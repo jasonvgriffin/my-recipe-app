@@ -25,8 +25,6 @@ const routes = () => ({
 beforeAll(() => {
   routes();
 }, 60_000);
-// Full-router integration tests: the first render still pulls in navigation code, which is slow on shared CI runners.
-jest.setTimeout(20_000);
 
 beforeEach(async () => {
   await require('@react-native-async-storage/async-storage').clear();
