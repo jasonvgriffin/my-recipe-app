@@ -2,7 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { MAX_CONTENT_WIDTH, MaxWidthContainer } from '@/components/layout';
+import { MAX_CONTENT_WIDTH, MaxWidthContainer, useBottomInset } from '@/components/layout';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { rankRecipesByPantry, type PantryMatch } from '@/lib/pantry';
@@ -16,6 +16,7 @@ import { recipeStore } from '@/storage/recipes';
  * optional: when it is locked, hidden in Settings or empty, this explains gently instead of nagging.
  */
 export default function PantryMatchScreen() {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const gate = useFeature('pantry');
@@ -81,7 +82,7 @@ export default function PantryMatchScreen() {
   return (
     <View style={styles.fill} testID="pantry-match">
       <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.text}>
-        <ScrollView contentContainerStyle={styles.list} testID="pantry-suggestions">
+        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 16 + bottomInset }]} testID="pantry-suggestions">
           {body}
         </ScrollView>
       </MaxWidthContainer>

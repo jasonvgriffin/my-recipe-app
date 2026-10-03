@@ -6,14 +6,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { renderRouter } from 'expo-router/testing-library';
 
-import {
-  ACCENTS,
-  THEME_MODES,
-  buildColors,
-  contrastRatio,
-  resolveScheme,
-  type ColorScheme,
-} from '@/lib/theme';
+import { ACCENTS, THEME_MODES, buildColors, contrastRatio, resolveScheme, type ColorScheme } from '@/lib/theme';
 import { createSettingsStore, settingsStore, SETTINGS_STORAGE_KEY } from '@/storage/settings';
 import { DEFAULT_SETTINGS } from '@/types/recipe';
 
@@ -84,7 +77,10 @@ describe('appearance settings', () => {
     await settingsStore.update({ appearance: { themeMode: 'light' } });
     expect((await createSettingsStore().get()).appearance).toEqual({ themeMode: 'light', accent: 'teal' });
     const AsyncStorage = require('@react-native-async-storage/async-storage');
-    await AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ appearance: { themeMode: 'neon', accent: 'gold' } }));
+    await AsyncStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({ appearance: { themeMode: 'neon', accent: 'gold' } }),
+    );
     expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'system', accent: 'green' });
   });
 });
@@ -98,7 +94,9 @@ describe('Settings → Appearance (UI)', () => {
       expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'light', accent: 'blue' }),
     );
     const blue = buildColors('light', 'blue');
-    await waitFor(() => expect(screen.getByTestId('settings-theme-light')).toHaveStyle({ backgroundColor: blue.primary }));
+    await waitFor(() =>
+      expect(screen.getByTestId('settings-theme-light')).toHaveStyle({ backgroundColor: blue.primary }),
+    );
     expect(screen.getByTestId('settings-accent-blue')).toHaveProp('accessibilityState', { selected: true });
     screen.unmount();
 
@@ -129,7 +127,8 @@ describe('no hard-coded colors', () => {
         const p = join(dir, name);
         if (statSync(p).isDirectory()) walk(p);
         else if (/\.(tsx?|jsx?)$/.test(name) && !exempt.some((e) => p.endsWith(e))) {
-          if (/['"`]#[0-9a-fA-F]{3,8}['"`]|rgba?\(|['"](white|black)['"]/.test(readFileSync(p, 'utf8'))) offenders.push(p);
+          if (/['"`]#[0-9a-fA-F]{3,8}['"`]|rgba?\(|['"](white|black)['"]/.test(readFileSync(p, 'utf8')))
+            offenders.push(p);
         }
       }
     };

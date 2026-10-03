@@ -118,7 +118,10 @@ export function mixHex(a: string, b: string, t: number): string {
   const pa = parseHex(a);
   const pb = parseHex(b);
   const out = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
-  return `#${out.map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+  return `#${out
+    .map((v) => v.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase()}`;
 }
 
 function parseHex(hex: string): [number, number, number] {

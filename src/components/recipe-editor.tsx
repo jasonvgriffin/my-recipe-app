@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { useFeature } from '@/hooks/use-feature';
 import { deleteLocalPhoto, PhotoPermissionError, pickRecipePhoto } from '@/lib/photos';
 import {
@@ -18,6 +19,7 @@ import { PREFERRED_SWEETENER, type Recipe } from '@/types/recipe';
 
 /** Full recipe editor: title, notes, ingredients (add/delete/reorder/substitute), steps with timers (spec #2, #4, #6, #7). */
 export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (recipe: Recipe) => void }) {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const photos = useFeature('photos').available;
@@ -65,7 +67,7 @@ export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (re
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" testID="recipe-editor">
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="recipe-editor">
       <Field label="Title">
         <TextInput
           value={state.title}

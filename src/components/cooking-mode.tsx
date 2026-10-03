@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { PanResponder, Pressable, ScrollView, Text, View } from 'react-native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
-import { TwoPaneLayout } from '@/components/layout';
+import { TwoPaneLayout, useBottomInset } from '@/components/layout';
 import { ServingsUnits } from '@/components/servings-units';
 import type { CurrentStep } from '@/cooking';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
@@ -63,6 +63,7 @@ export function CookingMode({
   onEnd: () => void;
   onMarkCooked?: () => void;
 }) {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   useEffect(() => {
     if (!keepAwake) return;
@@ -85,7 +86,7 @@ export function CookingMode({
   const forStep = new Set(step?.ingredientsForStep ?? []);
 
   const ingredients = recipe ? (
-    <ScrollView contentContainerStyle={styles.ingPane} testID="cook-ingredients">
+    <ScrollView contentContainerStyle={[styles.ingPane, { paddingBottom: 48 + bottomInset }]} testID="cook-ingredients">
       <Text style={styles.kicker}>Ingredients</Text>
       {unitsEnabled ? (
         <ServingsUnits
@@ -130,7 +131,7 @@ export function CookingMode({
         testID="cook-layout"
         compact="primary"
         primary={
-          <ScrollView contentContainerStyle={styles.stepPane}>
+          <ScrollView contentContainerStyle={[styles.stepPane, { paddingBottom: 48 + bottomInset }]}>
             {message && !step ? <Text style={styles.message}>{message}</Text> : null}
             {finished ? (
               <View style={styles.done}>

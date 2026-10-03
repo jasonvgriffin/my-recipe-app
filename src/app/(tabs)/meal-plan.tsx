@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { DayPlan } from '@/components/day-plan';
-import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout, useBottomInset } from '@/components/layout';
 import { MealCalendar } from '@/components/meal-calendar';
 import { OptionalFeature } from '@/components/optional-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
@@ -27,6 +27,7 @@ export default function MealPlanScreen() {
 }
 
 function MealPlanBody() {
+  const bottomInset = useBottomInset();
   const { isTwoPane } = useWindowSizeClass();
   const [anchor, setAnchor] = useState(() => new Date());
   const [selected, setSelected] = useState<IsoDate>(() => toIsoDate(new Date()));
@@ -100,7 +101,7 @@ function MealPlanBody() {
       testID="meal-plan-layout"
       primary={
         <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.text}>
-          <ScrollView>{calendar}</ScrollView>
+          <ScrollView contentContainerStyle={{ paddingBottom: bottomInset }}>{calendar}</ScrollView>
         </MaxWidthContainer>
       }
       secondary={

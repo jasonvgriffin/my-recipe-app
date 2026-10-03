@@ -1,8 +1,8 @@
 import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout, useBottomInset } from '@/components/layout';
 import { RecipeDetail } from '@/components/recipe-detail';
 import { RecipeFilters } from '@/components/recipe-filters';
 import { StarRating } from '@/components/star-rating';
@@ -27,6 +27,7 @@ import type { Category, Recipe } from '@/types/recipe';
  * Opened from the Recipes tab's "Existing Recipes" and "Search" buttons (`?focus=search` focuses the box).
  */
 export default function RecipeListScreen() {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const { focus } = useLocalSearchParams<{ focus?: string }>();
@@ -151,7 +152,7 @@ export default function RecipeListScreen() {
         data={visible}
         keyExtractor={(r) => r.id}
         extraData={selectedId}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: 96 + bottomInset }]}
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <RecipeFilters
@@ -200,7 +201,7 @@ export default function RecipeListScreen() {
         }}
       />
       <Link href="/add" asChild>
-        <Pressable style={styles.fab} accessibilityRole="button" testID="list-add-recipe-button">
+        <Pressable style={StyleSheet.flatten([styles.fab, { bottom: 24 + bottomInset }])} accessibilityRole="button" testID="list-add-recipe-button">
           <Text style={styles.fabText}>+ Add recipe</Text>
         </Pressable>
       </Link>

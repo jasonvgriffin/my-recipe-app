@@ -2,7 +2,7 @@ import { Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, useBottomInset } from '@/components/layout';
 import { useFeature } from '@/hooks/use-feature';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
@@ -13,6 +13,7 @@ import type { Category } from '@/types/recipe';
  * Assigning a category or tag to one recipe happens on the recipe itself.
  */
 export default function OrganizeScreen() {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const categoriesOn = useFeature('categories').available;
@@ -124,7 +125,7 @@ export default function OrganizeScreen() {
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
       <Stack.Screen options={{ title: 'Categories & tags' }} />
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" testID="organize-screen">
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="organize-screen">
         {categoriesOn ? (
           <View style={styles.section}>
             <Text style={styles.heading}>Categories</Text>

@@ -3,13 +3,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { StyleSheet, useColorScheme } from 'react-native';
 
 import { useSettings } from '@/hooks/use-settings';
-import {
-  buildColors,
-  defaultColors,
-  resolveScheme,
-  type ColorScheme,
-  type ThemeColors,
-} from '@/lib/theme';
+import { buildColors, defaultColors, resolveScheme, type ColorScheme, type ThemeColors } from '@/lib/theme';
 
 interface ThemeValue {
   colors: ThemeColors;

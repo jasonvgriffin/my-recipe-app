@@ -1,5 +1,6 @@
 import { Pressable, SectionList, Text, View } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { groupByAisle, shoppingProgress } from '@/lib/shopping';
 import { makeStyles } from '@/hooks/use-theme';
 import type { ShoppingListItem } from '@/types/meal-plan';
@@ -16,6 +17,7 @@ export interface GroceryRunViewProps {
  * The screen keeps the display awake and owns persistence.
  */
 export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunViewProps) {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const progress = shoppingProgress(items);
   const percent = Math.round(progress.fraction * 100);
@@ -55,7 +57,7 @@ export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunV
   return (
     <SectionList
       style={styles.list}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: 48 + bottomInset }]}
       sections={sections}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={header}

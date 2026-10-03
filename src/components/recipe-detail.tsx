@@ -2,6 +2,7 @@ import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
 import { ServingsUnits } from '@/components/servings-units';
@@ -42,6 +43,7 @@ export interface RecipeDetailProps {
  * (medium/expanded, spec #23). Keep it free of navigation side effects — use the callbacks.
  */
 export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesProp }: RecipeDetailProps) {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined);
@@ -195,7 +197,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} testID="recipe-detail">
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} testID="recipe-detail">
       {photos && recipe.photoUri ? (
         <Image
           source={{ uri: recipe.photoUri }}

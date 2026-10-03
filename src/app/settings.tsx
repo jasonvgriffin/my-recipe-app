@@ -4,7 +4,7 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
-import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, useBottomInset } from '@/components/layout';
 import { FeatureGate } from '@/components/feature-gate';
 import { appVersion, MCP_SERVER_URL } from '@/config';
 import { featureGate, type FeatureId } from '@/entitlements';
@@ -63,6 +63,7 @@ function HouseholdSettingsLink() {
 }
 
 export default function SettingsScreen() {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const settings = useSettings();
@@ -73,7 +74,7 @@ export default function SettingsScreen() {
   const version = appVersion();
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
-      <ScrollView contentContainerStyle={styles.container} testID="settings-screen">
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 16 + bottomInset }]} testID="settings-screen">
         <McpServerSection />
         <AppearanceSection />
         <Text style={styles.section}>Optional features</Text>

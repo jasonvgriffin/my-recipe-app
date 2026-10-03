@@ -14,7 +14,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 
 import { FeatureGate, FeatureLocked } from '@/components/feature-gate';
-import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout, useBottomInset } from '@/components/layout';
 import { SyncStatusBanner } from '@/components/sync-status';
 import { householdActions, restoreHouseholdSession, syncHouseholdNow } from '@/household/runtime';
 import { useHousehold } from '@/hooks/use-household';
@@ -42,6 +42,7 @@ function memberLabel(member: HouseholdMember, selfId?: string): string {
  * Gated by `householdSync`. Compact is one scrolling column; medium/expanded puts members beside the account.
  */
 export default function HouseholdScreen() {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const { account, sync } = useHousehold();
@@ -160,7 +161,7 @@ export default function HouseholdScreen() {
   const accountPane = (
     <ScrollView
       testID="household-scroll"
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={refresh}>
       <Text style={styles.section}>Household</Text>
@@ -406,7 +407,7 @@ export default function HouseholdScreen() {
   const membersPane = (
     <ScrollView
       testID="household-members-scroll"
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]}
       refreshControl={refresh}
       keyboardShouldPersistTaps="handled">
       {membersPaneContent()}

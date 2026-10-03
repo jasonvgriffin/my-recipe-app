@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { Chip } from '@/components/chip';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { addDays, formatLongDate } from '@/lib/dates';
@@ -24,6 +25,7 @@ const SLOT_LABEL: Record<MealSlot, string> = {
  * Used in the expanded secondary pane and on the compact day route. Writes go through the meal-plan store.
  */
 export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => void }) {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const [entries, setEntries] = useState<MealPlanEntry[]>([]);
@@ -105,7 +107,7 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
 
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]}
       keyboardShouldPersistTaps="handled"
       testID="day-plan">
       <Text style={styles.heading}>{formatLongDate(date)}</Text>

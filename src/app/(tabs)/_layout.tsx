@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddMenuSheet } from '@/components/add-menu-sheet';
 import { AppHeaderTitle, SettingsGearButton } from '@/components/app-header';
+import { BottomBarCoversInsetProvider } from '@/components/layout';
 import { useFeatureVisible } from '@/hooks/use-feature';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { makeStyles, useColors } from '@/hooks/use-theme';
@@ -49,7 +50,7 @@ export default function TabsLayout() {
   // A little taller than the 49dp default so the labels never clip under the raised + (custom height must add the inset).
   const insets = useSafeAreaInsets();
   return (
-    <>
+    <BottomBarCoversInsetProvider value={!useNavigationRail}>
       <Tabs
         screenOptions={{
           tabBarPosition: useNavigationRail ? 'left' : 'bottom',
@@ -118,7 +119,7 @@ export default function TabsLayout() {
         />
       </Tabs>
       <AddMenuSheet visible={menuOpen} onClose={() => setMenuOpen(false)} />
-    </>
+    </BottomBarCoversInsetProvider>
   );
 }
 

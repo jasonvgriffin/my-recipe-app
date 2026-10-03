@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { CategoryChips } from '@/components/category-chips';
-import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, useBottomInset } from '@/components/layout';
 import { StarRating } from '@/components/star-rating';
 import { useFeature } from '@/hooks/use-feature';
 import { createRecipe, parseLines, parseTags } from '@/lib/recipe-utils';
@@ -12,6 +12,7 @@ import { recipeStore } from '@/storage/recipes';
 import { PREFERRED_SWEETENER, validateRecipeInput, type Category, type RecipeInput } from '@/types/recipe';
 
 export default function AddRecipeScreen() {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const [title, setTitle] = useState('');
@@ -80,7 +81,7 @@ export default function AddRecipeScreen() {
 
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} keyboardShouldPersistTaps="handled">
         {canImport ? (
           <Link href="/import" asChild>
             <Pressable style={styles.importLink} accessibilityRole="button" testID="add-import-link">

@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 
 import * as Sharing from 'expo-sharing';
 
 import { FeatureGate, FeatureLocked } from '@/components/feature-gate';
-import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, useBottomInset } from '@/components/layout';
 import { useFeature } from '@/hooks/use-feature';
 import {
   importRecipe,
@@ -37,6 +37,7 @@ export default function ImportScreen() {
 }
 
 function ImportBody() {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const params = useLocalSearchParams<{ url?: string; text?: string; incoming?: string }>();
@@ -167,7 +168,7 @@ function ImportBody() {
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
       <Stack.Screen options={{ title: 'Import recipe' }} />
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" testID="import-screen">
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="import-screen">
         <Text style={styles.lead}>Paste a recipe link. The page is read as schema.org JSON-LD, then microdata or the page text.</Text>
         <Text style={styles.label}>Recipe link</Text>
         <TextInput

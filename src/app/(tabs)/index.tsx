@@ -1,7 +1,7 @@
 import { router, type Href } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { MAX_CONTENT_WIDTH, MaxWidthContainer } from '@/components/layout';
+import { MAX_CONTENT_WIDTH, MaxWidthContainer, useBottomInset } from '@/components/layout';
 import type { FeatureId } from '@/entitlements';
 import { useFeature } from '@/hooks/use-feature';
 import { makeStyles } from '@/hooks/use-theme';
@@ -56,12 +56,13 @@ const ACTIONS: HomeAction[] = [
 ];
 
 export default function RecipesHomeScreen() {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const shareOk = useFeature('householdSync').available;
   const pantryOk = useFeature('pantry').available;
   const allowed = (gate?: FeatureId) => (gate === 'householdSync' ? shareOk : gate === 'pantry' ? pantryOk : true);
   return (
-    <ScrollView contentContainerStyle={styles.scroll} testID="recipes-home">
+    <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 16 + bottomInset }]} testID="recipes-home">
       <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
         <View style={styles.actions}>
           {ACTIONS.filter((a) => allowed(a.gate)).map((a) => (

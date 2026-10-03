@@ -3,7 +3,7 @@ import { ActivityIndicator, Linking, Pressable, Text, TextInput, View } from 're
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
 import { FeatureLocked } from '@/components/feature-gate';
-import { TwoPaneLayout } from '@/components/layout';
+import { TwoPaneLayout, useBottomInset } from '@/components/layout';
 import { useFeature } from '@/hooks/use-feature';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { barcodeLookup, type BarcodeProduct } from '@/pantry';
@@ -32,6 +32,7 @@ export interface BarcodeScannerProps {
  * codes ask for a name once; that mapping is saved for the household.
  */
 export function BarcodeScanner({ visible, hiddenLabel, onProduct, testID = 'barcode-layout' }: BarcodeScannerProps) {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const access = useFeature('barcodeScan');
@@ -133,7 +134,7 @@ export function BarcodeScanner({ visible, hiddenLabel, onProduct, testID = 'barc
   );
 
   const panel = (
-    <View style={styles.panel} testID="barcode-result">
+    <View style={[styles.panel, { paddingBottom: 16 + bottomInset }]} testID="barcode-result">
       {state.kind === 'idle' ? <Text style={styles.muted}>Point the camera at a barcode.</Text> : null}
       {state.kind === 'saving' ? <ActivityIndicator color={colors.primary} testID="barcode-saving" /> : null}
       {state.kind === 'error' ? (

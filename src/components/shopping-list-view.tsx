@@ -1,5 +1,6 @@
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { formatShortDate } from '@/lib/dates';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import type { IsoDate, ShoppingList } from '@/types/meal-plan';
@@ -45,6 +46,7 @@ export function ShoppingListView({
   onScan,
   added,
 }: ShoppingListViewProps) {
+  const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const checked = list?.items.some((i) => i.checked) ?? false;
@@ -124,7 +126,7 @@ export function ShoppingListView({
           <Text style={styles.clearText}>Clear checked</Text>
         </Pressable>
       ) : null}
-      <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 12 + bottomInset }]} keyboardShouldPersistTaps="handled">
         {(list?.items.length ?? 0) === 0 ? (
           <Text style={styles.empty}>
             {list ? 'No ingredients — plan some recipes for this week first.' : 'No list yet for this week.'}
