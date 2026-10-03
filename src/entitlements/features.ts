@@ -10,7 +10,6 @@ export const FeatureId = {
   shoppingList: 'shoppingList',
   groceryRun: 'groceryRun',
   pantry: 'pantry',
-  receiptScan: 'receiptScan',
   barcodeScan: 'barcodeScan',
   householdSync: 'householdSync',
   cookingMode: 'cookingMode',
@@ -45,8 +44,9 @@ export const FEATURES: Record<FeatureId, FeatureInfo> = {
   shoppingList: { id: 'shoppingList', label: 'Shopping list', spec: [12] },
   groceryRun: { id: 'groceryRun', label: 'Grocery run mode', spec: [18] },
   pantry: { id: 'pantry', label: 'Pantry', spec: [21] },
-  receiptScan: { id: 'receiptScan', label: 'Receipt scanning', spec: [26], requires: ['pantry'] },
-  barcodeScan: { id: 'barcodeScan', label: 'Barcode scanning', spec: [27], requires: ['pantry'] },
+  // Pantry and shopping list both scan (v1.0.1), so barcodeScan no longer requires pantry; each entry point
+  // also needs its own screen's feature (pantry / shoppingList) to be visible.
+  barcodeScan: { id: 'barcodeScan', label: 'Barcode scanning', spec: [27] },
   householdSync: { id: 'householdSync', label: 'Household sharing', spec: [25] },
   cookingMode: { id: 'cookingMode', label: 'Cooking mode', spec: [19] },
   cookWithMe: { id: 'cookWithMe', label: 'Cook-with-me (voice assistant)', spec: [24] },

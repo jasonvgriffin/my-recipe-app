@@ -107,8 +107,8 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
   });
 });
 
-describe('recipeStore.seedIfNeeded', () => {
-  it('seeds once even when called concurrently', async () => {
+describe('recipeStore.removeUntouchedSamples', () => {
+  it('runs once even when called concurrently', async () => {
     const { createRecipeStore } = require('@/storage/recipes');
     const data = new Map<string, string>();
     const store = createRecipeStore({
@@ -116,9 +116,15 @@ describe('recipeStore.seedIfNeeded', () => {
       setItem: async (k: string, v: string) => void data.set(k, v),
       removeItem: async (k: string) => void data.delete(k),
     });
-    await Promise.all([store.seedIfNeeded(), store.seedIfNeeded(), store.seedIfNeeded()]);
-    await store.seedIfNeeded();
-    const { SEED_RECIPES } = require('@/data/seed');
-    expect(await store.list()).toHaveLength(SEED_RECIPES.length);
+    const { SAMPLE_RECIPES, asLegacySample } = require('../test-helpers/sample-recipes');
+    for (const r of SAMPLE_RECIPES) await store.save(asLegacySample(r, r.id));
+    const counts = await Promise.all([
+      store.removeUntouchedSamples(),
+      store.removeUntouchedSamples(),
+      store.removeUntouchedSamples(),
+    ]);
+    expect(counts).toEqual([2, 2, 2]); // coalesced into one run
+    expect(await store.removeUntouchedSamples()).toBe(0);
+    expect(await store.list()).toHaveLength(0);
   });
 });

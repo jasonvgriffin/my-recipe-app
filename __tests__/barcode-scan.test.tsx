@@ -44,31 +44,50 @@ beforeEach(async () => {
   jest.restoreAllMocks();
 });
 
-function renderScan() {
-  const Scan = require('@/app/pantry/scan').default;
-  renderRouter({ index: Scan }, { initialUrl: '/' });
+const routes = () => ({
+  _layout: require('@/app/_layout').default,
+  '(tabs)/_layout': require('@/app/(tabs)/_layout').default,
+  '(tabs)/index': require('@/app/(tabs)/index').default,
+  '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
+  '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
+  'pantry/scan': require('@/app/pantry/scan').default,
+  'shopping/scan': require('@/app/shopping/scan').default,
+});
+
+beforeAll(() => {
+  routes();
+}, 60_000);
+
+function renderScan(url = '/pantry/scan') {
+  renderRouter(routes(), { initialUrl: url });
 }
 
 describe('barcode camera (spec #27)', () => {
-  it('adds a found product and increments it on a second scan', async () => {
+  it('adds a found product (name as the title) and returns to the pantry; a re-scan increments it', async () => {
     jest.spyOn(barcodeLookup, 'lookup').mockResolvedValue({
       status: 'found',
       source: 'openfoodfacts',
-      product: { barcode: EAN, name: 'Almond flour', brand: 'Bob’s' },
+      product: { barcode: EAN, name: 'Almond Flour', brand: 'Bob’s' },
     });
     renderScan();
     expect(await screen.findByTestId('barcode-camera')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('mock-scan')));
-    expect(await screen.findByTestId('barcode-added')).toHaveTextContent('Added almond flour. You now have 1.');
+    expect(await screen.findByTestId('pantry-added-banner')).toHaveTextContent('Added Almond Flour');
+    expect(screen).toHavePathname('/pantry');
+    // Product name is the item title, brand secondary.
+    expect(screen.getByText('Almond Flour')).toBeTruthy();
+    expect(screen.getByText(/1 package · Bob’s/)).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('barcode-scan-another'));
-    await act(async () => fireEvent.press(screen.getByTestId('mock-scan')));
-    expect(await screen.findByText('Added almond flour. You now have 2.')).toBeTruthy();
+    const { router } = require('expo-router');
+    await act(async () => router.push('/pantry/scan'));
+    await act(async () => fireEvent.press(await screen.findByTestId('mock-scan')));
+    await screen.findByTestId('pantry-added-banner');
     const items = await pantryStore.list();
-    expect(items[0]).toMatchObject({ name: 'almond flour', barcode: EAN, quantity: 2 });
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ name: 'Almond Flour', brand: 'Bob’s', barcode: EAN, quantity: 2 });
   });
 
-  it('asks for a name once when the barcode is unknown and saves the mapping', async () => {
+  it('asks for a name once when the barcode is unknown, saves the mapping, and returns to the pantry', async () => {
     jest.spyOn(barcodeLookup, 'lookup').mockResolvedValue({ status: 'not_found', barcode: EAN });
     const save = jest.spyOn(barcodeLookup, 'saveUserProduct').mockResolvedValue({ barcode: EAN, name: 'Chicken breast' });
     renderScan();
@@ -77,11 +96,31 @@ describe('barcode camera (spec #27)', () => {
     expect(await screen.findByText(/No product found/)).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('barcode-name-input'), 'Chicken breast');
     await act(async () => fireEvent.press(screen.getByTestId('barcode-save-button')));
-    expect(await screen.findByText(/Added chicken breast/)).toBeTruthy();
+    expect(await screen.findByText('Added Chicken breast')).toBeTruthy();
     expect(save).toHaveBeenCalledWith(EAN, 'Chicken breast');
     expect(await pantryStore.list()).toEqual([
-      expect.objectContaining({ name: 'chicken breast', barcode: EAN, quantity: 1 }),
+      expect.objectContaining({ name: 'Chicken breast', barcode: EAN, quantity: 1 }),
     ]);
+  });
+
+  it('shopping list: scan adds the product name as a line and returns to the list', async () => {
+    jest.spyOn(barcodeLookup, 'lookup').mockResolvedValue({
+      status: 'found',
+      source: 'cache',
+      product: { barcode: EAN, name: 'Nutella Hazelnut Spread', brand: 'Ferrero' },
+    });
+    const { startOfWeek, toIsoDate } = require('@/lib/dates');
+    const week = toIsoDate(startOfWeek(new Date()));
+    renderScan('/shopping');
+    await act(async () => fireEvent.press(await screen.findByTestId('shopping-scan-button')));
+    await act(async () => fireEvent.press(await screen.findByTestId('mock-scan')));
+    expect(await screen.findByTestId('shopping-added-banner')).toHaveTextContent('Added Nutella Hazelnut Spread');
+    expect(screen).toHavePathname('/shopping');
+    expect(await screen.findByText('Nutella Hazelnut Spread')).toBeTruthy();
+    const { mealPlanStore } = require('@/storage/meal-plan');
+    const list = await mealPlanStore.getShoppingList(week);
+    expect(list.items.map((i: { text: string }) => i.text)).toEqual(['Nutella Hazelnut Spread']);
+    expect(await pantryStore.list()).toEqual([]); // the pantry is untouched
   });
 
   it('explains camera permission when it has not been granted', async () => {

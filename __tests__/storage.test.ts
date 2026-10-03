@@ -1,7 +1,6 @@
-import { UUID_RE } from '@/lib/ids';
 import { createPantryStore } from '@/storage/pantry';
 import { createSettingsStore } from '@/storage/settings';
-import { SEED_RECIPES } from '@/data/seed';
+import { asLegacySample, SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { createRecipe } from '@/lib/recipe-utils';
 import { createRecipeStore, RECIPES_STORAGE_KEY, type KeyValueStore } from '@/storage/recipes';
 
@@ -16,16 +15,28 @@ function memoryStore(): KeyValueStore & { data: Map<string, string> } {
 }
 
 describe('recipe store', () => {
-  it('seeds once and lists recipes', async () => {
-    const kv = memoryStore();
-    const store = createRecipeStore(kv);
-    await store.seedIfNeeded();
-    const seeded = await store.list();
-    expect(seeded.map((r) => r.title).sort()).toEqual(SEED_RECIPES.map((r) => r.title).sort());
-    expect(seeded.every((r) => UUID_RE.test(r.id))).toBe(true); // fresh UUIDs per device (spec #25)
-    await store.remove(seeded[0].id);
-    await store.seedIfNeeded(); // must not re-add deleted seed
-    expect((await store.list()).map((r) => r.id)).toEqual([seeded[1].id]);
+  it('seeds nothing on a fresh install (v1.0.1)', async () => {
+    const store = createRecipeStore(memoryStore());
+    expect(await store.removeUntouchedSamples()).toBe(0);
+    expect(await store.list()).toEqual([]);
+  });
+
+  it('removes only untouched v1.0.0 sample recipes, once, and never user recipes', async () => {
+    const store = createRecipeStore(memoryStore());
+    // What v1.0.0 seeded: the two samples under fresh UUIDs.
+    const [chicken, mousse] = SAMPLE_RECIPES;
+    await store.save(asLegacySample(chicken, 'a1'));
+    await store.save(asLegacySample(mousse, 'a2'));
+    // An edited sample (rated) and a user recipe with a sample's title are kept.
+    await store.save({ ...asLegacySample(chicken, 'edited'), rating: 5 });
+    const mine = createRecipe({ title: chicken.title, ingredients: [{ text: '1 lb chicken' }], steps: [], tags: [], servings: 2 });
+    await store.save(mine);
+    expect(await store.removeUntouchedSamples()).toBe(2);
+    expect((await store.list()).map((r) => r.id).sort()).toEqual(['edited', mine.id].sort());
+    // Runs once: a sample synced in later is left alone.
+    await store.save(asLegacySample(mousse, 'later'));
+    expect(await store.removeUntouchedSamples()).toBe(0);
+    expect(await store.get('later')).toBeTruthy();
   });
 
   it('saves, updates, gets, removes and lists tags', async () => {
@@ -55,8 +66,8 @@ describe('recipe store', () => {
     const store = createRecipeStore(kv);
     kv.data.set(RECIPES_STORAGE_KEY, 'not json');
     expect(await store.list()).toEqual([]);
-    kv.data.set(RECIPES_STORAGE_KEY, JSON.stringify([{ id: 1 }, SEED_RECIPES[0]]));
-    expect(await store.list()).toEqual([SEED_RECIPES[0]]);
+    kv.data.set(RECIPES_STORAGE_KEY, JSON.stringify([{ id: 1 }, SAMPLE_RECIPES[0]]));
+    expect(await store.list()).toEqual([SAMPLE_RECIPES[0]]);
   });
 });
 

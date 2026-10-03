@@ -12,6 +12,7 @@ import { mealPlanStore } from '@/storage/meal-plan';
 import { pantryStore } from '@/storage/pantry';
 import { recipeStore } from '@/storage/recipes';
 import { settingsStore } from '@/storage/settings';
+import { addSampleRecipes } from '../test-helpers/sample-recipes';
 
 const COMPACT = 411;
 const EXPANDED = 900;
@@ -29,7 +30,7 @@ const Grocery = () => require('@/app/grocery-run').default;
 const Recipe = () => require('@/app/recipe/[id]').default;
 
 async function chicken() {
-  await recipeStore.seedIfNeeded();
+  await addSampleRecipes(recipeStore);
   const list = await recipeStore.list();
   const found = list.find((r) => r.title.includes('Chicken'));
   if (!found) throw new Error('seed chicken missing');
@@ -55,6 +56,7 @@ describe.each([
   });
 
   it('assigns, moves, and removes a recipe', async () => {
+    await addSampleRecipes(recipeStore);
     renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
     expect(await screen.findByTestId(width >= 600 ? 'meal-plan-layout-dual' : 'meal-plan-layout-single')).toBeTruthy();
 
@@ -90,17 +92,22 @@ describe.each([
     }
   });
 
-  it('switches between week and month', async () => {
+  it('shows the month view only (no week view) and pages by month', async () => {
+    const recipe = await chicken();
+    const today = toIsoDate(new Date());
+    await mealPlanStore.addEntry(today, recipe.id, 'dinner');
     renderRouter({ index: MealPlan() }, { initialUrl: '/' });
-    expect(await screen.findByTestId('view-week')).toBeTruthy();
     const now = new Date();
-    fireEvent.press(screen.getByTestId('view-month'));
     expect(await screen.findByText(formatMonthYear(now.getFullYear(), now.getMonth()))).toBeTruthy();
+    expect(screen.queryByTestId('view-week')).toBeNull();
+    expect(screen.queryByTestId('view-month')).toBeNull();
+    expect(screen.queryByText(/^Week of/)).toBeNull();
+    expect((await screen.findAllByText(recipe.title)).length).toBeGreaterThan(0); // planned meal shown in its day cell
     fireEvent.press(screen.getByTestId('cal-next'));
     const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     expect(await screen.findByText(formatMonthYear(nextMonth.getFullYear(), nextMonth.getMonth()))).toBeTruthy();
-    fireEvent.press(screen.getByTestId('view-week'));
-    expect(await screen.findByText(`Week of ${formatShortDate(toIsoDate(startOfWeek(nextMonth)))}`)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('jump-today'));
+    expect(await screen.findByText(formatMonthYear(now.getFullYear(), now.getMonth()))).toBeTruthy();
   });
 });
 

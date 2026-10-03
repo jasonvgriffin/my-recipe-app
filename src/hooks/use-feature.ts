@@ -27,8 +27,6 @@ const TOGGLE: Partial<Record<FeatureId, keyof OptionalFeatures>> = {
   shoppingList: 'shopping',
   groceryRun: 'shopping',
   pantry: 'pantry',
-  receiptScan: 'pantry',
-  barcodeScan: 'pantry',
 };
 
 /** Should this feature's entry points render? = gate allows it AND the user hasn't hidden it in Settings. */

@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link, Tabs } from 'expo-router';
 import { Pressable, Text, type ColorValue } from 'react-native';
 
@@ -49,7 +50,7 @@ export default function TabsLayout() {
                 hitSlop={12}
                 style={{ paddingHorizontal: 16 }}
                 testID="settings-button">
-                <Text style={{ color: colors.text, fontSize: 20 }}>⚙︎</Text>
+                <Ionicons name="settings-outline" size={22} color={colors.text} />
               </Pressable>
             </Link>
           ),

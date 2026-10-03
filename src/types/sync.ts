@@ -25,5 +25,4 @@ export type SyncTable =
   | 'pantry_items'
   | 'meal_plan_entries'
   | 'shopping_items'
-  | 'barcode_items'
-  | 'receipt_aliases';
+  | 'barcode_items';

@@ -1,3 +1,4 @@
+import { isInPantry } from '@/pantry/isInPantry';
 import {
   createBarcodeLookup,
   normalizeBarcode,
@@ -103,7 +104,12 @@ describe('barcode lookup (spec #27)', () => {
     await pantry.addScanned({ barcode: EAN, name: 'Almond Flour' }, 2);
     const items = await pantry.list();
     expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ name: 'almond flour', brand: 'Bob’s', barcode: EAN, quantity: 3, unit: 'package' });
+    // The product name is the item's title as scanned; brand is secondary (v1.0.1).
+    expect(items[0]).toMatchObject({ name: 'Almond Flour', brand: 'Bob’s', barcode: EAN, quantity: 3, unit: 'package' });
+    // A typed item with the same normalized name is the same item, and matching ignores case.
+    await pantry.addQuantity({ name: 'almond flour' });
+    expect(await pantry.list()).toHaveLength(1);
+    expect(isInPantry('2 cups almond flour', await pantry.list())).toBe(true);
   });
 });
 

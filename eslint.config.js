@@ -15,7 +15,6 @@ module.exports = defineConfig([
       'src/cooking/**/*.ts',
       'src/sync/**/*.ts',
       'src/pantry/**/*.ts',
-      'src/receipts/**/*.ts',
       'src/entitlements/**/*.ts',
       'src/mcp/**/*.ts',
     ],

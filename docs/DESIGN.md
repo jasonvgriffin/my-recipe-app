@@ -2,7 +2,7 @@
 
 ## 0. RECIPES ARE THE CORE
 
-Recipes are the product; pantry, meal plan, shopping list, grocery run, receipt/barcode scanning and household
+Recipes are the product; pantry, meal plan, shopping list, grocery run, barcode scanning and household
 sharing are optional. App opens to Recipes; no onboarding/sign-in/setup; no recipe flow requires or prompts
 optional features; cross-links are unobtrusive and absent when the feature is hidden (`useSettings().features`)
 or empty; empty optional features never nag; Settings toggles hide the optional tabs. Recipe features get
@@ -72,7 +72,7 @@ Screens stay thin. Shared logic goes in pure, tested modules that a future MCP s
 - `src/cooking/` — cook-with-me session state (docs/COOK_API.md)
 - `src/sync/` + `src/storage/` — repositories and household sync (docs/SYNC.md)
 - `src/entitlements/` — feature gate (`canUse`, registry, providers)
-- `src/pantry/` — barcode lookup (Open Food Facts + local/household cache); receipt parsing goes here too
+- `src/pantry/` — barcode lookup (Open Food Facts + local/household cache); shared by the pantry and shopping-list scanners (`src/components/barcode-scanner.tsx`)
   ESLint forbids React / react-native / expo imports inside those modules.
 
 ## 4. Voice / assistant friendliness (spec #24)

@@ -33,6 +33,8 @@ describe('with-release-signing', () => {
     );
     // Debug build type keeps the debug keystore.
     expect(out).toMatch(/debug \{\n\s+signingConfig signingConfigs\.debug\n/);
+    // v1 + v2 + v3 schemes on the release config (v1.0.1).
+    expect(out).toMatch(/enableV1Signing true[\s\S]*enableV2Signing true[\s\S]*enableV3Signing true/);
     // No secret values are baked into the file.
     expect(out).not.toMatch(/storePassword '(?!android')/);
   });

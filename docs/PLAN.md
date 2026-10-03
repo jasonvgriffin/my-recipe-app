@@ -7,7 +7,7 @@ AI-friendly, diabetic-friendly recipe app. Android first, iOS later from the sam
 **v1 = [docs/SPEC.md](SPEC.md)** (Jason's 27-item feature spec: link import, editing, categories, photos,
 source links, notes, search, filters, cooked tracking, meal plan calendar, shopping list, dark theme, share,
 step timers, unit conversion, ~~nutrition~~ (removed), grocery run mode, cooking mode, tags, pantry, ratings, foldables,
-cook-with-me, household sharing, receipt scanning, barcode scanning).
+cook-with-me, household sharing, barcode scanning; receipt scanning was removed in v1.0.1).
 
 **Standing rule (Jason, Oct 3 2026):** This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition. Spec #17 (nutrition) was removed;
 the pantry tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition), and barcode scans use Open Food Facts for the product name and brand only.
@@ -23,7 +23,7 @@ Household sync on Supabase (#25) **is** in v1 (project live, migrations applied)
 - [x] `Recipe` schema (`src/types/recipe.ts`) with validation (required fields, servings > 0,
       **no monk fruit** — allulose only)
 - [x] Recipe list with search (title / tag / ingredient), add-recipe form, detail view, delete
-- [x] Local persistence (AsyncStorage behind a swappable repository) + 2 seed recipes
+- [x] Local persistence (AsyncStorage behind a swappable repository) + 2 seed recipes (removed in v1.0.1: no sample recipes)
 - [x] Jest tests for schema + storage; typecheck + lint
 - [x] GitHub Actions: APK artifact on every push/PR; GitHub Release only on `v*` tag / manual publish
 - [x] Dark theme by default; bottom tabs Recipes · Meal plan · Shopping list
@@ -62,7 +62,7 @@ Suggested PR order (each small, with tests; update the status table in SPEC.md):
 14. Pantry tab/screen + "what can I cook" suggestions + shopping skip (#21)
 15. Star rating input + sort/filter controls (#22)
 16. Household UI: Settings → Household (email code sign-in, create/join with invite code), sync triggers (#25)
-17. Pantry agent: barcode scanner UI (`expo-camera`) + receipt scanning (#26, #27), on top of #21
+17. Pantry agent: barcode scanner UI (`expo-camera`) + receipt scanning (#26, #27), on top of #21 (receipt scanning removed in v1.0.1)
 18. Remaining two-pane screens (meal plan, shopping+pantry) with compact/expanded tests (#23)
 19. Polish: app icon + splash, empty states → release keystore → tag **v1.0.0** (first published APK)
 

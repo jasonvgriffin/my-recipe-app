@@ -3,7 +3,6 @@ import { expiryState, filterSortPantry, pantryCategories, rankRecipesByPantry } 
 import { isInPantry } from '@/pantry/isInPantry';
 import { createRecipe } from '@/lib/recipe-utils';
 import { PANTRY_STORAGE_KEY, createPantryStore } from '@/storage/pantry';
-import { createReceiptAliasStore } from '@/storage/receipt-aliases';
 import type { KeyValueStore } from '@/storage/kv';
 import type { PantryItem } from '@/types/recipe';
 
@@ -133,16 +132,5 @@ describe('pantry store details', () => {
     expect(expiryState('2026-10-05', today)).toBe('soon');
     expect(expiryState('2026-12-01', today)).toBe('ok');
     expect(expiryState(undefined, today)).toBe('none');
-  });
-});
-
-describe('receipt alias store', () => {
-  it('remembers a corrected name and overwrites it on the next correction', async () => {
-    const aliases = createReceiptAliasStore(memoryStore());
-    await aliases.remember('GV BNLS CHKN', 'Chicken Breast');
-    await aliases.remember('gv bnls chkn', 'Boneless chicken breast');
-    const rows = await aliases.list();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ alias: 'gv bnls chkn', name: 'boneless chicken breast' });
   });
 });

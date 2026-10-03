@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -38,6 +38,8 @@ export default function ShoppingScreen() {
 function ShoppingBody() {
   const showGrocery = useFeatureVisible('groceryRun');
   const showPantry = useFeatureVisible('pantry');
+  const showScan = useFeatureVisible('barcodeScan');
+  const { added } = useLocalSearchParams<{ added?: string }>();
   const [weekStart, setWeekStart] = useState<IsoDate>(() => toIsoDate(startOfWeek(new Date())));
   const [list, setList] = useState<ShoppingList | undefined>();
   const [mealCount, setMealCount] = useState(0);
@@ -117,6 +119,8 @@ function ShoppingBody() {
       onAddManual={addManual}
       onClearChecked={clearDone}
       onGroceryRun={() => router.push({ pathname: '/grocery-run', params: { weekStart } })}
+      onScan={showScan ? () => router.push({ pathname: '/shopping/scan', params: { weekStart } }) : undefined}
+      added={typeof added === 'string' && added ? added : undefined}
     />
   );
 

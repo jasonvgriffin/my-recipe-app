@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 
 import { createCookSession } from '@/cooking';
-import { SEED_RECIPES } from '@/data/seed';
+import { SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import {
   armStepTimer,
   cancelStepTimerNotification,
@@ -22,8 +22,8 @@ function memoryStore(): KeyValueStore {
   };
 }
 
-const chicken = SEED_RECIPES[0];
-const other: Recipe = { ...SEED_RECIPES[1], id: 'other-recipe' };
+const chicken = SAMPLE_RECIPES[0];
+const other: Recipe = { ...SAMPLE_RECIPES[1], id: 'other-recipe' };
 
 beforeEach(() => {
   jest.clearAllMocks();

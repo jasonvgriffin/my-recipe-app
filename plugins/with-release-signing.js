@@ -4,6 +4,7 @@
  * At Gradle time, when ANDROID_KEYSTORE_PATH is set, `assembleRelease` is signed with that keystore using
  * ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD. When it is not set (local builds,
  * fork PRs without secrets) the release build keeps the Expo template's debug keystore.
+ * The release config signs with APK Signature Scheme v1 + v2 + v3 (v1.0.1).
  * CI decodes the keystore from GitHub secrets — see .github/workflows/android.yml and AGENTS.md.
  */
 const { withAppBuildGradle } = require('expo/config-plugins');
@@ -29,6 +30,11 @@ function addReleaseSigning(contents) {
                 keyAlias System.getenv('ANDROID_KEY_ALIAS')
                 keyPassword System.getenv('ANDROID_KEY_PASSWORD')
             }
+            // Sign with every scheme (v1 JAR + v2 + v3) so any installer accepts it: AGP drops v1 when
+            // minSdk >= 24 and only adds v3 on key rotation; some OEM installers are pickier than the platform.
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
         }`,
   );
 

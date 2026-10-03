@@ -1,5 +1,5 @@
 import { createRecipe, parseLines, parseTags, searchRecipes } from '@/lib/recipe-utils';
-import { SEED_RECIPES } from '@/data/seed';
+import { SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { isRecipe, validateRecipeInput, type RecipeInput } from '@/types/recipe';
 
 const base: RecipeInput = {
@@ -50,17 +50,17 @@ describe('recipe utils', () => {
   });
 
   it('searches title, ingredients, notes and tags (spec #8)', () => {
-    const withNotes = { ...SEED_RECIPES[0], notes: 'serve with a side salad' };
-    expect(searchRecipes([withNotes, SEED_RECIPES[1]], 'side salad')).toHaveLength(1);
-    expect(searchRecipes(SEED_RECIPES, 'chicken')).toHaveLength(1);
-    expect(searchRecipes(SEED_RECIPES, 'thyme')).toHaveLength(1);
-    expect(searchRecipes(SEED_RECIPES, 'no-bake')).toHaveLength(1);
-    expect(searchRecipes(SEED_RECIPES, 'allulose')).toHaveLength(1);
-    expect(searchRecipes(SEED_RECIPES, '')).toHaveLength(2);
+    const withNotes = { ...SAMPLE_RECIPES[0], notes: 'serve with a side salad' };
+    expect(searchRecipes([withNotes, SAMPLE_RECIPES[1]], 'side salad')).toHaveLength(1);
+    expect(searchRecipes(SAMPLE_RECIPES, 'chicken')).toHaveLength(1);
+    expect(searchRecipes(SAMPLE_RECIPES, 'thyme')).toHaveLength(1);
+    expect(searchRecipes(SAMPLE_RECIPES, 'no-bake')).toHaveLength(1);
+    expect(searchRecipes(SAMPLE_RECIPES, 'allulose')).toHaveLength(1);
+    expect(searchRecipes(SAMPLE_RECIPES, '')).toHaveLength(2);
   });
 
   it('seed recipes are valid and monk-fruit free', () => {
-    for (const r of SEED_RECIPES) {
+    for (const r of SAMPLE_RECIPES) {
       expect(isRecipe(r)).toBe(true);
       expect(validateRecipeInput(r).ok).toBe(true);
     }

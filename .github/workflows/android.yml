@@ -147,6 +147,18 @@ jobs:
           if [[ "$SIGNED_WITH_RELEASE_KEY" == "true" ]] && grep -q "CN=Android Debug" <<<"$certs"; then
             echo "::error::Expected the release keystore but the APK is debug-signed."; exit 1
           fi
+          # Install robustness (v1.0.1): every signature scheme, 16 KB-aligned uncompressed native libs, no stray permissions.
+          bt="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n1)"
+          schemes=$("$bt/apksigner" verify --verbose "$apk")
+          for v in "v1 scheme (JAR signing): true" "v2 scheme (APK Signature Scheme v2): true" "v3 scheme (APK Signature Scheme v3): true"; do
+            grep -qF "$v" <<<"$schemes" || { echo "$schemes"; echo "::error::APK is not signed with: $v"; exit 1; }
+          done
+          "$bt/zipalign" -c -P 16 4 "$apk" || { echo "::error::APK is not zip-aligned (4 bytes, 16 KB pages for .so)"; exit 1; }
+          perms=$("$bt/aapt2" dump permissions "$apk")
+          echo "$perms"
+          if grep -Eq "BLUETOOTH|NEARBY_WIFI_DEVICES|UWB_RANGING|SYSTEM_ALERT_WINDOW|EXTERNAL_STORAGE|EXACT_ALARM|launcher|badge|finsky|c2dm" <<<"$perms"; then
+            echo "::error::APK requests a blocked permission (see app.json android.blockedPermissions)"; exit 1
+          fi
 
       - name: Remove decoded keystore
         if: always()

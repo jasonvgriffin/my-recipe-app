@@ -8,7 +8,7 @@ Guidance for Cursor cloud agents (and any other coding agent) working in this re
 
 ## Rule #1: RECIPES ARE THE CORE
 
-Pantry, meal planning, shopping list, grocery run, receipt/barcode scanning and household sharing are optional
+Pantry, meal planning, shopping list, grocery run, barcode scanning and household sharing are optional
 nice-to-haves. The app opens to Recipes; no onboarding, sign-in or setup; no recipe flow requires or prompts
 optional features; cross-links are unobtrusive and absent when a feature is hidden (`useSettings().features`)
 or empty; empty optional features never nag; Settings → Optional features hides the optional tabs. Recipe
@@ -67,7 +67,10 @@ src/lib/                      pure helpers: recipe-utils (create/search/filter/s
 src/storage/                  repositories over a KeyValueStore (AsyncStorage by default; inject one in tests):
                               kv.ts (createCollection), recipes.ts (recipes + categories), meal-plan.ts,
                               pantry.ts, settings.ts
-src/data/seed.ts    sample recipes inserted on first launch
+src/app/(tabs)/index.tsx      Recipes tab: five buttons (Search, Existing Recipes, Share, Add, pantry match)
+src/app/recipes.tsx           Existing Recipes: search, filters, list + detail
+src/storage/legacy-samples.ts identifies untouched v1.0.0 sample recipes (no seeding since v1.0.1)
+test-helpers/sample-recipes.ts  sample recipes for tests only
 __tests__/          jest tests
 .github/workflows/android.yml   CI: APK artifact every push/PR; Release only on v* tag
 .github/workflows/supabase-migrations.yml  applies supabase/migrations on main (see docs/SYNC.md)
@@ -134,7 +137,7 @@ Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the And
   tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition); barcode scans may use Open Food Facts for the product **name and brand** only.
 - Recipes are **diabetic-friendly**. Always track `servings`.
 - **Allulose is the only sugar-free sweetener. Never use or suggest monk fruit** (or luo han guo / mogrosides)
-  — not in seed data, examples, tests, AI prompts, or suggestions. `validateRecipeInput` enforces this; keep it.
+  — not in sample data, examples, tests, AI prompts, or suggestions. `validateRecipeInput` enforces this; keep it.
 - Keep the `Recipe` schema in `src/types/recipe.ts` JSON-serializable and versioned (`schemaVersion`);
   bump `RECIPE_SCHEMA_VERSION` and extend `migrateRecipe` when changing the stored shape.
 - Put logic in pure, unit-tested helpers (`src/lib`, `src/storage`); keep screens thin.

@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { Text } from 'react-native';
 
 import { TwoPaneLayout } from '@/components/layout';
-import { SEED_RECIPES } from '@/data/seed';
+import { addSampleRecipes, SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { getWindowSizeClass } from '@/hooks/use-window-size-class';
 
 const COMPACT = 411; // folded / phone
@@ -79,7 +79,7 @@ describe.each([
 
   it('RecipeDetail renders a recipe', async () => {
     const { recipeStore } = require('@/storage/recipes');
-    await recipeStore.seedIfNeeded();
+    await addSampleRecipes(recipeStore);
     const [first] = await recipeStore.list();
     const RecipeRoute = require('@/app/recipe/[id]/index').default;
     renderRouter({ 'recipe/[id]': RecipeRoute }, { initialUrl: `/recipe/${first.id}` });
@@ -94,7 +94,7 @@ describe.each([
 
   it('edit screen shows the full editor', async () => {
     const { recipeStore } = require('@/storage/recipes');
-    await recipeStore.seedIfNeeded();
+    await addSampleRecipes(recipeStore);
     const [first] = await recipeStore.list();
     const EditRoute = require('@/app/recipe/[id]/edit').default;
     renderRouter({ 'recipe/[id]/edit': EditRoute }, { initialUrl: `/recipe/${first.id}/edit` });
@@ -111,17 +111,26 @@ describe.each([
     expect(screen.getByTestId('import-text-input')).toBeTruthy();
   });
 
-  it('Recipes tab: list-detail in expanded, navigation in compact', async () => {
+  it('Recipes tab: five buttons (width-capped)', async () => {
     const RecipesTab = require('@/app/(tabs)/index').default;
+    renderRouter({ index: RecipesTab }, { initialUrl: '/' });
+    expect(await screen.findByTestId('recipes-home')).toBeTruthy();
+    for (const label of ['Search', 'Existing Recipes', 'Share Recipes', 'Add Recipe', 'What can I make with my existing pantry?'])
+      expect(screen.getByText(label)).toBeTruthy();
+  });
+
+  it('Existing Recipes: list-detail in expanded, navigation in compact', async () => {
+    const { recipeStore } = require('@/storage/recipes');
+    await addSampleRecipes(recipeStore);
+    const RecipesTab = require('@/app/recipes').default;
     const RecipeRoute = require('@/app/recipe/[id]/index').default;
     renderRouter({ index: RecipesTab, 'recipe/[id]': RecipeRoute }, { initialUrl: '/' });
-    await screen.findByText(SEED_RECIPES[1].title);
+    await screen.findByText(SAMPLE_RECIPES[1].title);
     expect(screen.getByTestId('search-input')).toBeTruthy();
     expect(screen.getByTestId('recipe-filters')).toBeTruthy();
     expect(screen.getByTestId('filter-cooked')).toBeTruthy();
     expect(screen.getByTestId('filter-recent')).toBeTruthy();
-    const { recipeStore } = require('@/storage/recipes');
-    const target = (await recipeStore.list()).find((r: { title: string }) => r.title === SEED_RECIPES[1].title);
+    const target = (await recipeStore.list()).find((r: { title: string }) => r.title === SAMPLE_RECIPES[1].title);
     const item = screen.getByTestId(`recipe-item-${target.id}`);
     if (width >= 600) {
       expect(screen.getByTestId('recipes-layout-dual')).toBeTruthy();
@@ -157,19 +166,18 @@ describe.each([
     expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
   });
 
-  it('Pantry tab: list at compact, list + suggestions side by side when expanded', async () => {
+  it('Pantry tab: one width-capped list (suggestions moved to the Recipes tab)', async () => {
     const Pantry = require('@/app/(tabs)/pantry').default;
     renderRouter({ index: Pantry }, { initialUrl: '/' });
     expect(await screen.findByText('Nothing in the pantry yet.')).toBeTruthy();
-    expect(screen.getByTestId(width >= 600 ? 'pantry-layout-dual' : 'pantry-layout-single')).toBeTruthy();
-    if (width >= 600) {
-      expect(screen.getByTestId('pantry-suggestions')).toBeTruthy();
-      expect(screen.queryByTestId('pantry-show-ideas')).toBeNull();
-    } else {
-      expect(screen.getByTestId('pantry-show-ideas')).toBeTruthy();
-      fireEvent.press(screen.getByTestId('pantry-show-ideas'));
-      expect(screen.getByTestId('pantry-suggestions')).toBeTruthy();
-    }
+    expect(screen.getByTestId('pantry-layout')).toBeTruthy();
+    expect(screen.queryByTestId('pantry-suggestions')).toBeNull();
+  });
+
+  it('pantry match renders (width-capped)', async () => {
+    const Match = require('@/app/pantry-match').default;
+    renderRouter({ index: Match }, { initialUrl: '/' });
+    expect(await screen.findByTestId('pantry-match-empty')).toBeTruthy();
   });
 
   it('barcode scanner shows the camera and the result pane', async () => {
@@ -180,13 +188,11 @@ describe.each([
     expect(screen.getByTestId(width >= 600 ? 'barcode-layout-dual' : 'barcode-layout-single')).toBeTruthy();
   });
 
-  it('receipt scanner offers camera and gallery', async () => {
-    const Receipt = require('@/app/pantry/receipt').default;
-    renderRouter({ index: Receipt }, { initialUrl: '/' });
-    expect(await screen.findByText('Take photo')).toBeTruthy();
-    expect(screen.getByText('Choose from gallery')).toBeTruthy();
-    expect(screen.getByTestId(width >= 600 ? 'receipt-layout-dual' : 'receipt-layout-single')).toBeTruthy();
-    if (width >= 600) expect(screen.getByText('Select a line to edit the match.')).toBeTruthy();
+  it('shopping-list barcode scanner shows the camera and the result pane', async () => {
+    const Scan = require('@/app/shopping/scan').default;
+    renderRouter({ index: Scan }, { initialUrl: '/' });
+    expect(await screen.findByTestId('barcode-camera')).toBeTruthy();
+    expect(screen.getByTestId(width >= 600 ? 'barcode-layout-dual' : 'barcode-layout-single')).toBeTruthy();
   });
 
   it('meal plan is a calendar, with the selected day beside it when expanded', async () => {
@@ -209,8 +215,8 @@ describe.each([
 
   it('cook screen (deep link myrecipeapp://cook/{id}) shows the current step', async () => {
     const { recipeStore } = require('@/storage/recipes');
-    await recipeStore.seedIfNeeded();
-    const r = (await recipeStore.list()).find((x: { title: string }) => x.title === SEED_RECIPES[0].title);
+    await addSampleRecipes(recipeStore);
+    const r = (await recipeStore.list()).find((x: { title: string }) => x.title === SAMPLE_RECIPES[0].title);
     const CookScreen = require('@/app/cook/[action]').default;
     renderRouter({ 'cook/[action]': CookScreen }, { initialUrl: `/cook/${r.id}` });
     expect(await screen.findByText(r.steps[0].text)).toBeTruthy();

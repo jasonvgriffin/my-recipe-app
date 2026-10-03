@@ -25,10 +25,6 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: [] })),
 }));
 
-jest.mock('@/receipts/ocr', () => ({
-  recognizeReceiptText: jest.fn(async () => ''),
-}));
-
 jest.mock('expo-notifications', () => ({
   AndroidImportance: { DEFAULT: 3, HIGH: 4, LOW: 2, MAX: 5, MIN: 1, NONE: 0 },
   SchedulableTriggerInputTypes: { DATE: 'date', TIME_INTERVAL: 'timeInterval', CALENDAR: 'calendar' },
