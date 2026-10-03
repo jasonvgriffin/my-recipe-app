@@ -23,7 +23,7 @@ export const FeatureId = {
   share: 'share',
   photos: 'photos',
   linkImport: 'linkImport',
-  /** Future remote MCP server (assistant read/write access). Checked server-side; no in-app UI. */
+  /** Remote MCP server (spec #28, docs/MCP.md): assistant read/write access. Checked server-side; no in-app UI. */
   mcpAccess: 'mcpAccess',
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare -- const + type pair (enum-like)
@@ -58,7 +58,7 @@ export const FEATURES: Record<FeatureId, FeatureInfo> = {
   share: { id: 'share', label: 'Share', spec: [14] },
   photos: { id: 'photos', label: 'Recipe photos', spec: [4] },
   linkImport: { id: 'linkImport', label: 'Import from link / text', spec: [1] },
-  mcpAccess: { id: 'mcpAccess', label: 'AI assistant access (MCP server)', spec: [] },
+  mcpAccess: { id: 'mcpAccess', label: 'AI assistant access (MCP server)', spec: [28] },
 };
 
 export type FeatureTier = 'free' | 'premium';

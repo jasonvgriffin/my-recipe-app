@@ -33,18 +33,18 @@
 >   the gate allows it AND the user hasn't hidden it.
 > - **Core recipe CRUD / view / search is never gated** (recipes-first). Locked features disappear quietly;
 >   deep links to them show a neutral message.
-> - `mcpAccess` is the future remote MCP server's own switch (checked server-side; no in-app UI).
+> - `mcpAccess` is the remote MCP server's own switch (#28; checked server-side; no in-app UI).
 > - New optional feature = new `FeatureId` + registry/config row + gated entry points + a test.
 > - **Acceptance:** flipping features to premium with no entitlement hides/locks their entry points and the
 >   recipe workflow still works — `__tests__/entitlements.test.tsx`.
 
 Source: Jason Griffin, 2026-10-02/03 (items 15–27 added later). **v1 = this spec.**
 
-> **Release rule: v1.0.0 = ALL features 1–27 complete (except #17, removed).** The first published APK is **v1.0.0**.
+> **Release rule: v1.0.0 = ALL features 1–28 complete (except #17, removed).** The first published APK is **v1.0.0**.
 > No incremental/rolling APK releases before that — CI builds an APK artifact on every push/PR only to
 > prove the build stays green. Releases are published only from a `v*` tag (or a manual `publish` run).
 
-The remote MCP server stays a later phase (see [PLAN.md](PLAN.md)); household sync (#25) is in v1. When built, MCP uses OAuth on the same email-code account as #25 (recipes synced to Supabase), has its own paywall switch in `src/entitlements`, and per-user rate limits. MCP work needs Jason's OK before starting.
+The remote MCP server (#28) **is in v1.0** (approved by Jason, Oct 3 2026), as is household sync (#25). MCP uses OAuth on the same email-code account as #25 (recipes synced to Supabase), has its own paywall switch (`mcpAccess`) in `src/entitlements`, and per-user rate limits. See [MCP.md](MCP.md).
 Design rules every PR must follow: [DESIGN.md](DESIGN.md). Standing product rules: diabetic-friendly recipes, **allulose is the only
 sugar-free sweetener — never monk fruit**.
 
@@ -83,6 +83,7 @@ Status legend: ✅ done · 🟡 data layer / partial UI ready · ⬜ not started
 | 25  | **Shared family/household version:** several people contribute recipes to one household; shared pantry, meal plan and shopping list. Supabase (free project): email OTP / magic link auth, `households` + `household_members` (owner/member) + invite codes; all synced records carry `household_id`, `created_by`, `updated_at`, `deleted_at` (tombstones), stable UUIDs; RLS so members only see their household; offline-first local store, last-write-wins by `updated_at`; realtime optional. Opt-in from Settings; app works fully offline/solo when signed out. | ✅ Settings → Household: email OTP (magic link optional), create/join/leave, invite code (show/copy/share/rotate), members and roles, sign out; sync on sign-in, foreground, debounced writes, pull-to-refresh, optional realtime; offline queue and status; LWW; full app works solo when signed out | `src/app/household.tsx`, `src/sync/`, `supabase/migrations/` ([SYNC.md](SYNC.md)) |
 | 26  | **Receipt scanning** (pantry): camera or gallery photo → on-device OCR with Google ML Kit text recognition (bundled Latin model, offline, no API key; local module `mlkit-text-recognition` + config plugin, built by `expo prebuild` in the APK workflow). UI-free `parseReceipt` turns OCR text into line items `{rawText, name, quantity, unit?, price?}` and skips totals, tax, payment, and store-header lines. Review screen fuzzy-matches each line to pantry items plus a learned alias table (e.g. `GV BNLS CHKN` → `chicken breast`, saved when the user corrects a match, household-shared `receipt_aliases`). User can edit, skip, or create items; Apply increments pantry quantities. Depends on the pantry feature. | ✅ OCR module + `src/receipts/parseReceipt.ts` (fixture tests) + review/apply UI + alias store and migration. Compact/expanded tested | `src/app/pantry/receipt.tsx`, `src/receipts/`, `modules/mlkit-text-recognition/`, `supabase/migrations/20261003020000_receipt_aliases.sql` |
 | 27  | **Barcode scanning** (pantry): scan EAN-13 / EAN-8 / UPC-A / UPC-E with `expo-camera` to add or increment a pantry item. Lookup via Open Food Facts (`/api/v2/product/{barcode}.json`, no key, User-Agent `MyRecipeApp/1.0 (github.com/jasonvgriffin)`); results cached locally; offline / not found → user types a name once and the barcode→item mapping is saved (household-shared).                                                                                                                                                                                | ✅ Camera UI on `barcodeLookup`: permission prompt, add/increment on a hit, type-a-name once when missing or offline. Depends on pantry. Compact/expanded tested | `src/app/pantry/scan.tsx`, `src/pantry/barcodeLookup.ts` |
+| 28  | **AI assistant access (remote MCP server):** Grok / Claude / ChatGPT can search, add (via `importRecipe`) and edit recipes, plan meals and manage the shopping list. Streamable HTTP on Supabase Edge Functions (free), OAuth 2.1 + PKCE on the household email-code account (#25; recipes must be synced), `mcpAccess` entitlement (free in v1), per-user rate limits (429). No nutrition tools. | ✅ Server core + 12 tools + OAuth + rate limits, tested (`__tests__/mcp.test.ts`); Edge Function binding verified locally with Deno; rate-limit migration applied by CI. **Deploy needs `SUPABASE_ACCESS_TOKEN` secret** (docs/MCP.md) | `src/mcp/`, `supabase/functions/mcp/`, [MCP.md](MCP.md) |
 
 **Pantry agent scope:** #21 + #26 + #27 together. **Optional features** (#11, #12, #18, #21, #25, #26, #27) must
 follow the Recipes-are-the-core rule above.

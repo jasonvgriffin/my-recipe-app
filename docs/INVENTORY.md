@@ -38,6 +38,7 @@
 | 25 | Household sharing (Supabase) | `src/sync/` (`engine.ts`, `coordinator.ts`, `account.ts`, `supabase.ts`, `rows.ts`, `config.ts`, `status.ts`, `authors.ts`, `auth-url.ts`, `errors.ts`), `src/household/` (`runtime.ts`, `state.ts`), `src/hooks/use-household.ts`, `src/hooks/use-household-sync.ts`, `src/app/household.tsx`, `src/components/shared-by.tsx`, `src/components/sync-status.tsx`, `src/storage/identity.ts`, `supabase/migrations/*`, `.github/workflows/supabase-migrations.yml`. Contract: `docs/SYNC.md` |
 | 26 | Receipt scanning | `src/receipts/` (`ocr.ts`, `parseReceipt.ts`, `match.ts` receipt-line→pantry fuzzy match, `apply.ts`, `types.ts`), `src/storage/receipt-aliases.ts`, `src/app/pantry/receipt.tsx`, `modules/mlkit-text-recognition/` |
 | 27 | Barcode scanning (Open Food Facts for the **name only**) | `src/pantry/barcodeLookup.ts`, `src/app/pantry/scan.tsx`, `pantryStore.addScanned` |
+| 28 | AI assistant access (remote MCP server) | `src/mcp/` (`server.ts` HTTP/OAuth/JSON-RPC, `tools.ts` tools on top of `importRecipeWith` / `applyRecipeEdit` / `filterRecipes` / `compileWeekShoppingList` / `addManualItem` / `isInPantry`, `repo.ts` synced tables via `src/sync/rows.ts`, `oauth.ts`, `rate-limit.ts`), `supabase/functions/mcp/` (Edge Function binding), `supabase/migrations/20261003030000_mcp_rate_limits.sql`, `.github/workflows/supabase-functions.yml`. Docs: `docs/MCP.md` |
 
 ## Shared libraries (reuse these)
 

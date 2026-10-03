@@ -70,7 +70,10 @@ methods, so a deep link and the cooking screen always show the same step. `?step
 query as well as from the link string. Deep links can drive the app but can't return data to the caller;
 returning the step text to an assistant is the job of the future MCP server. There is no in-app text-to-speech.
 
-## Future MCP server mapping (later phase, not v1)
+## MCP server mapping (not exposed by the v1.0 remote server)
+
+The v1.0 remote MCP server (docs/MCP.md) runs in the cloud, but the cook session lives on the phone, so it has
+no cook tools. On the phone, assistants use the deep links above. This table is the mapping if cook sessions are synced later.
 
 | MCP tool                                            | Calls                          |
 | --------------------------------------------------- | ------------------------------ |

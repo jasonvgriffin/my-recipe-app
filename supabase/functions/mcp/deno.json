@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "@/": "../../../src/",
+    "zod": "npm:zod@^4.6.5",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.117.2",
+    "@react-native-async-storage/async-storage": "./async-storage-stub.ts"
+  },
+  "unstable": [
+    "sloppy-imports"
+  ]
+}
