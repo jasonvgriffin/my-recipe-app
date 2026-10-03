@@ -28,12 +28,8 @@ npm run typecheck
 
 ## Android APK
 
-Every push to `main` builds an APK in GitHub Actions and publishes it to the rolling
-[`latest-apk`](https://github.com/jasonvgriffin/my-recipe-app/releases/tag/latest-apk) prerelease:
-
-https://github.com/jasonvgriffin/my-recipe-app/releases/download/latest-apk/my-recipe-app.apk
-
-The repo is private, so you must be signed in to GitHub to download it. The APK is signed with the
-debug keystore (fine for sideloading; enable "install unknown apps" on the phone).
+Every push/PR builds an APK in GitHub Actions and attaches it to the run as the `my-recipe-app-apk`
+artifact (private repo: sign in to GitHub to download). Published releases happen only from a `v*` tag;
+**the first published APK will be v1.0.0, once all 22 SPEC features are complete.**
 
 See [AGENTS.md](AGENTS.md) for contributor/agent rules and [docs/PLAN.md](docs/PLAN.md) for the roadmap.

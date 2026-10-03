@@ -33,6 +33,7 @@ const PAGE = `<html><head><script type="application/ld+json">${JSON.stringify({
         { '@type': 'HowToStep', text: '<p>Bake.</p>' },
       ],
       keywords: 'Bread, Low-Carb',
+      nutrition: { '@type': 'NutritionInformation', calories: '180 kcal', carbohydrateContent: '6 g', fiberContent: '3 g', proteinContent: '7g' },
       recipeCategory: 'Breads',
       image: [{ url: 'https://example.com/bread.jpg' }],
     },
@@ -70,8 +71,9 @@ describe('importRecipe — structured (future MCP / "Hey AI, send this recipe")'
       ingredients: [{ text: '1 cup almond flour' }, { text: '1/2 cup allulose' }],
       tags: ['dessert'],
       servings: 9,
-      carbsPerServing: 3,
+      nutrition: { netCarbsG: 3, source: 'imported' },
     });
+    expect(result.recipe.ingredients[1]).toMatchObject({ quantity: 0.5, unit: 'cup', name: 'allulose' });
     const [cat] = await d.store.listCategories();
     expect(cat.name).toBe('Desserts');
     expect(result.recipe.categoryIds).toEqual([cat.id]);
@@ -94,8 +96,8 @@ describe('importRecipe — structured (future MCP / "Hey AI, send this recipe")'
   it('warns (not fails) on unknown carbs/servings and never invents carbs', async () => {
     const result = await importRecipe({ kind: 'structured', recipe: { title: 'Eggs', steps: ['Scramble'] } }, {}, deps());
     if (!result.ok) throw new Error('expected ok');
-    expect(result.recipe.carbsPerServing).toBeUndefined();
-    expect(result.warnings.join(' ')).toMatch(/Carbs per serving unknown/);
+    expect(result.recipe.nutrition.netCarbsG).toBeUndefined();
+    expect(result.warnings.join(' ')).toMatch(/Net carbs per serving unknown/);
   });
 });
 
@@ -106,11 +108,13 @@ describe('importRecipe — url (link import, spec #1/#5)', () => {
     if (!first.ok) throw new Error(first.errors.join());
     expect(first.recipe).toMatchObject({
       title: 'Keto Bread & Butter',
-      steps: ['Mix.', 'Bake.'],
+      steps: [{ text: 'Mix.' }, { text: 'Bake.' }],
       servings: 8,
       sourceUrl: PAGE_URL,
       photoUri: 'https://example.com/bread.jpg',
+      nutrition: { calories: 180, carbsG: 6, fiberG: 3, proteinG: 7, netCarbsG: 3, source: 'imported' },
     });
+    expect(first.warnings).toContain('Net carbs computed as total carbs minus fiber.');
 
     const again = await importRecipe({ kind: 'url', url: 'http://example.com/keto-bread' }, {}, d);
     expect(again).toMatchObject({ ok: true, status: 'duplicate' });
@@ -145,7 +149,7 @@ describe('importRecipe — text', () => {
     const result = await importRecipe({ kind: 'text', text }, { dryRun: true }, deps());
     expect(result).toMatchObject({
       ok: true,
-      recipe: { title: 'Cauliflower Mash', ingredients: [{ text: '1 head cauliflower' }, { text: '2 tbsp butter' }], steps: ['Steam', 'Mash'] },
+      recipe: { title: 'Cauliflower Mash', ingredients: [{ text: '1 head cauliflower' }, { text: '2 tbsp butter' }], steps: [{ text: 'Steam' }, { text: 'Mash' }] },
     });
   });
 });

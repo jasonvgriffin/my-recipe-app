@@ -5,10 +5,10 @@ import { isLowCarb, isRecipe, validateRecipeInput, type RecipeInput } from '@/ty
 const base: RecipeInput = {
   title: 'Test Recipe',
   ingredients: [{ text: '1 cup almond flour' }, { text: '2 tbsp allulose' }],
-  steps: ['Mix', 'Bake'],
+  steps: [{ text: 'Mix' }, { text: 'Bake 20 minutes' }],
   tags: ['dessert'],
   servings: 4,
-  carbsPerServing: 3,
+  nutrition: { netCarbsG: 3 },
 };
 
 describe('validateRecipeInput', () => {
@@ -17,7 +17,7 @@ describe('validateRecipeInput', () => {
   });
 
   it('requires title, ingredients, steps and sane numbers', () => {
-    const r = validateRecipeInput({ ...base, title: ' ', ingredients: [], steps: [], servings: 0, carbsPerServing: NaN });
+    const r = validateRecipeInput({ ...base, title: ' ', ingredients: [], steps: [], servings: 0, nutrition: { netCarbsG: NaN } });
     expect(r.ok).toBe(false);
     expect(r.errors).toHaveLength(5);
   });

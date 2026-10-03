@@ -1,4 +1,4 @@
-/** Meal planning + shopping list types (spec #11, #12). Keep JSON-serializable. */
+/** Meal planning + shopping list / grocery run types (spec #11, #12, #18). Keep JSON-serializable. */
 
 /** Calendar day in local time, formatted YYYY-MM-DD. */
 export type IsoDate = string;
@@ -20,7 +20,10 @@ export interface MealPlanEntry {
 /** One line on the shopping list (spec #12). */
 export interface ShoppingListItem {
   id: string;
+  /** Display text, e.g. "3 tbsp allulose" (merged + scaled). */
   text: string;
+  /** Normalized ingredient name used for merging / pantry matching. */
+  name?: string;
   checked: boolean;
   /** Recipes this item came from; empty for manually added items. */
   recipeIds: string[];

@@ -73,6 +73,25 @@ function image(value: unknown): string | undefined {
   return undefined;
 }
 
+/** schema.org NutritionInformation → per-serving numbers (spec #17). "250 kcal" / "5 g" → 250 / 5. */
+function nutrition(value: unknown): RecipeDraft['nutrition'] {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const n = value as Node;
+  const num = (v: unknown) => {
+    const m = String(v ?? '').match(/\d+(?:\.\d+)?/);
+    return m ? Number(m[0]) : undefined;
+  };
+  const out = {
+    calories: num(n.calories),
+    carbsG: num(n.carbohydrateContent),
+    fiberG: num(n.fiberContent),
+    proteinG: num(n.proteinContent),
+    fatG: num(n.fatContent),
+  };
+  const defined = Object.fromEntries(Object.entries(out).filter(([, v]) => v !== undefined));
+  return Object.keys(defined).length ? defined : undefined;
+}
+
 function toDraft(r: Node, sourceUrl?: string): Partial<RecipeDraft> {
   const yieldRaw = Array.isArray(r.recipeYield) ? r.recipeYield[0] : r.recipeYield;
   const servings = parseInt(String(yieldRaw ?? ''), 10);
@@ -89,6 +108,7 @@ function toDraft(r: Node, sourceUrl?: string): Partial<RecipeDraft> {
     categories: category.map((c) => String(c).trim()).filter(Boolean),
     servings: Number.isFinite(servings) && servings > 0 ? servings : undefined,
     photoUrl: image(r.image),
+    nutrition: nutrition(r.nutrition),
     sourceUrl,
   };
 }

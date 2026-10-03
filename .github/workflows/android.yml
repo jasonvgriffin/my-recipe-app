@@ -1,18 +1,34 @@
 name: Android APK
 
+# Every push / PR builds the APK and uploads it as a CI artifact (proves the build stays green).
+# A GitHub Release with the APK is published ONLY for:
+#   - a pushed tag matching v* (e.g. v1.0.0), or
+#   - a manual run (workflow_dispatch) with `publish: true` and a `tag` (e.g. v1.0.0).
+# There are no rolling / incremental releases. The first published APK is v1.0.0 (all SPEC items 1-22 done).
+
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish a GitHub Release with the APK'
+        type: boolean
+        default: false
+      tag:
+        description: 'Release tag when publishing, e.g. v1.0.0 (must match app.json expo.version)'
+        type: string
+        required: false
 
 concurrency:
   group: android-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 permissions:
-  contents: write # needed to publish the rolling `latest-apk` prerelease
+  contents: read
 
 env:
   CI: 1
@@ -23,9 +39,37 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 75
+    outputs:
+      publish: ${{ steps.release.outputs.publish }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Decide whether to publish
+        id: release
+        env:
+          INPUT_PUBLISH: ${{ github.event.inputs.publish }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          publish=false; tag=""
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            publish=true; tag="${GITHUB_REF#refs/tags/}"
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$INPUT_PUBLISH" == "true" ]]; then
+            if [[ ! "$INPUT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+              echo "::error::publish=true requires a tag like v1.0.0"; exit 1
+            fi
+            publish=true; tag="$INPUT_TAG"
+          fi
+          if [[ "$publish" == "true" ]]; then
+            app_version=$(node -p "require('./app.json').expo.version")
+            if [[ "${tag#v}" != "$app_version"* ]]; then
+              echo "::error::Tag $tag does not match app.json expo.version ($app_version). Bump app.json first."; exit 1
+            fi
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish tag=$tag"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -56,34 +100,48 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build release APK (signed with debug keystore)
+        # TODO before v1.0.0: sign with a real release keystore from GitHub secrets (see AGENTS.md).
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=${{ env.RN_ARCHS }}
 
       - name: Collect APK
-        id: apk
         run: |
           src=$(ls android/app/build/outputs/apk/release/*.apk | head -n1)
           mkdir -p dist
-          cp "$src" dist/my-recipe-app.apk
+          name="my-recipe-app${{ steps.release.outputs.tag && format('-{0}', steps.release.outputs.tag) || '' }}.apk"
+          cp "$src" "dist/$name"
           ls -la dist
-          echo "path=dist/my-recipe-app.apk" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: my-recipe-app-apk
-          path: dist/my-recipe-app.apk
+          path: dist/*.apk
           if-no-files-found: error
+          retention-days: 14
 
-      - name: Publish rolling prerelease `latest-apk`
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+  release:
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: my-recipe-app-apk
+          path: dist
+
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.build.outputs.tag }}
         run: |
-          gh release delete latest-apk --yes --cleanup-tag || true
-          git push origin :refs/tags/latest-apk || true
-          gh release create latest-apk dist/my-recipe-app.apk \
-            --prerelease \
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::Release $TAG already exists; refusing to overwrite. Bump the version."; exit 1
+          fi
+          gh release create "$TAG" dist/*.apk \
             --target "$GITHUB_SHA" \
-            --title "Latest APK (${GITHUB_SHA::7})" \
-            --notes "Rolling build of \`main\` at ${GITHUB_SHA}. Release APK signed with the Expo debug keystore (sideload only, not for Play Store). Built $(date -u +'%Y-%m-%d %H:%M UTC') by run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
+            --title "My Recipe App $TAG" \
+            --generate-notes

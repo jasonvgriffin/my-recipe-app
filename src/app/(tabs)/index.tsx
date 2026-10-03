@@ -5,9 +5,9 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, Vi
 import { filterRecipes, type RecipeFilter } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
 import { recipeStore } from '@/storage/recipes';
-import { isLowCarb, type Recipe } from '@/types/recipe';
+import { isLowCarb, netCarbs, type Recipe } from '@/types/recipe';
 
-/** List filters (spec #9). TODO: category filter chips (spec #3). */
+/** List filters (spec #9). TODO: category (#3), tag (#20), rating filter + sort (#22) controls — helpers exist. */
 type FilterMode = 'all' | 'cooked' | 'recent' | 'notCooked';
 const FILTERS: Record<FilterMode, Omit<RecipeFilter, 'keyword'>> = {
   all: {},
@@ -79,9 +79,10 @@ export default function RecipeListScreen() {
             <Pressable style={styles.card}>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.meta}>
-                {item.carbsPerServing ?? '?'} g carbs/serving · {item.servings} servings
+                {netCarbs(item.nutrition) ?? '?'} g net carbs/serving · {item.servings} servings
                 {isLowCarb(item) ? ' · low-carb' : ''}
                 {item.cooked ? ' · cooked' : ''}
+                {item.rating ? ` · ${'★'.repeat(item.rating)}` : ''}
               </Text>
               {item.tags.length > 0 && <Text style={styles.tags}>{item.tags.map((t) => `#${t}`).join('  ')}</Text>}
             </Pressable>

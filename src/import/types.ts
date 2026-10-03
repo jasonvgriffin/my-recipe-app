@@ -43,12 +43,27 @@ export const RecipeDraftSchema = z
     title: z.string().trim().min(1, 'title is required').max(300),
     description: z.string().trim().max(5000).optional(),
     ingredients: z.array(ingredient).max(500).default([]),
-    steps: z.array(z.string()).max(500).default([]),
+    steps: z
+      .array(z.union([z.string(), z.object({ text: z.string(), durationSeconds: z.number().int().positive().optional() })]))
+      .max(500)
+      .default([]),
     tags: z.array(z.string()).max(100).default([]),
     /** Category names (not ids); created on import if missing. */
     categories: z.array(z.string()).max(50).default([]),
     servings: z.number().positive().max(1000).optional(),
+    /** Shorthand for nutrition.netCarbsG (handy for AI assistants). */
     carbsPerServing: z.number().min(0).max(10000).optional(),
+    nutrition: z
+      .object({
+        calories: z.number().min(0).optional(),
+        carbsG: z.number().min(0).optional(),
+        netCarbsG: z.number().min(0).optional(),
+        proteinG: z.number().min(0).optional(),
+        fatG: z.number().min(0).optional(),
+        fiberG: z.number().min(0).optional(),
+      })
+      .optional(),
+    rating: z.number().int().min(1).max(5).optional(),
     notes: z.string().max(20000).optional(),
     /** http(s) or file:// URI of a photo. TODO(spec #4): download remote photos into app storage. */
     photoUrl: z

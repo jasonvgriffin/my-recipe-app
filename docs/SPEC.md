@@ -1,6 +1,12 @@
 # My Recipe App — v1 Feature Spec
 
-Source: Jason Griffin, 2026-10-02. **v1 = this spec.** The remote MCP server / sync backend stays a later phase
+Source: Jason Griffin, 2026-10-02 (items 15–22 added the same evening). **v1 = this spec.**
+
+> **Release rule: v1.0.0 = ALL features 1–22 complete.** The first published APK is **v1.0.0**.
+> No incremental/rolling APK releases before that — CI builds an APK artifact on every push/PR only to
+> prove the build stays green. Releases are published only from a `v*` tag (or a manual `publish` run).
+
+ The remote MCP server / sync backend stays a later phase
 (see [PLAN.md](PLAN.md)). Standing product rules: diabetic-friendly, low-carb, **allulose is the only
 sugar-free sweetener — never monk fruit**.
 
@@ -23,27 +29,11 @@ Status legend: ✅ done · 🟡 data layer / partial UI ready · ⬜ not started
 | 12 | **Shopping list** auto-compiled from a planned week's recipes, with check-off items. | 🟡 builds from current week, dedupes lines, check-off persists; no quantity merge / week picker | `src/app/(tabs)/shopping.tsx`, `src/lib/shopping.ts` |
 | 13 | **Dark theme** throughout. | ✅ dark by default (`userInterfaceStyle: "dark"`) | `src/lib/theme.ts` |
 | 14 | **Share button** via the Android share sheet, letting the user choose what to share: recipe text, photo, source link, or any combination. | ⬜ | detail screen; `expo-sharing` / RN `Share` |
-
-## Design constraint: one import pipeline (voice / AI-assistant ready)
-
-Eventually an MCP server will let Jason's AI assistant send recipes into the app by voice
-(*"Hey AI, send this recipe to my recipe app"*). No MCP work in v1, but:
-
-- **All imports go through `importRecipe(input)` in `src/import/`** — in-app link import, pasted text,
-  Android share intent, deep links (`myrecipeapp://import?url=…`), and later MCP and sync.
-- Input is a discriminated union: `{ kind: 'url', url }` | `{ kind: 'structured', recipe: RecipeDraft, source? }`
-  | `{ kind: 'text', text }`. The draft is validated with zod, normalized, checked against house rules
-  (no monk fruit), and **deduped by normalized source URL**.
-- The module is pure TypeScript with **no UI dependencies**; storage/network/clock are injected.
-- Contract: [IMPORT_API.md](IMPORT_API.md). Don't add a second import path.
-
-## Notes for implementers
-
-- Navigation: bottom tabs **Recipes · Meal plan · Shopping list** in `src/app/(tabs)/`; recipe detail and add
-  are stack screens above the tabs.
-- All data types live in `src/types/` (`recipe.ts`, `meal-plan.ts`). Bump `RECIPE_SCHEMA_VERSION` and extend
-  `migrateRecipe` whenever the stored shape changes.
-- Storage goes through repositories in `src/storage/` (`createRecipeStore`, `createMealPlanStore`) built on
-  `createCollection` over a `KeyValueStore`; tests inject an in-memory store.
-- Imported recipes enter only via `importRecipe` (validates, rejects monk fruit, keeps `sourceUrl`, dedupes).
-- One spec item (or a slice of one) per PR. Keep the dark theme: use `colors` from `src/lib/theme.ts`.
+| 15 | **Built-in step timers:** timers tied to individual recipe steps — detect times in step text, tap to start, run in the background with a notification. | 🟡 `Step.durationSeconds`, `detectStepDuration` (ranges use upper bound), ⏱ shown on detail; no running timer / notification yet | `src/lib/timers.ts`; needs `expo-notifications` |
+| 16 | **Unit conversion** metric ↔ imperial: per-recipe toggle + app setting. | 🟡 parsed ingredients `{quantity, unit, name, note}`, `convertIngredient`, `Recipe.unitSystem`, `AppSettings.unitSystem`; no UI toggle yet | `src/lib/units.ts`, `src/lib/ingredients.ts`, `src/storage/settings.ts` |
+| 17 | **Nutritional info per serving:** calories, carbs, net carbs, protein, fat, fiber. Manual entry first; imported from schema.org `nutrition` when present; computed lookup later. | 🟡 `Recipe.nutrition`, `netCarbs()`, JSON-LD nutrition import; add form only takes net carbs | `src/types/recipe.ts`, `src/import/parsers/json-ld.ts` |
+| 18 | **Grocery run mode:** strip a recipe or the planned meals down to just the items to buy, as a big checkable list. | 🟡 `compileItems` (merge, scale, pantry skip) works for one recipe or a week; no full-screen mode UI | `src/lib/shopping.ts` |
+| 19 | **Cooking mode:** full-screen, one step at a time, keep screen awake, large text, step timers inline. | ⬜ (`AppSettings.cookingModeKeepAwake`, step durations ready) | new `src/app/recipe/[id]/cook.tsx`; needs `expo-keep-awake` |
+| 20 | **Tags:** free-form, multiple per recipe, filterable; distinct from categories. | 🟡 `Recipe.tags`, entered on add form, `filterRecipes({ tags })`; no tag filter UI yet | `src/lib/recipe-utils.ts` |
+| 21 | **Pantry tracker:** list what's on hand with optional quantities; suggest recipes ranked by how many ingredients you already have; shopping list skips items in the pantry. | 🟡 `PantryItem`, pantry store, `rankRecipesByPantry`, shopping `pantry` skip; no UI | `src/storage/pantry.ts`, `src/lib/pantry.ts` |
+| 22 | **Five-star ratings** per recipe, sortable and filterable. | 🟡 `Recipe.rating`, `setRating`, `sortRecipes('rating')`, `filterRecipes({ minRating })`; stars shown in list; no rating input yet | `src/lib/recipe-utils.ts` |

@@ -2,8 +2,13 @@
 
 AI-friendly, diabetic-friendly recipe app. Android first, iOS later from the same Expo codebase.
 
-**v1 = [docs/SPEC.md](SPEC.md)** (Jason's 14-item feature spec: link import, editing, categories, photos,
-source links, notes, search, filters, cooked tracking, meal plan calendar, shopping list, dark theme, share).
+**v1 = [docs/SPEC.md](SPEC.md)** (Jason's 22-item feature spec: link import, editing, categories, photos,
+source links, notes, search, filters, cooked tracking, meal plan calendar, shopping list, dark theme, share,
+step timers, unit conversion, nutrition, grocery run mode, cooking mode, tags, pantry, ratings).
+
+**Release policy:** v1.0.0 = ALL SPEC items 1–22 complete. The first published APK is v1.0.0. Until then CI only
+uploads APK *artifacts* on each push/PR (to keep builds green); a GitHub Release is created only by pushing a
+`v*` tag (or a manual `publish` workflow run) — Eve/Jason decide when.
 The remote MCP server and sync backend are **not** part of v1; they remain Phase 3.
 
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
@@ -14,9 +19,11 @@ The remote MCP server and sync backend are **not** part of v1; they remain Phase
 - [x] Recipe list with search (title / tag / ingredient), add-recipe form, detail view, delete
 - [x] Local persistence (AsyncStorage behind a swappable repository) + 2 seed recipes
 - [x] Jest tests for schema + storage; typecheck + lint
-- [x] GitHub Actions: APK artifact + rolling `latest-apk` prerelease
+- [x] GitHub Actions: APK artifact on every push/PR; GitHub Release only on `v*` tag / manual publish
 - [x] Dark theme by default; bottom tabs Recipes · Meal plan · Shopping list
 - [x] Single import pipeline `src/import/importRecipe` (zod contract, JSON-LD, text, dedupe) — see IMPORT_API.md
+- [x] Data model for items 15–22: structured steps (timers), parsed ingredients (units/scaling/merge),
+      nutrition per serving, ratings, tags, pantry, app settings; schema migration v2→v3
 - [x] Data layer for v1: categories, cooked/lastCookedAt, notes, sourceUrl, photoUri, meal plan entries,
       shopping lists, schema migration v1→v2, JSON-LD import parser
 
@@ -31,9 +38,17 @@ Suggested PR order (each small, with tests; update the status table in SPEC.md):
 5. Meal plan calendar (month view + day picker, add/remove/move entries) (#11)
 6. Shopping list: week picker, quantity merge, manual items, clear checked (#12)
 7. Share sheet with selectable parts: text / photo / link (#14)
-8. Polish: app icon + splash, sort options, empty states
+8. Step timers: tap ⏱ to start, background + notification (`expo-notifications`) (#15)
+9. Unit toggle per recipe + app setting; servings scaler (#16)
+10. Nutrition entry/edit form (all six fields) + display (#17)
+11. Grocery run mode for a recipe or the planned week (big checklist, pantry-aware) (#18)
+12. Cooking mode: full-screen step pager, keep-awake, large text, inline timers (#19)
+13. Tag filter chips + tag management (#20)
+14. Pantry tab/screen + "what can I cook" suggestions + shopping skip (#21)
+15. Star rating input + sort/filter controls (#22)
+16. Polish: app icon + splash, empty states → release keystore → tag **v1.0.0** (first published APK)
 - [ ] Optional: move storage to `expo-sqlite` if recipe count / querying needs grow
-- [ ] Production signing keystore in GitHub secrets (needed before Play Store)
+- [ ] Production signing keystore in GitHub secrets (needed before v1.0.0 so updates install over each other)
 
 ## Phase 3 — AI-friendly (after v1)
 
@@ -71,17 +86,17 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
 
 ## Open decisions for Jason
 
-1. **Distribution on Android:** keep sideloading the `latest-apk` build (private repo → must be signed in to
+1. **Distribution on Android:** sideload the v1.0.0 GitHub Release APK (private repo → must be signed in to
    GitHub to download), or publish via Google Play (one-time $25 developer fee, needs a real release keystore)?
-   A public download location is another option.
 2. **Release signing:** OK to generate a production keystore and store it only in GitHub secrets?
 3. **Backend / hosting** for sync + MCP: Cloudflare, Supabase, Fly.io, or something else? Any budget?
 4. **MCP auth:** API key only (simplest, personal use) vs OAuth (needed by some assistant connectors)?
 5. **Storage engine:** stay on AsyncStorage for now, or switch to `expo-sqlite` early?
-6. **Nutrition data:** manual net-carb entry only, or integrate a nutrition source (e.g. Cronometer export,
-   USDA FoodData Central) later?
+6. **Nutrition lookup source** for computed nutrition later (spec #17): USDA FoodData Central (free),
+   Cronometer export, or other (may need keys/money)?
 7. **iOS timing** and whether to pay for Apple Developer ($99/yr) and/or EAS.
 8. **Multi-user:** just Jason, or family members sharing a recipe box?
 9. **Low-carb threshold:** currently ≤ 15 g net carbs/serving gets the "low-carb" label — adjust?
-10. **"Cooked recently" window:** currently 14 days — adjust?
+10. **"Cooked recently" window:** currently 14 days (`AppSettings.cookedRecentlyDays`) — adjust?
 11. **Photos:** keep on-device only (lost if the app is uninstalled) until a sync backend exists — OK?
+12. **Timer notifications:** OK to request Android notification permission on first timer start?

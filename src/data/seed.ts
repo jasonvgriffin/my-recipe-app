@@ -1,12 +1,12 @@
-import { RECIPE_SCHEMA_VERSION, type Recipe } from '@/types/recipe';
+import { createRecipe } from '@/lib/recipe-utils';
+import type { Recipe, RecipeInput } from '@/types/recipe';
 
 const SEED_TS = '2026-10-02T00:00:00.000Z';
 
-/** Sample recipes inserted on first launch. Diabetic-friendly, low-carb, allulose only. */
-export const SEED_RECIPES: Recipe[] = [
+/** Sample recipes (built through createRecipe so ingredients are parsed + step timers detected) inserted on first launch. Diabetic-friendly, low-carb, allulose only. */
+const SEED_INPUTS: (RecipeInput & { id: string })[] = [
   {
     id: 'seed-lemon-herb-chicken',
-    schemaVersion: RECIPE_SCHEMA_VERSION,
     title: 'Lemon Herb Chicken Thighs',
     description: 'Crispy-skinned sheet-pan chicken with green beans.',
     ingredients: [
@@ -19,22 +19,17 @@ export const SEED_RECIPES: Recipe[] = [
       { text: 'Salt and pepper to taste' },
     ],
     steps: [
-      'Heat oven to 425°F (220°C).',
-      'Toss chicken with oil, lemon zest and juice, garlic, thyme, salt and pepper.',
-      'Arrange skin-side up on a sheet pan with the green beans around it.',
-      'Roast 35–40 minutes until the chicken reaches 175°F (80°C) and the skin is crisp.',
+      { text: 'Heat oven to 425°F (220°C).' },
+      { text: 'Toss chicken with oil, lemon zest and juice, garlic, thyme, salt and pepper.' },
+      { text: 'Arrange skin-side up on a sheet pan with the green beans around it.' },
+      { text: 'Roast 35–40 minutes until the chicken reaches 175°F (80°C) and the skin is crisp.' },
     ],
     tags: ['dinner', 'low-carb', 'diabetic-friendly', 'sheet-pan'],
     servings: 6,
-    carbsPerServing: 5,
-    categoryIds: [],
-    cooked: false,
-    createdAt: SEED_TS,
-    updatedAt: SEED_TS,
+    nutrition: { calories: 390, carbsG: 8, fiberG: 3, netCarbsG: 5, proteinG: 28, fatG: 27, source: 'manual' },
   },
   {
     id: 'seed-allulose-cheesecake-mousse',
-    schemaVersion: RECIPE_SCHEMA_VERSION,
     title: 'Allulose Vanilla Cheesecake Mousse',
     description: 'No-bake dessert sweetened only with allulose.',
     ingredients: [
@@ -46,17 +41,15 @@ export const SEED_RECIPES: Recipe[] = [
       { text: 'Pinch of salt' },
     ],
     steps: [
-      'Beat cream cheese, allulose, vanilla, lemon juice and salt until smooth.',
-      'In a separate bowl whip the cream to stiff peaks.',
-      'Fold the whipped cream into the cream cheese mixture.',
-      'Spoon into 6 cups and chill at least 1 hour.',
+      { text: 'Beat cream cheese, allulose, vanilla, lemon juice and salt until smooth.' },
+      { text: 'In a separate bowl whip the cream to stiff peaks.' },
+      { text: 'Fold the whipped cream into the cream cheese mixture.' },
+      { text: 'Spoon into 6 cups and chill at least 1 hour.' },
     ],
     tags: ['dessert', 'low-carb', 'diabetic-friendly', 'allulose', 'no-bake'],
     servings: 6,
-    carbsPerServing: 2,
-    categoryIds: [],
-    cooked: false,
-    createdAt: SEED_TS,
-    updatedAt: SEED_TS,
+    nutrition: { calories: 280, carbsG: 2, fiberG: 0, netCarbsG: 2, proteinG: 3, fatG: 28, source: 'manual' },
   },
 ];
+
+export const SEED_RECIPES: Recipe[] = SEED_INPUTS.map(({ id, ...input }) => createRecipe(input, new Date(SEED_TS), id));

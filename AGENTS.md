@@ -29,17 +29,21 @@ src/app/_layout.tsx           root Stack + dark navigation theme
 src/app/(tabs)/               bottom tabs: index.tsx (Recipes), meal-plan.tsx, shopping.tsx
 src/app/add.tsx               add-recipe form (modal)
 src/app/recipe/[id].tsx       recipe detail (cooked toggle, plan for today, source link, delete)
-src/types/recipe.ts           Recipe + Category schema, validation, migrations (single source of truth)
+src/types/recipe.ts           Recipe (structured steps, parsed ingredients, nutrition, rating, unitSystem),
+                              Category, PantryItem, AppSettings, validation, migrations (single source of truth)
 src/types/meal-plan.ts        MealPlanEntry, ShoppingList types
 src/import/                   THE import pipeline: importRecipe(), zod contract, parsers (JSON-LD, text,
                               heuristics stub), deep-link/share adapters — no UI deps (docs/IMPORT_API.md)
-src/lib/                      pure helpers: recipe-utils (create/search/filter/cooked), dates, shopping,
-                              theme (dark colors)
+src/lib/                      pure helpers: recipe-utils (create/search/filter/sort/cooked/rating),
+                              ingredients (parse/scale/convert/format), units, timers (detect step times),
+                              shopping (merge/scale/pantry-skip; grocery run), pantry (rank by on-hand),
+                              dates, theme (dark colors)
 src/storage/                  repositories over a KeyValueStore (AsyncStorage by default; inject one in tests):
-                              kv.ts (createCollection), recipes.ts (recipes + categories), meal-plan.ts
+                              kv.ts (createCollection), recipes.ts (recipes + categories), meal-plan.ts,
+                              pantry.ts, settings.ts
 src/data/seed.ts    sample recipes inserted on first launch
 __tests__/          jest tests
-.github/workflows/android.yml   CI APK build + `latest-apk` prerelease
+.github/workflows/android.yml   CI: APK artifact every push/PR; Release only on v* tag
 ```
 
 ## Commands
@@ -59,26 +63,28 @@ Run **typecheck, lint and tests** before declaring any task done. They also run 
 Expo changes a lot between SDKs — do not trust memory. Check the versioned docs for the SDK in
 `package.json` (`https://docs.expo.dev/versions/v57.0.0/`) and https://docs.expo.dev/llms.txt.
 
-## How CI builds the APK
+## How CI builds the APK (and when releases happen)
 
-`.github/workflows/android.yml` runs on push to `main`, PRs to `main`, and `workflow_dispatch`:
+`.github/workflows/android.yml` runs on push to `main`, PRs to `main`, `v*` tags, and `workflow_dispatch`:
 
 1. JDK 17 + Node 22, `npm ci`, typecheck/lint/test
 2. `npx expo prebuild --platform android --clean` (with `CI=1`; the old `--non-interactive` flag is deprecated).
    The generated `android/` (and `ios/`) folders are **gitignored** — never commit or hand-edit them;
    configure native behavior through `app.json` / config plugins (Continuous Native Generation).
-3. `./gradlew assembleRelease` (ABIs `arm64-v8a,x86_64`), signed with the Expo template's **debug keystore**
-   — fine for sideloading, **not** for the Play Store.
-4. Uploads the APK as artifact `my-recipe-app-apk`, and (on `main` only) deletes + recreates the rolling
-   prerelease **`latest-apk`** with asset `my-recipe-app.apk`. Stable URL:
-   `https://github.com/jasonvgriffin/my-recipe-app/releases/download/latest-apk/my-recipe-app.apk`
-   The repo is **private**, so downloading requires being signed in to GitHub as someone with access.
+3. `./gradlew assembleRelease` (ABIs `arm64-v8a,x86_64`), currently signed with the Expo template's **debug
+   keystore** — fine for sideloading, not for the Play Store.
+4. Uploads the APK as CI artifact `my-recipe-app-apk` (14-day retention) on **every** run — this is how we prove
+   the build stays green. Download it from the run page while signed in to GitHub (private repo).
+5. **Releases:** a GitHub Release with the APK is published **only** for a pushed tag `v*` (e.g. `v1.0.0`) or a
+   manual run with `publish: true` + `tag`. The tag must match `app.json` `expo.version`; existing releases are
+   never overwritten. **No rolling/incremental releases.** **v1.0.0 = all SPEC items 1–22 complete, and is the
+   first published APK.** Agents must not push `v*` tags or trigger a publish run — Eve/Jason do that.
 
 Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the Android SDK.
 
 ## Branch / PR rules
 
-- `main` is always releasable; every push to `main` ships a new `latest-apk`.
+- `main` must stay green (CI builds the APK on every push/PR). Releases only from `v*` tags (see above).
 - Work on a feature branch; open **small, focused PRs** (one concern each) with a clear description and test notes.
 - CI must be green before merge. **Eve merges** PRs (agents do not self-merge to `main` unless Eve says so).
 - Don't force-push `main`. Don't commit secrets, keystores, `.env` files, or generated `android/`/`ios/` folders.
@@ -90,7 +96,8 @@ Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the And
 - Recipes are **diabetic-friendly and low-carb**. Always track `servings` and `carbsPerServing` (net grams).
 - **Allulose is the only sugar-free sweetener. Never use or suggest monk fruit** (or luo han guo / mogrosides)
   — not in seed data, examples, tests, AI prompts, or suggestions. `validateRecipeInput` enforces this; keep it.
-- Never default unknown carbs to 0 (`carbsPerServing` is optional = unknown); that would mislead a diabetic user.
+- Net carbs live in `recipe.nutrition.netCarbsG` (use `netCarbs()`); all nutrition is per serving.
+- Never default unknown carbs/nutrition to 0 (`carbsPerServing` is optional = unknown); that would mislead a diabetic user.
 - Keep the `Recipe` schema in `src/types/recipe.ts` JSON-serializable and versioned (`schemaVersion`);
   bump `RECIPE_SCHEMA_VERSION` and extend `migrateRecipe` when changing the stored shape.
 - Put logic in pure, unit-tested helpers (`src/lib`, `src/storage`); keep screens thin.

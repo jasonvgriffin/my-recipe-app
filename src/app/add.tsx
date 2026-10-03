@@ -21,10 +21,10 @@ export default function AddRecipeScreen() {
     const input: RecipeInput = {
       title,
       ingredients: parseLines(ingredients).map((text) => ({ text })),
-      steps: parseLines(steps),
+      steps: parseLines(steps).map((text) => ({ text })),
       tags: parseTags(tags),
       servings: Number(servings),
-      carbsPerServing: carbs.trim() === '' ? NaN : Number(carbs),
+      nutrition: { netCarbsG: carbs.trim() === '' ? undefined : Number(carbs), source: 'manual' },
     };
     const result = validateRecipeInput(input);
     setErrors(result.errors);
@@ -66,7 +66,7 @@ export default function AddRecipeScreen() {
           placeholder={'Preheat oven to 400°F\nRoast 25 minutes'}
         />
       </Field>
-      {/* TODO(spec #1,#3,#4,#6): link import, category picker, photo picker, notes. */}
+      {/* TODO(spec #1,#3,#4,#6,#17,#22): link import, category picker, photo, notes, full nutrition, rating. */}
       <Field label="Tags (comma separated)">
         <TextInput
           placeholderTextColor={colors.placeholder} style={styles.input} value={tags} onChangeText={setTags} autoCapitalize="none" />

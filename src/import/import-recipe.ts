@@ -80,7 +80,7 @@ export async function importRecipeWith(
     description: draft.description,
     notes: draft.notes,
     ingredients: draft.ingredients.map((i) => ({ text: typeof i === 'string' ? i : i.text })),
-    steps: draft.steps,
+    steps: draft.steps.map((st) => (typeof st === 'string' ? { text: st } : st)),
   });
   if (forbidden.length > 0) {
     return fail(

@@ -1,3 +1,5 @@
+import { createPantryStore } from '@/storage/pantry';
+import { createSettingsStore } from '@/storage/settings';
 import { SEED_RECIPES } from '@/data/seed';
 import { createRecipe } from '@/lib/recipe-utils';
 import { createRecipeStore, RECIPES_STORAGE_KEY, type KeyValueStore } from '@/storage/recipes';
@@ -25,7 +27,7 @@ describe('recipe store', () => {
   it('saves, updates, gets, removes and lists tags', async () => {
     const store = createRecipeStore(memoryStore());
     const r = createRecipe(
-      { title: 'Eggs', ingredients: [{ text: '2 eggs' }], steps: ['Scramble'], tags: ['breakfast'], servings: 1, carbsPerServing: 1 },
+      { title: 'Eggs', ingredients: [{ text: '2 eggs' }], steps: [{ text: 'Scramble' }], tags: ['breakfast'], servings: 1, nutrition: { netCarbsG: 1 } },
       new Date('2026-01-01T00:00:00Z'),
       'eggs',
     );
@@ -45,5 +47,20 @@ describe('recipe store', () => {
     expect(await store.list()).toEqual([]);
     kv.data.set(RECIPES_STORAGE_KEY, JSON.stringify([{ id: 1 }, SEED_RECIPES[0]]));
     expect(await store.list()).toEqual([SEED_RECIPES[0]]);
+  });
+});
+
+describe('pantry + settings stores', () => {
+  it('upserts pantry items by normalized name and persists settings', async () => {
+    const kv = memoryStore();
+    const pantry = createPantryStore(kv);
+    const a = await pantry.upsert('Almond Flour', 2, 'cup');
+    const b = await pantry.upsert('almond  flour!', 3, 'cup');
+    expect(b.id).toBe(a.id);
+    expect(await pantry.list()).toEqual([expect.objectContaining({ name: 'almond flour', quantity: 3 })]);
+    const settings = createSettingsStore(kv);
+    expect((await settings.get()).unitSystem).toBe('original');
+    await settings.update({ unitSystem: 'metric' });
+    expect((await settings.get()).unitSystem).toBe('metric');
   });
 });

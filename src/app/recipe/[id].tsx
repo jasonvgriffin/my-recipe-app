@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { toIsoDate } from '@/lib/dates';
+import { formatIngredient } from '@/lib/ingredients';
 import { setCooked } from '@/lib/recipe-utils';
+import { formatDuration } from '@/lib/timers';
 
 import { colors } from '@/lib/theme';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
-import { isLowCarb, type Recipe } from '@/types/recipe';
+import { isLowCarb, netCarbs, type Recipe } from '@/types/recipe';
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,6 +50,8 @@ export default function RecipeDetailScreen() {
     ]);
   }
 
+  const net = netCarbs(recipe.nutrition);
+
   async function toggleCooked(r: Recipe) {
     const next = setCooked(r, !r.cooked);
     await recipeStore.save(next);
@@ -59,6 +63,8 @@ export default function RecipeDetailScreen() {
     Alert.alert('Added to meal plan', `“${r.title}” is planned for today.`);
   }
 
+  // TODO(spec #15, #19): tap ⏱ to start a background step timer w/ notification; "Cook" button → cooking mode.
+  // TODO(spec #16, #22, #18): unit toggle (convertIngredient), star rating (setRating), grocery-run for this recipe.
   // TODO(spec #2): Edit screen (all fields, substitute/add/delete ingredients).
   // TODO(spec #4): photo display; TODO(spec #14): Share button (text / photo / link, any combination).
   return (
@@ -68,16 +74,8 @@ export default function RecipeDetailScreen() {
       {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}
       <View style={styles.stats}>
         <Stat label="Servings" value={String(recipe.servings)} />
-        <Stat
-          label="Net carbs / serving"
-          value={recipe.carbsPerServing === undefined ? 'unknown' : `${recipe.carbsPerServing} g`}
-        />
-        <Stat
-          label="Total net carbs"
-          value={
-            recipe.carbsPerServing === undefined ? 'unknown' : `${+(recipe.carbsPerServing * recipe.servings).toFixed(1)} g`
-          }
-        />
+        <Stat label="Net carbs / serving" value={net === undefined ? 'unknown' : `${net} g`} />
+        <Stat label="Calories / serving" value={recipe.nutrition.calories === undefined ? '—' : String(recipe.nutrition.calories)} />
       </View>
       {isLowCarb(recipe) && <Text style={styles.badge}>Low-carb</Text>}
       {recipe.tags.length > 0 && (
@@ -110,13 +108,14 @@ export default function RecipeDetailScreen() {
       <Text style={styles.section}>Ingredients</Text>
       {recipe.ingredients.map((i, idx) => (
         <Text key={idx} style={styles.item}>
-          • {i.text}
+          • {formatIngredient(i)}
         </Text>
       ))}
       <Text style={styles.section}>Steps</Text>
-      {recipe.steps.map((s, idx) => (
+      {recipe.steps.map((st, idx) => (
         <Text key={idx} style={styles.item}>
-          {idx + 1}. {s}
+          {idx + 1}. {st.text}
+          {st.durationSeconds ? <Text style={styles.timer}>  ⏱ {formatDuration(st.durationSeconds)}</Text> : null}
         </Text>
       ))}
       {recipe.notes ? (
@@ -183,6 +182,7 @@ const styles = StyleSheet.create({
   actionOn: { backgroundColor: colors.primary },
   actionText: { color: colors.primary, fontWeight: '600' },
   actionTextOn: { color: colors.primaryText },
+  timer: { color: colors.primary, fontWeight: '600' },
   meta: { color: colors.muted, marginTop: 8 },
   link: { color: colors.primary, marginTop: 8, textDecorationLine: 'underline' },
   section: { fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 8, color: colors.text },

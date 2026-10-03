@@ -37,13 +37,18 @@ interface ImportSource {
 
 interface RecipeDraft {          // validated with zod (RecipeDraftSchema); unknown keys stripped
   title: string;                 // required, 1–300 chars
-  ingredients?: (string | { text: string; substitutionNote?: string })[];
-  steps?: string[];              // at least one ingredient OR step required
+  ingredients?: (string | { text: string; substitutionNote?: string })[]; // parsed into
+                                 // { quantity, quantityMax, unit, name, note } on save (spec #16/#18/#21)
+  steps?: (string | { text: string; durationSeconds?: number })[]; // at least one ingredient OR step;
+                                 // timers auto-detected from text when durationSeconds absent (spec #15)
   description?: string;
   tags?: string[];               // lower-cased + deduped
   categories?: string[];         // category NAMES; created if missing (spec #3)
   servings?: number;             // > 0; defaults to 1 with a warning
-  carbsPerServing?: number;      // net g, >= 0; left UNKNOWN (never 0) with a warning
+  nutrition?: { calories?, carbsG?, netCarbsG?, proteinG?, fatG?, fiberG? }; // per serving (spec #17)
+  carbsPerServing?: number;      // shorthand for nutrition.netCarbsG; if neither given, net = carbs − fiber
+                                 // when both known, else left UNKNOWN (never 0) with a warning
+  rating?: number;               // 1–5 (spec #22)
   notes?: string;
   photoUrl?: string;             // http(s) or file://
   sourceUrl?: string;            // http(s)
@@ -73,7 +78,7 @@ type ImportErrorCode =
 1. **Validate input** (`RecipeImportInputSchema`, zod discriminated union on `kind`).
 2. **Produce a draft**
    - `url`: `deps.fetchHtml(url)` → `extractJsonLdRecipe` (schema.org `Recipe` JSON-LD, incl. `@graph`,
-     `HowToSection`, `recipeYield`, `keywords`, `recipeCategory`, `image`) → fallback
+     `HowToSection`, `recipeYield`, `keywords`, `recipeCategory`, `image`, `nutrition`) → fallback
      `extractRecipeHeuristically` (**stub — TODO**). The page URL becomes `sourceUrl`.
    - `text`: `parseRecipeText` (first line = title; "Ingredients" / "Steps|Instructions|Directions" sections).
    - `structured`: used as given.
