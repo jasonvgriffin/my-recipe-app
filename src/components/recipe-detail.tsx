@@ -31,6 +31,7 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
   // Optional cross-links (meal plan) only appear when that feature is enabled — recipes-first rule.
   // Gated entry points (src/entitlements) — recipe view/edit/delete itself is never gated.
   const showPlanToday = useFeatureVisible('mealPlan');
+  const showGroceryRun = useFeatureVisible('groceryRun');
   const timers = useFeature('timers').available;
   const tags = useFeature('tags').available;
 
@@ -96,7 +97,7 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
   }
 
   // TODO(spec #15, #19): tap ⏱ to start a background step timer w/ notification; "Cook" button → cooking mode.
-  // TODO(spec #16, #22, #18): unit toggle (convertIngredient), star rating (setRating), grocery-run for this recipe.
+  // TODO(spec #16, #22): unit toggle (convertIngredient), star rating (setRating).
   // TODO(spec #2): Edit screen (all fields, substitute/add/delete ingredients).
   // TODO(spec #4): photo display; TODO(spec #14): Share button (text / photo / link, any combination).
   return (
@@ -138,6 +139,13 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
           <Pressable style={styles.action} onPress={() => planToday(recipe)} testID="plan-today-button">
             <Text style={styles.actionText}>Plan for today</Text>
           </Pressable>
+        ) : null}
+        {showGroceryRun ? (
+          <Link href={{ pathname: '/grocery-run', params: { recipeId: recipe.id } }} asChild>
+            <Pressable style={styles.action} testID="grocery-run-button">
+              <Text style={styles.actionText}>Grocery run</Text>
+            </Pressable>
+          </Link>
         ) : null}
       </View>
       {recipe.lastCookedAt && (
@@ -222,8 +230,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
   },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  action: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.primary, alignItems: 'center' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  action: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    minHeight: 44,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actionOn: { backgroundColor: colors.primary },
   actionText: { color: colors.primary, fontWeight: '600' },
   actionTextOn: { color: colors.primaryText },

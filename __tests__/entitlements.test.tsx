@@ -161,6 +161,8 @@ const routes = () => ({
   add: require('@/app/add').default,
   'recipe/[id]': require('@/app/recipe/[id]').default,
   'cook/[action]': require('@/app/cook/[action]').default,
+  'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
+  'grocery-run': require('@/app/grocery-run').default,
   settings: require('@/app/settings').default,
 });
 

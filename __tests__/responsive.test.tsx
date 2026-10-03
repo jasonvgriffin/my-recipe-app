@@ -109,13 +109,31 @@ describe.each([
   });
 
   it.each([
-    ['(tabs)/meal-plan', 'Nothing planned'],
+    ['(tabs)/meal-plan', 'Today'],
     ['(tabs)/shopping', 'No list yet for this week.'],
     ['add', 'Save recipe'],
   ])('%s renders (width-capped)', async (route, text) => {
     const Screen = require(`@/app/${route}`).default;
     renderRouter({ index: Screen }, { initialUrl: '/' });
     expect((await screen.findAllByText(text)).length).toBeGreaterThan(0);
+  });
+
+  it('meal plan is a calendar, with the selected day beside it when expanded', async () => {
+    const Screen = require('@/app/(tabs)/meal-plan').default;
+    renderRouter({ index: Screen }, { initialUrl: '/' });
+    expect(await screen.findByTestId('meal-calendar')).toBeTruthy();
+    expect(screen.getByTestId(width >= 600 ? 'meal-plan-layout-dual' : 'meal-plan-layout-single')).toBeTruthy();
+    if (width >= 600) expect(screen.getByTestId('day-plan')).toBeTruthy();
+    else expect(screen.queryByTestId('day-plan')).toBeNull();
+  });
+
+  it('shopping list shows the pantry pane only when expanded', async () => {
+    const Screen = require('@/app/(tabs)/shopping').default;
+    renderRouter({ index: Screen }, { initialUrl: '/' });
+    expect(await screen.findByText('No list yet for this week.')).toBeTruthy();
+    expect(screen.getByTestId(width >= 600 ? 'shopping-layout-dual' : 'shopping-layout-single')).toBeTruthy();
+    if (width >= 600) expect(screen.getByTestId('pantry-on-hand')).toBeTruthy();
+    else expect(screen.queryByTestId('pantry-on-hand')).toBeNull();
   });
 
   it('cook screen (deep link myrecipeapp://cook/{id}) shows the current step', async () => {
