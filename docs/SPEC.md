@@ -124,3 +124,10 @@ follow the Recipes-are-the-core rule above.
 - **Settings:** the “cooked recently” window setting is gone — the filter uses a fixed 14 days (#9). New
   “AI assistants (MCP)” section shows the MCP server URL (`MCP_SERVER_URL` in `src/config/index.ts`) with a copy
   button (#28). The app version (“Version x.y.z”, from expo-constants / app config) is shown at the bottom.
+
+## v1.0.3 UI changes (Jason, Oct 3 2026)
+
+- **Shopping List add area** (`src/components/shopping-list-view.tsx`): the old `[Add an item][Add][Scan]` row is now a
+  full-width outlined **Scan Item** button (same style as **Grocery run**) that opens the existing shopping-list barcode
+  scanner (`src/app/shopping/scan.tsx`), the word “or” centered below it, then the `[Add an item][Add]` row. When barcode
+  scanning is locked or hidden, the Scan Item button and the “or” are both left out (#12, #27).

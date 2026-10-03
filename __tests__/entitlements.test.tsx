@@ -278,6 +278,8 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     renderRouter(routes(), { initialUrl: '/shopping' });
     expect(await screen.findByTestId('build-list')).toBeTruthy();
     expect(screen.queryByTestId('shopping-scan-button')).toBeNull();
+    expect(screen.queryByTestId('shopping-scan-or')).toBeNull(); // no dangling “or”
+    expect(screen.getByTestId('manual-input')).toBeTruthy();
   });
 
   it('a locked cook-with-me deep link shows a neutral message (no payment UI)', async () => {

@@ -105,6 +105,19 @@ describe('barcode camera (spec #27)', () => {
     ]);
   });
 
+  it('shopping list: full-width Scan Item button, then “or”, then the Add an item row', async () => {
+    renderScan('/shopping');
+    const scan = await screen.findByTestId('shopping-scan-button');
+    expect(scan).toHaveTextContent('Scan Item');
+    expect(screen.getByTestId('shopping-scan-or')).toHaveTextContent('or');
+    const tree = JSON.stringify(screen.toJSON());
+    const order = ['shopping-scan-button', 'shopping-scan-or', 'manual-input', 'add-manual'].map((id) =>
+      tree.indexOf(`"testID":"${id}"`),
+    );
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
   it('shopping list: scan adds the product name as a line and returns to the list', async () => {
     jest.spyOn(barcodeLookup, 'lookup').mockResolvedValue({
       status: 'found',
