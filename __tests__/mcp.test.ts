@@ -5,23 +5,20 @@ import {
   createMcpHandler,
   createMemoryRateLimiter,
   createMemoryRepo,
-  createSealer,
-  isAllowedRedirectUri,
-  pkceMatches,
-  b64url,
+  isAuthorizationId,
+  protectedResourceMetadata,
+  supabaseAuthIssuer,
   type McpAuthBackend,
 } from '@/mcp';
 import { isPublicHttpUrl, toolDefinitions } from '@/mcp/tools';
 import type { FeatureId } from '@/entitlements';
 
-const ISSUER = 'https://ref.supabase.co/functions/v1/mcp';
-const REDIRECT = 'https://claude.ai/api/mcp/auth_callback';
+const RESOURCE = 'https://ref.supabase.co/functions/v1/mcp';
+const AUTH_SERVER = 'https://ref.supabase.co/auth/v1';
+const AUTH_ID = 'figzye2ye5tgratgakx4y4wf5yo5s6ki';
+const REDIRECT = 'https://grok.com/connectors-oauth-exchange-code/';
 const NOW = new Date('2026-10-05T15:00:00Z'); // a Monday
-const VERIFIER = 'v'.repeat(43) + '-._~abc';
-
-async function challengeFor(verifier: string) {
-  return b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier))));
-}
+const OAUTH_TOKEN = 'sb-oauth-access-1'; // what Supabase Auth's token endpoint hands the client
 
 const RECIPE_HTML = `<html><head><script type="application/ld+json">${JSON.stringify({
   '@context': 'https://schema.org',
@@ -33,10 +30,10 @@ const RECIPE_HTML = `<html><head><script type="application/ld+json">${JSON.strin
 })}</script></head><body></body></html>`;
 
 async function setup(opts: { household?: boolean; canUse?: (id: FeatureId) => boolean; perMinute?: number } = {}) {
-  const sealer = await createSealer('test-secret-0123456789', () => NOW);
   const repo = createMemoryRepo('h1', 'u1', () => NOW);
   const sent: string[] = [];
-  let refreshCount = 0;
+  const approved: string[] = [];
+  const ended: string[] = [];
   const auth: McpAuthBackend = {
     async sendCode(email) {
       if (email !== 'jason@example.com') throw new Error('Signups not allowed for otp');
@@ -44,21 +41,24 @@ async function setup(opts: { household?: boolean; canUse?: (id: FeatureId) => bo
     },
     async verifyCode(email, code) {
       if (email !== 'jason@example.com' || code !== '123456') throw new Error('Token has expired or is invalid');
-      return { accessToken: 'sb-access-1', refreshToken: 'sb-refresh-1', expiresIn: 3600, userId: 'u1' };
+      return { accessToken: 'sb-consent-session', userId: 'u1' };
     },
-    async refresh(rt) {
-      if (rt !== 'sb-refresh-1') throw new Error('invalid');
-      refreshCount++;
-      return { accessToken: 'sb-access-2', refreshToken: 'sb-refresh-1', expiresIn: 3600, userId: 'u1' };
+    async approve(id, at) {
+      if (id !== AUTH_ID || at !== 'sb-consent-session') throw new Error('authorization not found');
+      approved.push(id);
+      return { redirectUrl: `${REDIRECT}?code=abc&state=st8` };
+    },
+    async endSession(at) {
+      ended.push(at);
     },
     async getUser(at) {
-      return at.startsWith('sb-access') ? { id: 'u1', email: 'jason@example.com' } : undefined;
+      return at.startsWith('sb-') ? { id: 'u1', email: 'jason@example.com' } : undefined;
     },
   };
   const fetched: string[] = [];
   const handler = createMcpHandler({
-    issuer: ISSUER,
-    sealer,
+    resource: RESOURCE,
+    authorizationServer: AUTH_SERVER,
     auth,
     connect: async () => (opts.household === false ? undefined : repo),
     rateLimiter: (() => {
@@ -72,44 +72,19 @@ async function setup(opts: { household?: boolean; canUse?: (id: FeatureId) => bo
     canUse: opts.canUse ?? (() => true),
     now: () => NOW,
   });
-  const call = (path: string, init?: RequestInit) => handler(new Request(`${ISSUER}${path}`, init));
-  const form = (path: string, body: Record<string, string>) =>
-    call(path, {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(body).toString(),
-    });
-
-  async function connect() {
-    const reg = await call('/register', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ redirect_uris: [REDIRECT], client_name: 'Claude' }),
-    });
-    const { client_id } = (await reg.json()) as { client_id: string };
-    const challenge = await challengeFor(VERIFIER);
-    const page = await call(
-      `/authorize?response_type=code&client_id=${encodeURIComponent(client_id)}&redirect_uri=${encodeURIComponent(REDIRECT)}&code_challenge=${challenge}&code_challenge_method=S256&state=st8`,
-    );
-    const request = (await page.text()).match(/name="request" value="([^"]+)"/)![1];
-    const step2 = await form('/authorize', { request, step: 'send', email: 'Jason@Example.com' });
-    expect(await step2.text()).toContain('Code sent to jason@example.com');
-    const done = await form('/authorize', { request, step: 'verify', email: 'jason@example.com', code: '123 456' });
-    return { done, client_id, request };
+  const call = (path: string, init?: RequestInit) => handler(new Request(`${RESOURCE}${path}`, init));
+  const post = async (path: string, body: Record<string, string>) => {
+    const res = await call(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    return { status: res.status, headers: res.headers, body: (await res.json()) as { ok?: boolean; error?: string; redirect_url?: string } };
+  };
+  async function consent(email = 'Jason@Example.com', code = '123 456') {
+    const step1 = await post('/consent/send', { email });
+    if (step1.status !== 200) return step1;
+    return post('/consent/verify', { email, code, authorization_id: AUTH_ID });
   }
-
+  /** The access token a client holds after Supabase Auth's token endpoint (outside this server). */
   async function token() {
-    const { done, client_id } = await connect();
-    expect(done.status).toBe(302);
-    const loc = new URL(done.headers.get('location')!);
-    const res = await form('/token', {
-      grant_type: 'authorization_code',
-      code: loc.searchParams.get('code')!,
-      client_id,
-      redirect_uri: REDIRECT,
-      code_verifier: VERIFIER,
-    });
-    return (await res.json()) as { access_token: string; refresh_token: string; token_type: string; expires_in: number };
+    return { access_token: OAUTH_TOKEN };
   }
 
   let rpcId = 0;
@@ -126,84 +101,63 @@ async function setup(opts: { household?: boolean; canUse?: (id: FeatureId) => bo
     return r.body.result as { isError?: boolean; structuredContent?: any; content: { text: string }[] };
   }
 
-  return { call, form, connect, token, rpc, tool, repo, sent, fetched, refreshCount: () => refreshCount };
+  return { call, post, consent, token, rpc, tool, repo, sent, approved, ended, fetched };
 }
 
 describe('MCP server: OAuth discovery and auth', () => {
-  it('serves OAuth metadata and challenges unauthenticated MCP calls', async () => {
+  it('points clients at Supabase Auth and challenges unauthenticated MCP calls', async () => {
     const s = await setup();
-    const as = await (await s.call('/.well-known/oauth-authorization-server')).json();
-    expect(as).toMatchObject({
-      issuer: ISSUER,
-      token_endpoint: `${ISSUER}/token`,
-      registration_endpoint: `${ISSUER}/register`,
-      code_challenge_methods_supported: ['S256'],
-    });
-    expect((await (await s.call('/.well-known/openid-configuration')).json()).issuer).toBe(ISSUER);
-    expect((await (await s.call('/.well-known/oauth-protected-resource')).json()).authorization_servers).toEqual([ISSUER]);
-    const res = await s.call('', { method: 'POST', body: '{}' });
+    const prm = await (await s.call('/.well-known/oauth-protected-resource')).json();
+    expect(prm).toMatchObject({ resource: RESOURCE, authorization_servers: [AUTH_SERVER], bearer_methods_supported: ['header'] });
+    // RFC 9728 path-suffixed form some clients ask for on the resource path
+    expect((await (await s.call('/.well-known/oauth-protected-resource/functions/v1/mcp')).json()).resource).toBe(RESOURCE);
+    // The old self-hosted authorization server is gone (Supabase serves root-level RFC 8414 discovery).
+    expect((await s.call('/.well-known/oauth-authorization-server')).status).toBe(404);
+    expect((await s.call('/register', { method: 'POST', body: '{}' })).status).toBe(404);
+    const res = await s.call('', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"jsonrpc":"2.0","id":1,"method":"initialize"}' });
     expect(res.status).toBe(401);
-    expect(res.headers.get('www-authenticate')).toContain(`resource_metadata="${ISSUER}/.well-known/oauth-protected-resource"`);
+    expect(res.headers.get('www-authenticate')).toContain(`resource_metadata="${RESOURCE}/.well-known/oauth-protected-resource"`);
+    expect(res.headers.get('access-control-expose-headers')).toContain('WWW-Authenticate');
     expect((await s.call('', { method: 'GET' })).status).toBe(405);
+    expect((await s.call('/consent/send', { method: 'OPTIONS' })).headers.get('access-control-allow-origin')).toBe('*');
   });
 
-  it('signs in with the household email code, exchanges the code with PKCE, and refreshes', async () => {
+  it('consents with the household email code, approves the Supabase authorization, and ends the consent session', async () => {
     const s = await setup();
-    const { done } = await s.connect();
+    const r = await s.consent();
+    expect(r.status).toBe(200);
     expect(s.sent).toEqual(['jason@example.com']);
-    const loc = new URL(done.headers.get('location')!);
-    expect(loc.origin + loc.pathname).toBe(REDIRECT);
-    expect(loc.searchParams.get('state')).toBe('st8');
+    expect(s.approved).toEqual([AUTH_ID]);
+    expect(s.ended).toEqual(['sb-consent-session']);
+    const to = new URL(r.body.redirect_url!);
+    expect(to.origin + to.pathname).toBe(REDIRECT);
+    expect(to.searchParams.get('state')).toBe('st8');
     const t = await s.token();
-    expect(t.token_type).toBe('Bearer');
-    expect(t.expires_in).toBe(3600);
-    expect(t.access_token).not.toContain('sb-access'); // Supabase tokens are sealed, never handed out raw
-    const refreshed = await s.form('/token', { grant_type: 'refresh_token', refresh_token: t.refresh_token });
-    expect(refreshed.status).toBe(200);
-    expect(s.refreshCount()).toBe(1);
-    const init = await s.rpc(((await refreshed.json()) as { access_token: string }).access_token, 'initialize', {
-      protocolVersion: '2025-06-18',
-    });
+    const init = await s.rpc(t.access_token, 'initialize', { protocolVersion: '2025-06-18' });
     expect(init.body.result).toMatchObject({ protocolVersion: '2025-06-18', serverInfo: { name: 'my-recipe-app' } });
+    expect((await s.rpc(t.access_token, 'initialize', { protocolVersion: '2099-01-01' })).body.result.protocolVersion).toBe('2025-06-18');
   });
 
-  it('rejects a wrong PKCE verifier, a mismatched redirect, bad codes and unknown emails', async () => {
+  it('rejects bad codes, unknown emails, bad authorization ids and invalid tokens', async () => {
     const s = await setup();
-    const { done, client_id, request } = await s.connect();
-    const code = new URL(done.headers.get('location')!).searchParams.get('code')!;
-    const bad = await s.form('/token', { grant_type: 'authorization_code', code, client_id, code_verifier: 'x'.repeat(43) });
-    expect(bad.status).toBe(400);
-    expect((await bad.json()).error).toBe('invalid_grant');
-    const wrongRedirect = await s.form('/token', {
-      grant_type: 'authorization_code',
-      code,
-      client_id,
-      redirect_uri: 'https://evil.example/cb',
-      code_verifier: VERIFIER,
-    });
-    expect(wrongRedirect.status).toBe(400);
-    const wrongCode = await s.form('/authorize', { request, step: 'verify', email: 'jason@example.com', code: '000000' });
-    expect(await wrongCode.text()).toContain('That code did not work');
-    const stranger = await s.form('/authorize', { request, step: 'send', email: 'someone@example.com' });
-    expect(await stranger.text()).toContain('Use the email you signed in with');
-    const unregistered = await s.call(
-      `/authorize?response_type=code&client_id=${encodeURIComponent(client_id)}&redirect_uri=${encodeURIComponent('https://evil.example/cb')}&code_challenge=abc`,
-    );
-    expect(unregistered.status).toBe(400);
-    const regBad = await s.call('/register', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ redirect_uris: ['javascript:alert(1)'] }),
-    });
-    expect(regBad.status).toBe(400);
+    expect((await s.consent('jason@example.com', '000000')).body.error).toContain('That code did not work');
+    expect((await s.consent('someone@example.com')).body.error).toContain('Use the email you signed in with');
+    expect((await s.post('/consent/send', { email: 'nope' })).status).toBe(400);
+    const badId = await s.post('/consent/verify', { email: 'jason@example.com', code: '123456', authorization_id: '../admin' });
+    expect(badId.status).toBe(400);
+    const expired = await s.post('/consent/verify', { email: 'jason@example.com', code: '123456', authorization_id: 'x'.repeat(20) });
+    expect(expired.body.error).toContain('expired');
+    expect(s.approved).toEqual([]);
     expect((await s.rpc('not-a-token', 'ping')).status).toBe(401);
   });
 
   it('requires a household with synced recipes', async () => {
     const s = await setup({ household: false });
-    const { done } = await s.connect();
-    expect(done.status).toBe(200);
-    expect(await done.text()).toContain('No household found');
+    const r = await s.consent();
+    expect(r.status).toBe(403);
+    expect(r.body.error).toContain('No household found');
+    expect(s.approved).toEqual([]);
+    expect(s.ended).toEqual(['sb-consent-session']);
   });
 
   it('enforces the mcpAccess entitlement server-side', async () => {
@@ -213,6 +167,8 @@ describe('MCP server: OAuth discovery and auth', () => {
     expect((await s.rpc(t.access_token, 'ping')).status).toBe(200);
     allowed = false;
     expect((await s.rpc(t.access_token, 'ping')).status).toBe(403);
+    expect((await s.consent()).status).toBe(403);
+    expect(s.approved).toEqual([]);
   });
 
   it('rate limits per user with 429 and Retry-After', async () => {
@@ -326,24 +282,12 @@ describe('MCP server: tools', () => {
 });
 
 describe('MCP OAuth helpers', () => {
-  it('verifies PKCE and redirect URIs', async () => {
-    expect(await pkceMatches(VERIFIER, await challengeFor(VERIFIER))).toBe(true);
-    expect(await pkceMatches('short', await challengeFor('short'))).toBe(false);
-    expect(isAllowedRedirectUri('https://chatgpt.com/connector_platform_oauth_redirect')).toBe(true);
-    expect(isAllowedRedirectUri('http://127.0.0.1:6274/oauth/callback')).toBe(true);
-    expect(isAllowedRedirectUri('http://example.com/cb')).toBe(false);
-    expect(isAllowedRedirectUri('javascript:alert(1)')).toBe(false);
-  });
-
-  it('expires and never mixes sealed token kinds', async () => {
-    let now = NOW;
-    const sealer = await createSealer('another-secret-0123456789', () => now);
-    const code = await sealer.seal('code', { a: 1 }, 60);
-    expect(await sealer.open('code', code)).toMatchObject({ a: 1 });
-    expect(await sealer.open('access', code)).toBeUndefined();
-    now = new Date(NOW.getTime() + 61_000);
-    expect(await sealer.open('code', code)).toBeUndefined();
-    expect(await sealer.open('code', code.slice(0, -2) + 'AA')).toBeUndefined();
+  it('builds the Supabase issuer and resource metadata, and validates authorization ids', () => {
+    expect(supabaseAuthIssuer('https://ref.supabase.co/')).toBe(AUTH_SERVER);
+    expect(protectedResourceMetadata(RESOURCE, AUTH_SERVER).resource).toBe(RESOURCE);
+    expect(isAuthorizationId(AUTH_ID)).toBe(true);
+    expect(isAuthorizationId('a/b?c')).toBe(false);
+    expect(isAuthorizationId('')).toBe(false);
   });
 });
 
