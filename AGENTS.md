@@ -68,9 +68,9 @@ src/lib/                      pure helpers: recipe-utils (create/search/filter/s
 src/storage/                  repositories over a KeyValueStore (AsyncStorage by default; inject one in tests):
                               kv.ts (createCollection), recipes.ts (recipes + categories), meal-plan.ts,
                               pantry.ts, settings.ts
-src/app/(tabs)/index.tsx      Recipes tab: five green title links (Search, Existing Recipes, Share, Add, pantry match)
+src/app/(tabs)/index.tsx      Recipes tab = the recipe list (components/recipe-list.tsx; v1.0.4, no home page)
 src/config/index.ts           app constants: MCP_SERVER_URL, appVersion() (expo-constants)
-src/app/recipes.tsx           Existing Recipes: search, filters, list + detail
+src/app/recipes.tsx           stack route for the same list (deep links ?focus=search, ?select=pdf)
 src/app/auth.tsx              magic-link redirect (myrecipeapp://auth): sign in, then Settings → Household
 src/storage/legacy-samples.ts identifies untouched v1.0.0 sample recipes (no seeding since v1.0.1)
 test-helpers/sample-recipes.ts  sample recipes for tests only

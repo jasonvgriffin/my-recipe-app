@@ -201,13 +201,18 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     featureGate.setProvider(new NoEntitlements());
     featureGate.setConfig(premium(...ALL_FEATURE_IDS));
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
+    await screen.findByTestId('search-input');
     expect(screen.queryByTestId('import-recipe-button')).toBeNull();
     await waitFor(() => expect(screen.queryByText('Meal Plan')).toBeNull());
     expect(screen.queryByText('Shopping')).toBeNull();
     expect(screen.queryByText('Pantry')).toBeNull();
 
-    await act(async () => fireEvent.press(screen.getByTestId('add-recipe-button')));
+    // v1.0.4: the + menu keeps only the core recipe actions (locked Share Recipes / What Can I Make? are gone).
+    await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
+    expect(screen.queryByTestId('add-menu-share-recipe')).toBeNull();
+    expect(screen.queryByTestId('add-menu-what-can-i-make')).toBeNull();
+    expect(screen.getByTestId('add-menu-search-recipes')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('add-menu-add-recipe')));
     await screen.findByText('Save recipe');
     expect(screen.queryByText('Tags (comma separated)')).toBeNull();
     fireEvent.changeText(screen.getByPlaceholderText('e.g. Cauliflower Mac & Cheese'), 'Zucchini Lasagna');
@@ -215,13 +220,10 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Layer\nBake 30 minutes');
     await act(async () => fireEvent.press(screen.getByText('Save recipe')));
 
-    // Back on the Recipes tab: locked share / pantry buttons are gone, the core buttons stay.
-    await screen.findByTestId('home-existing');
-    expect(screen.queryByTestId('home-share')).toBeNull();
-    expect(screen.queryByTestId('home-pantry-match')).toBeNull();
-    expect(screen.getByTestId('home-search')).toBeTruthy();
-    await act(async () => fireEvent.press(screen.getByTestId('home-existing')));
+    // Back on the Recipes tab (the list): no import link, no PDF picker.
+    await screen.findByTestId('search-input');
     expect(screen.queryByTestId('import-recipe-button')).toBeNull();
+    expect(screen.queryByTestId('pdf-select-button')).toBeNull();
     await act(async () => fireEvent.press(await screen.findByText('Zucchini Lasagna')));
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
     expect(screen.getByText('Mark cooked')).toBeTruthy();
@@ -243,7 +245,7 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     featureGate.setProvider(new NoEntitlements());
     featureGate.setConfig(premium(...ALL_FEATURE_IDS));
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
+    await screen.findByTestId('search-input');
     await waitFor(() => expect(screen.queryByText('Meal Plan')).toBeNull());
     expect(screen.queryByText('Shopping')).toBeNull();
     await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));

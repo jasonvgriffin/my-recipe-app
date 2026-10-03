@@ -83,7 +83,7 @@ export function ShoppingListView({
       </Pressable>
       {showGroceryRun ? (
         <Pressable accessibilityRole="button" onPress={onGroceryRun} style={styles.secondary} testID="grocery-run-button">
-          <Text style={styles.secondaryText}>Grocery run</Text>
+          <Text style={styles.secondaryText}>Shopping List</Text>
         </Pressable>
       ) : null}
       {added ? (

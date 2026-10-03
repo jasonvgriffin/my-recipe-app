@@ -280,7 +280,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
         {showGroceryRun ? (
           <Link href={{ pathname: '/grocery-run', params: { recipeId: recipe.id } }} asChild>
             <Pressable style={styles.action} accessibilityRole="button" testID="grocery-run-button">
-              <Text style={styles.actionText}>Grocery run</Text>
+              <Text style={styles.actionText}>Shopping List</Text>
             </Pressable>
           </Link>
         ) : null}

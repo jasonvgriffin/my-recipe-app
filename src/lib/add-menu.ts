@@ -32,7 +32,7 @@ export const ADD_MENU_ITEMS: readonly AddMenuItem[] = [
   { id: 'add-shopping', label: 'Add to Shopping List', icon: 'cart-outline', needs: ['shoppingList'] },
   { id: 'add-pantry', label: 'Add Pantry Item', icon: 'basket-outline', needs: ['pantry'] },
   { id: 'plan-meal', label: 'Meal Plan', icon: 'calendar-outline', needs: ['mealPlan'] },
-  { id: 'share-recipe', label: 'Share Recipe', icon: 'share-social-outline', needs: ['pdfExport'] },
+  { id: 'share-recipe', label: 'Share Recipes', icon: 'share-social-outline', needs: ['pdfExport'] },
   { id: 'what-can-i-make', label: 'What Can I Make?', icon: 'restaurant-outline', needs: ['pantry'] },
 ];
 

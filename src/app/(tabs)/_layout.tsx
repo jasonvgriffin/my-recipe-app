@@ -5,7 +5,7 @@ import { Pressable, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddMenuSheet } from '@/components/add-menu-sheet';
-import { AppHeaderTitle, SettingsGearButton } from '@/components/app-header';
+import { AppHeaderTitle, SectionLayout, SettingsGearButton } from '@/components/app-header';
 import { BottomBarCoversInsetProvider } from '@/components/layout';
 import { useFeatureVisible } from '@/hooks/use-feature';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
@@ -17,6 +17,15 @@ import { makeStyles, useColors } from '@/hooks/use-theme';
  * Settings hides them; the + button and More always stay. Pantry lives under More (route kept here so it shows
  * the tab bar). The + button opens `AddMenuSheet` instead of navigating.
  */
+/** v1.0.4: section page title shown just below the banner (`SectionLayout`), per tab route. */
+const TAB_SECTIONS: Record<string, string> = {
+  index: 'Recipes',
+  'meal-plan': 'Meal Plan',
+  shopping: 'Shopping List',
+  more: 'More',
+  pantry: 'Pantry',
+};
+
 function TabIcon({ name, color }: { name: keyof typeof Ionicons.glyphMap; color: ColorValue }) {
   return <Ionicons name={name} size={22} color={color} />;
 }
@@ -33,7 +42,7 @@ function PlusTabButton({ onPress, rail }: { onPress: () => void; rail: boolean }
         onPress={onPress}
         style={({ pressed }) => [styles.plus, !rail && styles.plusRaised, pressed && styles.plusPressed]}
         testID="tab-add-button">
-        <Ionicons name="add" size={34} color={colors.accentText} />
+        <Ionicons name="add" size={PLUS_ICON} color={colors.accentText} />
       </Pressable>
     </View>
   );
@@ -52,6 +61,9 @@ export default function TabsLayout() {
   return (
     <BottomBarCoversInsetProvider value={!useNavigationRail}>
       <Tabs
+        screenLayout={({ route, children }) => (
+          <SectionLayout section={TAB_SECTIONS[route.name]}>{children}</SectionLayout>
+        )}
         screenOptions={{
           tabBarPosition: useNavigationRail ? 'left' : 'bottom',
           tabBarVariant: useNavigationRail ? 'material' : 'uikit',
@@ -74,7 +86,7 @@ export default function TabsLayout() {
           name="index"
           options={{
             title: 'Recipes',
-            headerTitle: () => <AppHeaderTitle section="Recipes" />,
+            headerTitle: () => <AppHeaderTitle />,
             tabBarIcon: ({ color }) => <TabIcon name="book-outline" color={color} />,
           }}
         />
@@ -82,7 +94,7 @@ export default function TabsLayout() {
           name="meal-plan"
           options={{
             title: 'Meal Plan',
-            headerTitle: () => <AppHeaderTitle section="Meal Plan" />,
+            headerTitle: () => <AppHeaderTitle />,
             href: showMealPlan ? undefined : null,
             tabBarIcon: ({ color }) => <TabIcon name="calendar-outline" color={color} />,
           }}
@@ -100,7 +112,7 @@ export default function TabsLayout() {
           name="shopping"
           options={{
             title: 'Shopping',
-            headerTitle: () => <AppHeaderTitle section="Shopping List" />,
+            headerTitle: () => <AppHeaderTitle />,
             href: showShopping ? undefined : null,
             tabBarIcon: ({ color }) => <TabIcon name="cart-outline" color={color} />,
           }}
@@ -109,13 +121,13 @@ export default function TabsLayout() {
           name="more"
           options={{
             title: 'More',
-            headerTitle: () => <AppHeaderTitle section="More" />,
+            headerTitle: () => <AppHeaderTitle />,
             tabBarIcon: ({ color }) => <TabIcon name="ellipsis-horizontal" color={color} />,
           }}
         />
         <Tabs.Screen
           name="pantry"
-          options={{ title: 'Pantry', headerTitle: () => <AppHeaderTitle section="Pantry" />, href: null }}
+          options={{ title: 'Pantry', headerTitle: () => <AppHeaderTitle />, href: null }}
         />
       </Tabs>
       <AddMenuSheet visible={menuOpen} onClose={() => setMenuOpen(false)} />
@@ -123,28 +135,31 @@ export default function TabsLayout() {
   );
 }
 
+// v1.0.4 (Jason): the center + is 33% smaller (≈67% of v1.0.3's 66dp raised / 58dp rail circle and 34dp glyph).
+const PLUS_ICON = 23;
+
 const useStyles = makeStyles((colors) => ({
   plusSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 64 },
   plus: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 39,
+    height: 39,
+    borderRadius: 19.5,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 6,
+    elevation: 4,
     shadowColor: colors.shadow,
     shadowOpacity: 0.35,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   plusRaised: {
-    marginTop: -22,
-    borderWidth: 4,
+    marginTop: -22, // unchanged: keeps the circle centered where v1.0.3's was (scaled about its center, ~3dp raised)
+    borderWidth: 3,
     borderColor: colors.background,
-    width: 66,
-    height: 66,
-    borderRadius: 33,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   plusPressed: { opacity: 0.85 },
 }));

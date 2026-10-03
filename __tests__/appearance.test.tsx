@@ -10,7 +10,7 @@ import { ACCENTS, THEME_MODES, buildColors, contrastRatio, resolveScheme, type C
 import { createSettingsStore, settingsStore, SETTINGS_STORAGE_KEY } from '@/storage/settings';
 import { DEFAULT_SETTINGS } from '@/types/recipe';
 
-jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.3' } } }));
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.4' } } }));
 
 const routes = () => ({
   _layout: require('@/app/_layout').default,
@@ -100,10 +100,10 @@ describe('Settings → Appearance (UI)', () => {
     expect(screen.getByTestId('settings-accent-blue')).toHaveProp('accessibilityState', { selected: true });
     screen.unmount();
 
-    // Another screen picks it up: the Recipes home links use the blue accent, the + button too.
+    // Another screen picks it up: the Recipes list's “+ Add recipe” button uses the blue accent, the + button too.
     renderRouter(routes(), { initialUrl: '/' });
-    const link = await screen.findByText('Add Recipe');
-    await waitFor(() => expect(StyleSheet.flatten(link.props.style).color).toBe(blue.primary));
+    const fab = await screen.findByTestId('list-add-recipe-button');
+    await waitFor(() => expect(StyleSheet.flatten(fab.props.style).backgroundColor).toBe(blue.primary));
     expect(screen.getByTestId('tab-add-button')).toHaveStyle({ backgroundColor: blue.accent });
   });
 

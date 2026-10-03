@@ -44,7 +44,7 @@ export interface FeatureInfo {
 export const FEATURES: Record<FeatureId, FeatureInfo> = {
   mealPlan: { id: 'mealPlan', label: 'Meal plan', spec: [11] },
   shoppingList: { id: 'shoppingList', label: 'Shopping list', spec: [12] },
-  groceryRun: { id: 'groceryRun', label: 'Grocery run mode', spec: [18] },
+  groceryRun: { id: 'groceryRun', label: 'Shopping List mode', spec: [18] },
   pantry: { id: 'pantry', label: 'Pantry', spec: [21] },
   // Pantry and shopping list both scan (v1.0.1), so barcodeScan no longer requires pantry; each entry point
   // also needs its own screen's feature (pantry / shoppingList) to be visible.
