@@ -1,6 +1,6 @@
 /** Pantry features (spec #21 pantry, #26 receipt scanning, #27 barcode scanning). */
 import { canUse } from '@/entitlements';
-import { generateId } from '@/lib/recipe-utils';
+import { uuid } from '@/lib/ids';
 import { createCollection, defaultStore } from '@/storage/kv';
 import { pantryStore } from '@/storage/pantry';
 import { settingsStore } from '@/storage/settings';
@@ -9,7 +9,8 @@ import { createBarcodeLookup, withoutNutrition, type BarcodeItem } from './barco
 import { createPantryMatcher } from './match';
 
 export * from './barcodeLookup';
-export { createPantryMatcher, ingredientIsInPantry, type PantryMatcher, type PantryMatcherDeps } from './match';
+export { isInPantry } from './isInPantry';
+export { createPantryMatcher, type PantryMatcher, type PantryMatcherDeps } from './match';
 
 export const BARCODE_ITEMS_STORAGE_KEY = 'my-recipe-app/barcode-items/v1';
 
@@ -27,7 +28,7 @@ export const barcodeItems = createCollection<BarcodeItem>(defaultStore, BARCODE_
 /** App-wide lookup bound to on-device storage + global fetch. */
 export const barcodeLookup = createBarcodeLookup({
   items: barcodeItems,
-  newId: generateId,
+  newId: uuid,
   fetchJson: async (url, headers) => {
     const res = await fetch(url, { headers });
     return { status: res.status, json: res.status === 200 ? await res.json() : undefined };
@@ -43,11 +44,3 @@ export const pantryMatcher = createPantryMatcher({
   list: async () => ((await settingsStore.get()).features.pantry ? pantryStore.list() : []),
   canUsePantry: () => canUse('pantry'),
 });
-
-/**
- * Async, storage-bound check (respects gate + Settings). For a pure check against a pantry list,
- * import `isInPantry` from `@/pantry/isInPantry`.
- */
-export function isInPantry(ingredient: string): Promise<boolean> {
-  return pantryMatcher.isInPantry(ingredient);
-}

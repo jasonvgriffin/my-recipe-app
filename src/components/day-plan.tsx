@@ -2,7 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { ensureRecipesSeeded } from '@/data/ensure-seed';
+import { Chip } from '@/components/chip';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { addDays, formatLongDate } from '@/lib/dates';
 import { searchRecipes } from '@/lib/recipe-utils';
@@ -31,7 +31,7 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
   const [servingsText, setServingsText] = useState('');
 
   const load = useCallback(async () => {
-    await ensureRecipesSeeded();
+    await recipeStore.seedIfNeeded();
     const [dayEntries, all] = await Promise.all([mealPlanStore.entriesForDates([date]), recipeStore.list()]);
     setEntries(dayEntries);
     setRecipes(all);
@@ -121,15 +121,13 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
                 <Text style={styles.title}>{title}</Text>
                 <View style={styles.row}>
                   {MEAL_SLOTS.map((s) => (
-                    <Pressable
+                    <Chip
                       key={s}
-                      accessibilityRole="button"
+                      label={SLOT_LABEL[s]}
                       accessibilityLabel={`Set ${title} to ${SLOT_LABEL[s]}`}
-                      accessibilityState={{ selected: entry.slot === s }}
+                      active={entry.slot === s}
                       onPress={() => setSlotFor(entry, s)}
-                      style={[styles.chip, entry.slot === s && styles.chipOn]}>
-                      <Text style={[styles.chipText, entry.slot === s && styles.chipTextOn]}>{SLOT_LABEL[s]}</Text>
-                    </Pressable>
+                    />
                   ))}
                 </View>
                 <View style={styles.row}>
@@ -184,15 +182,13 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
       <Text style={styles.section}>Add a recipe</Text>
       <View style={styles.row}>
         {MEAL_SLOTS.map((s) => (
-          <Pressable
+          <Chip
             key={s}
-            accessibilityRole="button"
-            accessibilityState={{ selected: slot === s }}
+            label={SLOT_LABEL[s]}
+            active={slot === s}
             onPress={() => setSlot(s)}
-            style={[styles.chip, slot === s && styles.chipOn]}
-            testID={`new-slot-${s}`}>
-            <Text style={[styles.chipText, slot === s && styles.chipTextOn]}>{SLOT_LABEL[s]}</Text>
-          </Pressable>
+            testID={`new-slot-${s}`}
+          />
         ))}
       </View>
       <TextInput
@@ -247,18 +243,6 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontSize: 17, fontWeight: '700' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
-  chip: {
-    minHeight: 44,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.muted, fontSize: 13 },
-  chipTextOn: { color: colors.primaryText, fontWeight: '700' },
   iconBtn: {
     minWidth: 44,
     minHeight: 44,

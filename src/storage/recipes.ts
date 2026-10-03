@@ -1,5 +1,5 @@
 import { SEED_RECIPES } from '@/data/seed';
-import { generateId } from '@/lib/recipe-utils';
+import { uuid } from '@/lib/ids';
 import { isCategory, migrateRecipe, withSyncDefaults, type Category, type Recipe } from '@/types/recipe';
 
 import { createCollection, defaultStore, type KeyValueStore } from './kv';
@@ -30,7 +30,7 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
       if (!seeding) {
         seeding = (async () => {
           if (await store.getItem(SEEDED_KEY)) return;
-          for (const r of seed) await recipes.save({ ...r, id: generateId() }, now);
+          for (const r of seed) await recipes.save({ ...r, id: uuid() }, now);
           await store.setItem(SEEDED_KEY, '1');
         })().finally(() => {
           seeding = undefined;
@@ -68,7 +68,7 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
       const existing = (await categories.all()).find((c) => c.name.toLowerCase() === trimmed.toLowerCase());
       if (existing) return existing;
       const ts = now.toISOString();
-      return categories.save({ id: generateId(), name: trimmed, createdAt: ts, updatedAt: ts }, now);
+      return categories.save({ id: uuid(), name: trimmed, createdAt: ts, updatedAt: ts }, now);
     },
     async renameCategory(id: string, name: string): Promise<void> {
       const c = await categories.get(id);
