@@ -15,6 +15,7 @@ import { MAX_CONTENT_WIDTH, MaxWidthContainer, TwoPaneLayout } from '@/component
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
+import { formatQuantity } from '@/lib/ingredients';
 import { rankRecipesByPantry } from '@/lib/pantry';
 import { colors } from '@/lib/theme';
 import { pantryStore } from '@/storage/pantry';
@@ -32,7 +33,7 @@ const EMPTY_DRAFT: Draft = { name: '', quantity: '', unit: '' };
 
 function formatQty(quantity: number | undefined, unit: string | undefined): string {
   if (quantity === undefined) return unit ? `some ${unit}` : 'on hand';
-  const qty = Number.isInteger(quantity) ? String(quantity) : String(Math.round(quantity * 100) / 100);
+  const qty = formatQuantity(quantity);
   return unit ? `${qty} ${unit}` : qty;
 }
 

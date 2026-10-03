@@ -1,6 +1,6 @@
 import { normalizeAlias } from '@/receipts/match';
 import { ingredientKey } from '@/lib/ingredients';
-import { generateId } from '@/lib/recipe-utils';
+import { uuid } from '@/lib/ids';
 import type { SyncMeta } from '@/types/sync';
 
 import { createCollection, defaultStore, type KeyValueStore } from './kv';
@@ -45,7 +45,7 @@ export function createReceiptAliasStore(store: KeyValueStore = defaultStore) {
       return items.save(
         {
           ...existing,
-          id: existing?.id ?? generateId(),
+          id: existing?.id ?? uuid(),
           alias: key,
           name: target,
           createdAt: existing?.createdAt ?? ts,

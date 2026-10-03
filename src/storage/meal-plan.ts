@@ -1,4 +1,4 @@
-import { generateId } from '@/lib/recipe-utils';
+import { uuid } from '@/lib/ids';
 import {
   isMealPlanEntry,
   isShoppingListItem,
@@ -38,7 +38,7 @@ export function createMealPlanStore(store: KeyValueStore = defaultStore) {
     },
     async addEntry(date: IsoDate, recipeId: string, slot?: MealSlot, now: Date = new Date()): Promise<MealPlanEntry> {
       const ts = now.toISOString();
-      return entries.save({ id: generateId(), date, recipeId, slot, createdAt: ts, updatedAt: ts }, now);
+      return entries.save({ id: uuid(), date, recipeId, slot, createdAt: ts, updatedAt: ts }, now);
     },
     /** Place a recipe on a day, optionally with a meal slot and a servings override (spec #11). */
     async placeEntry(
@@ -47,7 +47,7 @@ export function createMealPlanStore(store: KeyValueStore = defaultStore) {
     ): Promise<MealPlanEntry> {
       const ts = now.toISOString();
       const entry: MealPlanEntry = {
-        id: generateId(),
+        id: uuid(),
         date: input.date,
         recipeId: input.recipeId,
         createdAt: ts,

@@ -1,7 +1,6 @@
 import type { PantryItem } from '@/types/recipe';
 
-import { ingredientKey } from '@/lib/ingredients';
-import { pantryHas } from '@/lib/pantry';
+import { isInPantry } from './isInPantry';
 
 /**
  * Pantry matching for the shopping list (spec #12 / #21). Storage is injected so this module stays
@@ -14,10 +13,6 @@ export interface PantryMatcherDeps {
   canUsePantry?: () => boolean;
 }
 
-export function ingredientIsInPantry(pantry: PantryItem[], ingredient: string): boolean {
-  return pantryHas(pantry, ingredientKey({ text: ingredient }));
-}
-
 export function createPantryMatcher(deps: PantryMatcherDeps) {
   const allowed = () => (deps.canUsePantry ? deps.canUsePantry() : true);
 
@@ -26,7 +21,7 @@ export function createPantryMatcher(deps: PantryMatcherDeps) {
     async isInPantry(ingredient: string): Promise<boolean> {
       if (!allowed()) return false;
       const pantry = await deps.list();
-      return ingredientIsInPantry(pantry, ingredient);
+      return isInPantry(ingredient, pantry);
     },
     /**
      * Subset of ingredient keys (see `ingredientKey`) that shopping should skip.
@@ -35,7 +30,7 @@ export function createPantryMatcher(deps: PantryMatcherDeps) {
     async skipKeys(keys: readonly string[]): Promise<Set<string>> {
       if (!allowed() || keys.length === 0) return new Set();
       const pantry = await deps.list();
-      return new Set(keys.filter((key) => key && pantryHas(pantry, key)));
+      return new Set(keys.filter((key) => key && isInPantry(key, pantry)));
     },
   };
 }

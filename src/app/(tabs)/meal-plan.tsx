@@ -6,7 +6,6 @@ import { DayPlan } from '@/components/day-plan';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
 import { MealCalendar } from '@/components/meal-calendar';
 import { OptionalFeature } from '@/components/optional-feature';
-import { ensureRecipesSeeded } from '@/data/ensure-seed';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import {
@@ -60,7 +59,7 @@ function MealPlanBody() {
       : formatMonthYear(anchor.getFullYear(), anchor.getMonth());
 
   const load = useCallback(async () => {
-    await ensureRecipesSeeded();
+    await recipeStore.seedIfNeeded();
     const [nextEntries, list] = await Promise.all([mealPlanStore.entriesForDates(dates), recipeStore.list()]);
     setEntries(nextEntries);
     setRecipes(new Map(list.map((recipe) => [recipe.id, recipe])));
