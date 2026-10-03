@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { useLocalSearchParams } from 'expo-router';
 
 import { FeatureGate, FeatureLocked } from '@/components/feature-gate';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
@@ -42,6 +43,8 @@ function memberLabel(member: HouseholdMember, selfId?: string): string {
  */
 export default function HouseholdScreen() {
   const { account, sync } = useHousehold();
+  // Set by the `/auth` magic-link route after it finishes (success or error).
+  const authParams = useLocalSearchParams<{ auth?: string; message?: string }>();
   const { isTwoPane } = useWindowSizeClass();
   const [email, setEmail] = useState('');
   const [codeSent, setCodeSent] = useState(false);
@@ -163,6 +166,16 @@ export default function HouseholdScreen() {
         Share recipes, the pantry, meal plan and shopping list with people you live with. Optional — recipes work
         without an account.
       </Text>
+      {authParams.auth === 'ok' && account.user ? (
+        <Text testID="household-auth-ok" style={styles.success}>
+          You’re signed in.
+        </Text>
+      ) : null}
+      {authParams.auth === 'error' && !account.user ? (
+        <Text testID="household-auth-error" style={styles.error}>
+          {authParams.message || 'Sign-in failed. Request a new code and try again.'}
+        </Text>
+      ) : null}
       {shownError ? (
         <Text testID="household-error" style={styles.error}>
           {shownError}
@@ -460,6 +473,7 @@ const styles = StyleSheet.create({
   help: { color: colors.muted, fontSize: 14 },
   householdName: { color: colors.text, fontSize: 22, fontWeight: '700' },
   error: { color: colors.danger, fontSize: 15 },
+  success: { color: colors.primary, fontSize: 15, fontWeight: '600' },
   field: { gap: 6 },
   label: { color: colors.text, fontWeight: '600', fontSize: 15 },
   input: {

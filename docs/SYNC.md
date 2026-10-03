@@ -95,7 +95,10 @@ Opt-in. The recipes tab never asks anyone to sign in. `householdSync` gates the 
 Supabase env vars absent, the screen explains that recipes still work on this device.
 
 - **Sign in:** email, then the 6-digit code (`verifyEmailOtp`). Magic link to `myrecipeapp://auth` is optional;
-  other app deep links are ignored.
+  other app deep links are ignored. Since v1.0.1 the `src/app/auth.tsx` route handles that redirect (no more
+  "Unmatched Route"): it reads the raw URL (tokens in the `#fragment` or `?code=`), completes sign-in through
+  `completeMagicLink` in `src/household/runtime.ts` (one exchange per URL, shared with the app-wide URL listener),
+  then opens Settings → Household with a success or error message.
 - **Household:** create (shows the invite code), join with a code, or pick one if you already belong to several.
 - **Invite code:** shown to members; Copy, Share, and (owner only) rotate.
 - **Members:** list with Owner / Member. Owners can remove someone else. Anyone can leave. Display name is what
