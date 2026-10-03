@@ -73,7 +73,8 @@
           }
         }
       ],
-      "mlkit-text-recognition"
+      "mlkit-text-recognition",
+      "./plugins/with-release-signing"
     ],
     "experiments": {
       "typedRoutes": true,

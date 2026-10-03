@@ -101,8 +101,10 @@ never edit an applied migration. Details: `docs/SYNC.md`.
 2. `npx expo prebuild --platform android --clean` (with `CI=1`; the old `--non-interactive` flag is deprecated).
    The generated `android/` (and `ios/`) folders are **gitignored** — never commit or hand-edit them;
    configure native behavior through `app.json` / config plugins (Continuous Native Generation).
-3. `./gradlew assembleRelease` (ABIs `arm64-v8a,x86_64`), currently signed with the Expo template's **debug
-   keystore** — fine for sideloading, not for the Play Store.
+3. `./gradlew assembleRelease` (ABIs `arm64-v8a,x86_64`), signed with the **release keystore** from GitHub secrets
+   (decoded to `$RUNNER_TEMP`, wired in by the config plugin `plugins/with-release-signing.js`), then
+   `apksigner verify`. Without the secrets (fork PRs, local builds) it falls back to the debug keystore with a
+   warning; a publish run fails instead.
 4. Uploads the APK as CI artifact `my-recipe-app-apk` (14-day retention) on **every** run — this is how we prove
    the build stays green. Download it from the run page while signed in to GitHub (private repo).
 5. **Releases:** a GitHub Release with the APK is published **only** for a pushed tag `v*` (e.g. `v1.0.0`) or a
@@ -148,8 +150,12 @@ to my recipe app"). So:
 
 ## Signing & secrets
 
-- The **release signing keystore must live in GitHub Actions secrets** (e.g. `ANDROID_KEYSTORE_BASE64`,
-  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) and be decoded at build time.
+- The **release signing keystore lives in GitHub Actions secrets** `ANDROID_KEYSTORE_BASE64` (base64 of the
+  PKCS12 keystore), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` (same value as the
+  store password — PKCS12). CI decodes it at build time; `plugins/with-release-signing.js` reads
+  `ANDROID_KEYSTORE_PATH` + those variables from the environment in the generated `android/app/build.gradle`.
+  The same key must sign every future update (and becomes the Play upload key if Jason publishes there) —
+  never regenerate or rotate it without Jason's OK. A backup is kept outside the repo (ask Jason).
   **Never commit** keystores (`*.jks`, `*.keystore`), `.p8/.p12`, provisioning profiles, or API keys.
 - Do not sign up for outside services (Expo/EAS, Apple, Google Play, hosting) or spend money without Jason's OK.
 
