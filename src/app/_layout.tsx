@@ -1,9 +1,14 @@
 import { Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 
 import { colors, navigationTheme } from '@/lib/theme';
+import { configureStepTimerNotifications } from '@/notifications/step-timers';
 
 export default function RootLayout() {
+  useEffect(() => {
+    configureStepTimerNotifications();
+  }, []);
   return (
     <ThemeProvider value={navigationTheme}>
       <StatusBar style="light" />

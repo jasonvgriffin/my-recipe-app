@@ -85,6 +85,8 @@ describe.each([
     await render(<RecipeDetail id={first.id} />);
     expect(await screen.findAllByText(first.title)).toHaveLength(1);
     expect(screen.getByText('Ingredients')).toBeTruthy();
+    expect(screen.getByTestId('servings-units')).toBeTruthy();
+    expect(screen.getByTestId('nutrition-panel')).toBeTruthy();
   });
 
   it('Recipes tab: list-detail in expanded, navigation in compact', async () => {
@@ -126,7 +128,20 @@ describe.each([
     renderRouter({ 'cook/[action]': CookScreen }, { initialUrl: `/cook/${r.id}` });
     expect(await screen.findByText(r.steps[0].text)).toBeTruthy();
     expect(screen.getByTestId(width >= 600 ? 'cook-layout-dual' : 'cook-layout-single')).toBeTruthy();
+    expect(screen.getByTestId('cook-ingredients')).toBeTruthy();
+    if (width >= 600) {
+      expect(screen.getByTestId('cook-layout-secondary')).toBeTruthy();
+    } else {
+      expect(screen.queryByTestId('cook-layout-secondary')).toBeNull();
+    }
     await act(async () => fireEvent.press(screen.getByText('Next ›')));
     expect(await screen.findByText(r.steps[1].text)).toBeTruthy();
+  });
+
+  it('settings shows the unit default and keep-awake toggle', async () => {
+    const Screen = require('@/app/settings').default;
+    renderRouter({ index: Screen }, { initialUrl: '/' });
+    expect(await screen.findByTestId('settings-unit-metric')).toBeTruthy();
+    expect(screen.getByTestId('keep-awake-toggle')).toBeTruthy();
   });
 });

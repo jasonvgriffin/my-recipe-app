@@ -61,6 +61,22 @@ describe('cook-with-me session state machine (spec #24)', () => {
     expect(step(await afterRestart.getCurrentStep()).stepIndex).toBe(2);
   });
 
+  it('keeps timers on different steps running at the same time', async () => {
+    const s = createCookSession(deps(memoryStore()));
+    await s.startSession(chicken.id);
+    await s.goTo(3);
+    expect(step(await s.startStepTimer()).timer).toMatchObject({ stepIndex: 3, durationSeconds: 2400 });
+    await s.goTo(0);
+    const current = step(await s.startStepTimer(90));
+    expect(current.stepIndex).toBe(0);
+    expect(current.timer).toMatchObject({ stepIndex: 0, durationSeconds: 90 });
+    expect(current.activeTimers?.map((t) => t.stepIndex).sort()).toEqual([0, 3]);
+    clock = new Date(clock.getTime() + 30_000);
+    const later = step(await s.getCurrentStep());
+    expect(later.timer?.remainingSeconds).toBe(60);
+    expect(later.activeTimers?.find((t) => t.stepIndex === 3)?.remainingSeconds).toBe(2370);
+  });
+
   it('runs step timers and reports remaining time', async () => {
     const s = createCookSession(deps(memoryStore()));
     await s.startSession(chicken.id);
@@ -92,6 +108,8 @@ describe('cook deep links', () => {
     ['myrecipeapp://cook/previous', { action: 'previous' }],
     ['myrecipeapp://cook/current', { action: 'current' }],
     ['myrecipeapp:///cook/repeat', { action: 'repeat' }],
+    ['myrecipeapp://cook/timer', { action: 'timer' }],
+    ['myrecipeapp://cook/end', { action: 'end' }],
     ['myrecipeapp://import?url=x', undefined],
     ['https://example.com/cook/next', undefined],
   ])('%s', (link, cmd) => expect(parseCookDeepLink(link)).toEqual(cmd));
@@ -101,5 +119,19 @@ describe('cook deep links', () => {
     await runCookCommand(s, parseCookDeepLink(`myrecipeapp://cook/${chicken.id}`)!);
     const r = await runCookCommand(s, parseCookDeepLink('myrecipeapp://cook/next')!);
     expect(step(r).stepIndex).toBe(1);
+    expect(step(await runCookCommand(s, parseCookDeepLink('myrecipeapp://cook/repeat')!)).stepIndex).toBe(1);
+    expect(step(await runCookCommand(s, parseCookDeepLink('myrecipeapp://cook/previous')!)).stepIndex).toBe(0);
+    await runCookCommand(s, parseCookDeepLink('myrecipeapp://cook/next')!);
+    await runCookCommand(s, parseCookDeepLink('myrecipeapp://cook/next')!);
+    await runCookCommand(s, parseCookDeepLink('myrecipeapp://cook/next')!);
+    expect(await runCookCommand(s, parseCookDeepLink('myrecipeapp://cook/timer')!)).toMatchObject({
+      ok: true,
+      event: 'timer_started',
+    });
+    expect(step(await runCookCommand(s, parseCookDeepLink('myrecipeapp://cook/current')!)).stepIndex).toBe(3);
+    expect(await runCookCommand(s, parseCookDeepLink('myrecipeapp://cook/end')!)).toMatchObject({
+      ok: true,
+      event: 'ended',
+    });
   });
 });
