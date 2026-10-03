@@ -23,8 +23,8 @@
 | 10 | Cooked toggle and cook history | `setCooked` (`recipe-utils.ts`), `formatCookedOn` (`src/lib/dates.ts`), `Recipe.cooked` / `cookHistory` |
 | 11 | Meal planning tab (month view only since v1.0.1) | `src/app/(tabs)/meal-plan.tsx`, `src/app/meal-plan/[date].tsx`, `src/components/meal-calendar.tsx` (muted “Tap a day to add meal plan” hint left of Today since v1.0.3), `src/components/day-plan.tsx`, `src/storage/meal-plan.ts`, `src/types/meal-plan.ts`, date helpers in `src/lib/dates.ts` |
 | 12 | Shopping list | `src/lib/shopping.ts` (`compileItems`, `compileWeekShoppingList`, `reconcileShoppingList`, …), `src/app/(tabs)/shopping.tsx`, `src/components/shopping-list-view.tsx`, `src/components/pantry-on-hand.tsx`, barcode scan to add a line: `src/app/shopping/scan.tsx` (shared `BarcodeScanner`), opened by the full-width outlined “Scan Item” button above “or” and the Add an item row (v1.0.3; button and “or” absent when `barcodeScan` is locked/hidden) |
-| 13 | Dark theme | `src/lib/theme.ts` (`colors`). Use it; do not hard-code colors |
-| 14 | Share button | `src/lib/share-recipe.ts` (`formatRecipeShareText`, `buildShareRequest`), `src/lib/present-share.ts`, `src/components/share-recipe-panel.tsx`, `modules/recipe-share/` (Android native) |
+| 13 | Theme: dark / light / system + accent colors (Settings → Appearance, v1.0.3) | Palettes + contrast helpers: `src/lib/theme.ts` (`buildColors`, `ACCENTS`, `THEME_MODES`, `resolveScheme`). Live theme: `src/hooks/use-theme.tsx` (`AppThemeProvider`, `useColors`, `makeStyles`, `useNavigationTheme`, `useColorSchemeResolved`). Saved in `AppSettings.appearance` (`src/storage/settings.ts`). UI: `AppearanceSection` in `src/app/settings.tsx`. Never hard-code colors (`__tests__/appearance.test.tsx`) |
+| 14 | Share button + Export PDF (v1.0.3) | `src/lib/share-recipe.ts` (`formatRecipeShareText`, `buildShareRequest`), `src/lib/present-share.ts` (also shares PDF files), `src/components/share-recipe-panel.tsx`, `modules/recipe-share/` (Android native). PDF: `src/lib/recipe-pdf.ts` (pure HTML: `buildRecipesPdfHtml`, `pdfFileName`; no nutrition), `src/lib/export-pdf.ts` (`exportRecipesPdf`: expo-print → cache file → share sheet; gate `pdfExport`), `src/hooks/use-pdf-export.ts`; entry points: recipe detail “Export PDF”, Existing Recipes multi-select (`src/app/recipes.tsx`, `?select=pdf`) |
 | 15 | Step timers | `detectStepDuration` / `formatDuration` (`src/lib/timers.ts`), timers inside `src/cooking/session.ts`, `src/notifications/step-timers.ts` (OS notifications) |
 | 16 | Unit conversion and scaling | `src/lib/units.ts`, `src/lib/ingredients.ts` (`parseIngredient`, `convertIngredient`, `formatQuantity`, `ingredientKey`), `src/components/servings-units.tsx` |
 | 17 | ~~Nutrition~~: **removed** (recipe app, not a nutrition app). Do not re-add without Jason asking | none |
@@ -49,14 +49,14 @@
 | More screen: Pantry (if visible), Household (if unlocked), Settings | `src/app/(tabs)/more.tsx` |
 | Header “My Recipe App” + section name, settings gear right | `src/components/app-header.tsx` (`AppHeaderTitle`, `SettingsGearButton`), used by `(tabs)/_layout.tsx` and the Settings / Household screens in `src/app/_layout.tsx` |
 | App constants (MCP server URL) and app version | `src/config/index.ts` (`MCP_SERVER_URL`, `appVersion()` from expo-constants); version shown at the bottom of Settings |
-| Accent (orange) for the + button | `colors.accent` / `accentText` in `src/lib/theme.ts` |
+| Accent for the + button and + menu icons | `colors.accent` / `accentText` (orange with the Green accent, else the chosen accent; `src/lib/theme.ts`) |
 
 ## Recipes tab (v1.0.1; plain green titles since v1.0.2)
 
 | Button | Opens |
 |--------|-------|
 | Search / Existing Recipes | `src/app/recipes.tsx` (list, filters, two-pane detail) |
-| Share Recipes | `src/app/household.tsx` (hidden when `householdSync` is locked) |
+| Share Recipes | v1.0.3: `src/app/recipes.tsx?select=pdf` — pick recipes → one PDF → share sheet (hidden when `pdfExport` is locked). Household sharing: More → Household / Settings → Household |
 | Add Recipe | `src/app/add.tsx` (links to `src/app/import.tsx`) |
 | What can I make with my existing pantry? | `src/app/pantry-match.tsx` (hidden when `pantry` is locked; explains when hidden/empty) |
 
@@ -80,7 +80,9 @@ Home screen: `src/app/(tabs)/index.tsx` — since v1.0.2 each option is just its
 | Cooking state | `src/cooking/session.ts` | UI, deep links and future MCP all drive this |
 | Sync | `src/sync`, `src/household` | |
 | UI primitives | `Chip` (`src/components/chip.tsx`), `CategoryChips`, `TagEditor`, `StarRating`, `TwoPaneLayout` / `MaxWidthContainer` | Do not style ad-hoc chips |
-| Theme | `src/lib/theme.ts` | |
+| Theme | `src/lib/theme.ts` (palettes), `src/hooks/use-theme.tsx` (`makeStyles`, `useColors`) | No module-level `colors`; styles are per palette |
+| Bottom safe area | `useBottomInset()` in `src/components/layout.tsx` (+ `BottomBarCoversInsetProvider` in `(tabs)/_layout.tsx`) | Add to the bottom padding of every scrolling stack screen / floating button |
+| Durations in words | `formatDurationWords` (`src/lib/timers.ts`) | “20 min”, for print; `formatDuration` is the clock format |
 | Sample data | None in the app (v1.0.1). `src/storage/legacy-samples.ts` only identifies untouched v1.0.0 samples to delete. Test fixtures: `test-helpers/sample-recipes.ts` (`SAMPLE_RECIPES`, `addSampleRecipes`, `asLegacySample`) | |
 
 ## Build and release

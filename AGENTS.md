@@ -133,7 +133,10 @@ Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the And
 
 ## Product rules (Jason's preferences)
 
-- **Dark theme throughout** (spec #13). Use `colors` from `src/lib/theme.ts`; never hard-code light colors.
+- **Theme** (spec #13; v1.0.3 Settings → Appearance: System / Light / Dark, default System, plus accent colors). Dark +
+  Green is the original look. Read colors only through `makeStyles((colors) => …)` / `useColors()` from
+  `src/hooks/use-theme.tsx` (palettes live in `src/lib/theme.ts`); never hard-code colors (a test enforces it).
+  Scrolling stack screens add `useBottomInset()` (`src/components/layout.tsx`) so content clears the Android nav bar.
 
 - **This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition.**
   No nutrition fields, calories, macros, carb counts, nutrition lookups, nutrition imports, or nutrition UI. The pantry

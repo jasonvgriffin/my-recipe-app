@@ -8,7 +8,7 @@ Full v1 feature spec: [docs/SPEC.md](docs/SPEC.md).
 ## Features today
 
 - Recipes first: opens to Recipes, no sign-in; Settings can hide the optional Meal plan / Shopping tabs
-- Dark theme; bottom tabs (side rail on unfolded foldables/tablets), list + detail side-by-side on wide screens
+- Dark, light or system theme with accent colors (Settings → Appearance); bottom tabs (side rail on unfolded foldables/tablets), list + detail side-by-side on wide screens
 - Recipe list with keyword search and filters (cooked / cooked recently / not cooked)
 - Cooked toggle with last-cooked date; "Plan for today"; tappable source link; notes
 - Recipes tab with five buttons: Search, Existing Recipes, Share Recipes, Add Recipe, What can I make with my existing pantry?
