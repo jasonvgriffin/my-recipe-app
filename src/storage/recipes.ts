@@ -71,6 +71,28 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
         if (r.categoryIds.includes(id))
           await recipes.save({ ...r, categoryIds: r.categoryIds.filter((c) => c !== id) });
     },
+
+    /** Rename a tag on every recipe that has it (spec #20). Case-insensitive; dedupes. */
+    async renameTag(from: string, to: string, now?: Date): Promise<void> {
+      const f = from.trim().toLowerCase();
+      const t = to.trim().toLowerCase();
+      if (!f || !t || f === t) return;
+      for (const r of await recipes.all()) {
+        if (!r.tags.includes(f)) continue;
+        const tags = [...new Set(r.tags.map((x) => (x === f ? t : x)))];
+        await recipes.save({ ...r, tags }, now);
+      }
+    },
+
+    /** Remove a tag from every recipe (spec #20). */
+    async deleteTag(tag: string, now?: Date): Promise<void> {
+      const f = tag.trim().toLowerCase();
+      if (!f) return;
+      for (const r of await recipes.all()) {
+        if (!r.tags.includes(f)) continue;
+        await recipes.save({ ...r, tags: r.tags.filter((x) => x !== f) }, now);
+      }
+    },
   };
 }
 

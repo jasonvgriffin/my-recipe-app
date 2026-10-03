@@ -1,5 +1,17 @@
 import type { IsoDate } from '@/types/meal-plan';
 
+const COOKED_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * Calendar date (device local time) for a cook timestamp (spec #10). Local, not UTC: an evening cook in
+ * America/Chicago must not show up as the next day.
+ */
+export function formatCookedOn(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${COOKED_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
 /** Local-time YYYY-MM-DD for a Date. */
 export function toIsoDate(d: Date): IsoDate {
   const y = d.getFullYear();

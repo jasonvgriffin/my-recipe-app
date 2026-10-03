@@ -8,12 +8,11 @@
     "scheme": "myrecipeapp",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.jasonvgriffin.myrecipeapp"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#121412",
+        "backgroundColor": "#16211A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -34,6 +33,23 @@
           "backgroundColor": "#121412",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow My Recipe App to add an optional photo to a recipe.",
+          "cameraPermission": "Allow My Recipe App to take an optional photo of a recipe.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-sharing",
+        {
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": ["text/plain", "text/html"]
+          }
         }
       ]
     ],

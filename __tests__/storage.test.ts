@@ -73,5 +73,9 @@ describe('pantry + settings stores', () => {
     expect((await settings.get()).unitSystem).toBe('original');
     await settings.update({ unitSystem: 'metric' });
     expect((await settings.get()).unitSystem).toBe('metric');
+    await settings.update({ cookedRecentlyDays: 400 });
+    expect((await settings.get()).cookedRecentlyDays).toBe(365);
+    await settings.update({ cookedRecentlyDays: 0 });
+    expect((await settings.get()).cookedRecentlyDays).toBe(1);
   });
 });

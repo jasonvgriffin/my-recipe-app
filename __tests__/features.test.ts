@@ -1,6 +1,6 @@
 import { SEED_RECIPES } from '@/data/seed';
 import { startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
-import { filterRecipes, setCooked } from '@/lib/recipe-utils';
+import { filterRecipes, setCooked, setRating } from '@/lib/recipe-utils';
 import { buildShoppingList, toggleItem } from '@/lib/shopping';
 import { createMealPlanStore } from '@/storage/meal-plan';
 import { createRecipeStore, RECIPES_STORAGE_KEY, type KeyValueStore } from '@/storage/recipes';
@@ -26,6 +26,15 @@ describe('schema migration', () => {
     void cooked;
     const migrated = migrateRecipe({ ...v1, schemaVersion: 1 });
     expect(migrated).toMatchObject({ categoryIds: [], cooked: false, schemaVersion: RECIPE_SCHEMA_VERSION });
+    expect(migrated?.cookHistory).toEqual([]);
+  });
+
+  it('seeds cook history from lastCookedAt when the field is missing (spec #10)', () => {
+    const { cookHistory, ...rest } = chicken;
+    void cookHistory;
+    const migrated = migrateRecipe({ ...rest, cooked: true, lastCookedAt: '2026-08-01T00:00:00.000Z' });
+    expect(migrated?.cookHistory).toEqual(['2026-08-01T00:00:00.000Z']);
+    expect(migrated?.schemaVersion).toBe(RECIPE_SCHEMA_VERSION);
   });
 
   it('store reads v1 data transparently', async () => {
@@ -47,9 +56,38 @@ describe('cooked tracking + filters (spec #9, #10)', () => {
     expect(filterRecipes(all, { cookedWithinDays: 14 }, NOW).map((r) => r.id)).toEqual([mousse.id]);
     expect(filterRecipes(all, { keyword: 'thyme' }, NOW).map((r) => r.id)).toEqual([chicken.id]);
     expect(filterRecipes(all, { categoryId: 'desserts' }, NOW).map((r) => r.id)).toEqual([mousse.id]);
-    const uncooked = setCooked(cookedLongAgo, false, NOW);
+    expect(cookedLongAgo.cookHistory).toEqual(['2026-08-01T00:00:00.000Z']);
+    const again = setCooked(cookedLongAgo, true, new Date('2026-09-01T00:00:00.000Z'));
+    expect(again.cookHistory).toEqual(['2026-08-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z']);
+    expect(again.lastCookedAt).toBe('2026-09-01T00:00:00.000Z');
+    const uncooked = setCooked(again, false, NOW);
     expect(uncooked.cooked).toBe(false);
-    expect(uncooked.lastCookedAt).toBe(cookedLongAgo.lastCookedAt); // history kept
+    expect(uncooked.lastCookedAt).toBe(again.lastCookedAt);
+    expect(uncooked.cookHistory).toEqual(again.cookHistory);
+  });
+
+  it('combines keyword, cooked, recent window, category, tag and rating', () => {
+    const match = {
+      ...setRating(setCooked({ ...mousse, notes: 'weeknight treat' }, true, new Date('2026-10-01T00:00:00.000Z')), 5),
+      categoryIds: ['desserts'],
+    };
+    const other = setRating(chicken, 2);
+    const all = [match, other];
+    expect(
+      filterRecipes(
+        all,
+        {
+          keyword: 'weeknight',
+          cooked: true,
+          cookedWithinDays: 14,
+          categoryId: 'desserts',
+          tags: ['dessert'],
+          minRating: 4,
+        },
+        NOW,
+      ).map((r) => r.id),
+    ).toEqual([mousse.id]);
+    expect(filterRecipes(all, {}, NOW)).toHaveLength(2);
   });
 });
 
@@ -64,6 +102,23 @@ describe('categories (spec #3)', () => {
     expect((await store.listCategories()).map((c) => c.name)).toEqual(['Breads & Rolls']);
     await store.removeCategory(breads.id);
     expect((await store.get(chicken.id))?.categoryIds).toEqual([]);
+  });
+});
+
+describe('tags (spec #20)', () => {
+  it('renames and deletes a tag on every recipe that has it', async () => {
+    const store = createRecipeStore(memoryStore());
+    await store.save(chicken);
+    await store.save(mousse);
+    await store.renameTag('Low-Carb', 'keto');
+    expect((await store.get(chicken.id))?.tags).toContain('keto');
+    expect((await store.get(chicken.id))?.tags).not.toContain('low-carb');
+    expect((await store.get(mousse.id))?.tags).toContain('keto');
+    expect((await store.get(mousse.id))?.tags).toContain('dessert');
+    await store.deleteTag('keto');
+    expect((await store.get(chicken.id))?.tags).not.toContain('keto');
+    expect(await store.listTags()).not.toContain('keto');
+    expect(await store.listTags()).toContain('dessert');
   });
 });
 
