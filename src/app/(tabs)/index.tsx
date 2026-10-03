@@ -2,14 +2,30 @@ import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { searchRecipes } from '@/lib/recipe-utils';
+import { filterRecipes, type RecipeFilter } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
 import { recipeStore } from '@/storage/recipes';
 import { isLowCarb, type Recipe } from '@/types/recipe';
 
+/** List filters (spec #9). TODO: category filter chips (spec #3). */
+type FilterMode = 'all' | 'cooked' | 'recent' | 'notCooked';
+const FILTERS: Record<FilterMode, Omit<RecipeFilter, 'keyword'>> = {
+  all: {},
+  cooked: { cooked: true },
+  recent: { cookedWithinDays: 14 },
+  notCooked: { cooked: false },
+};
+const FILTER_LABELS: Record<FilterMode, string> = {
+  all: 'All',
+  cooked: 'Cooked',
+  recent: 'Cooked recently',
+  notCooked: 'Not cooked yet',
+};
+
 export default function RecipeListScreen() {
   const [recipes, setRecipes] = useState<Recipe[] | null>(null);
   const [query, setQuery] = useState('');
+  const [mode, setMode] = useState<FilterMode>('all');
 
   useFocusEffect(
     useCallback(() => {
@@ -33,7 +49,7 @@ export default function RecipeListScreen() {
     );
   }
 
-  const visible = searchRecipes(recipes, query);
+  const visible = filterRecipes(recipes, { keyword: query, ...FILTERS[mode] });
 
   return (
     <View style={styles.container}>
@@ -43,8 +59,16 @@ export default function RecipeListScreen() {
         value={query}
         onChangeText={setQuery}
         autoCapitalize="none"
+        placeholderTextColor={colors.placeholder}
         testID="search-input"
       />
+      <View style={styles.chips}>
+        {(Object.keys(FILTERS) as FilterMode[]).map((m) => (
+          <Pressable key={m} onPress={() => setMode(m)} style={[styles.chip, mode === m && styles.chipActive]}>
+            <Text style={[styles.chipText, mode === m && styles.chipTextActive]}>{FILTER_LABELS[m]}</Text>
+          </Pressable>
+        ))}
+      </View>
       <FlatList
         data={visible}
         keyExtractor={(r) => r.id}
@@ -55,8 +79,9 @@ export default function RecipeListScreen() {
             <Pressable style={styles.card}>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.meta}>
-                {item.carbsPerServing} g carbs/serving · {item.servings} servings
+                {item.carbsPerServing ?? '?'} g carbs/serving · {item.servings} servings
                 {isLowCarb(item) ? ' · low-carb' : ''}
+                {item.cooked ? ' · cooked' : ''}
               </Text>
               {item.tags.length > 0 && <Text style={styles.tags}>{item.tags.map((t) => `#${t}`).join('  ')}</Text>}
             </Pressable>
@@ -82,8 +107,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.card,
+    backgroundColor: colors.input,
+    color: colors.text,
   },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginHorizontal: 12, marginTop: 10 },
+  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.muted, fontSize: 13 },
+  chipTextActive: { color: colors.primaryText, fontWeight: '600' },
   list: { padding: 12, paddingBottom: 96, gap: 10 },
   empty: { textAlign: 'center', color: colors.muted, marginTop: 40 },
   card: {

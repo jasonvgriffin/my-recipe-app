@@ -4,14 +4,18 @@
  * This is the single source of truth for the recipe shape. It is used by the
  * app's local storage, the add-recipe form, and (later) JSON export/import and
  * the remote MCP server. Keep it JSON-serializable (no Dates, functions, etc.).
+ *
+ * v1 feature spec: docs/SPEC.md. Fields marked (spec #N) map to items in that spec.
  */
 
 /** Current schema version. Bump when the stored shape changes and add a migration. */
-export const RECIPE_SCHEMA_VERSION = 1;
+export const RECIPE_SCHEMA_VERSION = 2;
 
 export interface Ingredient {
   /** Free-text line, e.g. "2 tbsp allulose" or "1 lb chicken thighs". */
   text: string;
+  /** Optional note about a substitution made, e.g. "allulose instead of sugar" (spec #2). */
+  substitutionNote?: string;
 }
 
 export interface Recipe {
@@ -27,8 +31,23 @@ export interface Recipe {
   tags: string[];
   /** Number of servings the recipe makes (> 0). */
   servings: number;
-  /** Net carbs per serving in grams (>= 0). */
-  carbsPerServing: number;
+  /**
+   * Net carbs per serving in grams (>= 0). Undefined = unknown (e.g. imported from a page without
+   * nutrition info). Never default it to 0 — that would mislead a diabetic user.
+   */
+  carbsPerServing?: number;
+  /** Ids of user-defined categories (spec #3). */
+  categoryIds: string[];
+  /** Local file URI of the optional recipe photo (spec #4). */
+  photoUri?: string;
+  /** Original web page the recipe was imported from; tappable in the UI (spec #1, #5). */
+  sourceUrl?: string;
+  /** Free-text personal notes (spec #6). */
+  notes?: string;
+  /** Has this recipe been cooked at least once (spec #10). */
+  cooked: boolean;
+  /** ISO-8601 timestamp of the most recent time it was cooked (spec #9, #10). */
+  lastCookedAt?: string;
   /** ISO-8601 timestamps. */
   createdAt: string;
   updatedAt: string;
@@ -37,8 +56,17 @@ export interface Recipe {
 /** Fields a user (or an AI assistant) supplies when creating a recipe. */
 export type RecipeInput = Pick<
   Recipe,
-  'title' | 'ingredients' | 'steps' | 'tags' | 'servings' | 'carbsPerServing'
-> & { description?: string };
+  'title' | 'ingredients' | 'steps' | 'tags' | 'servings'
+> &
+  Partial<Pick<Recipe, 'carbsPerServing'>> &
+  Partial<Pick<Recipe, 'description' | 'categoryIds' | 'photoUri' | 'sourceUrl' | 'notes'>>;
+
+/** User-defined recipe category, e.g. "Breakfast" or "Breads" (spec #3). */
+export interface Category {
+  id: string;
+  name: string;
+  createdAt: string;
+}
 
 /** Jason's sweetener rule: allulose is the only sugar-free sweetener used. */
 export const PREFERRED_SWEETENER = 'allulose';
@@ -58,8 +86,16 @@ export interface ValidationResult {
   errors: string[];
 }
 
-export function findForbiddenIngredients(input: Pick<RecipeInput, 'ingredients' | 'steps' | 'title'>): string[] {
-  const haystack = [input.title, ...input.ingredients.map((i) => i.text), ...input.steps];
+export function findForbiddenIngredients(
+  input: Pick<RecipeInput, 'ingredients' | 'steps' | 'title' | 'description' | 'notes'>,
+): string[] {
+  const haystack = [
+    input.title,
+    input.description ?? '',
+    input.notes ?? '',
+    ...input.ingredients.map((i) => i.text),
+    ...input.steps,
+  ];
   const hits = new Set<string>();
   for (const text of haystack) {
     for (const pattern of FORBIDDEN_INGREDIENT_PATTERNS) {
@@ -70,7 +106,12 @@ export function findForbiddenIngredients(input: Pick<RecipeInput, 'ingredients' 
   return [...hits];
 }
 
-export function validateRecipeInput(input: RecipeInput): ValidationResult {
+export interface ValidateOptions {
+  /** Manual entry requires carbs; imports may leave them unknown. Default true. */
+  requireCarbs?: boolean;
+}
+
+export function validateRecipeInput(input: RecipeInput, { requireCarbs = true }: ValidateOptions = {}): ValidationResult {
   const errors: string[] = [];
   if (!input.title || !input.title.trim()) errors.push('Title is required.');
   if (input.ingredients.filter((i) => i.text.trim()).length === 0)
@@ -78,7 +119,8 @@ export function validateRecipeInput(input: RecipeInput): ValidationResult {
   if (input.steps.filter((s) => s.trim()).length === 0) errors.push('At least one step is required.');
   if (!Number.isFinite(input.servings) || input.servings <= 0)
     errors.push('Servings must be a number greater than 0.');
-  if (!Number.isFinite(input.carbsPerServing) || input.carbsPerServing < 0)
+  const carbs = input.carbsPerServing;
+  if (carbs === undefined ? requireCarbs : !Number.isFinite(carbs) || carbs < 0)
     errors.push('Carbs per serving must be a number of 0 or more.');
   const forbidden = findForbiddenIngredients(input);
   if (forbidden.length > 0)
@@ -89,7 +131,7 @@ export function validateRecipeInput(input: RecipeInput): ValidationResult {
 }
 
 export function isLowCarb(recipe: Pick<Recipe, 'carbsPerServing'>): boolean {
-  return recipe.carbsPerServing <= LOW_CARB_THRESHOLD_G;
+  return recipe.carbsPerServing !== undefined && recipe.carbsPerServing <= LOW_CARB_THRESHOLD_G;
 }
 
 /** Runtime type guard, used when loading stored or imported JSON. */
@@ -106,8 +148,30 @@ export function isRecipe(value: unknown): value is Recipe {
     Array.isArray(r.tags) &&
     r.tags.every((t) => typeof t === 'string') &&
     typeof r.servings === 'number' &&
-    typeof r.carbsPerServing === 'number' &&
+    (r.carbsPerServing === undefined || typeof r.carbsPerServing === 'number') &&
     typeof r.createdAt === 'string' &&
-    typeof r.updatedAt === 'string'
+    typeof r.updatedAt === 'string' &&
+    Array.isArray(r.categoryIds) &&
+    typeof r.cooked === 'boolean'
   );
+}
+
+/**
+ * Upgrade stored/imported data from older schema versions to the current one.
+ * Returns undefined if the value isn't recoverable as a recipe.
+ */
+export function migrateRecipe(value: unknown): Recipe | undefined {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const r = { ...(value as Record<string, unknown>) };
+  // v1 -> v2: add categories + cooked tracking.
+  if (!Array.isArray(r.categoryIds)) r.categoryIds = [];
+  if (typeof r.cooked !== 'boolean') r.cooked = typeof r.lastCookedAt === 'string';
+  r.schemaVersion = RECIPE_SCHEMA_VERSION;
+  return isRecipe(r) ? r : undefined;
+}
+
+export function isCategory(value: unknown): value is Category {
+  if (typeof value !== 'object' || value === null) return false;
+  const c = value as Record<string, unknown>;
+  return typeof c.id === 'string' && typeof c.name === 'string' && typeof c.createdAt === 'string';
 }

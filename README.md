@@ -3,9 +3,14 @@
 AI-friendly, diabetic-friendly recipe app (React Native + Expo SDK 57, TypeScript, expo-router).
 Android first; iOS later from the same codebase.
 
-## Features (Phase 1)
+Full v1 feature spec: [docs/SPEC.md](docs/SPEC.md).
 
-- Recipe list with search by title, tag, or ingredient
+## Features today
+
+- Dark theme; bottom tabs: Recipes · Meal plan · Shopping list
+- Recipe list with keyword search and filters (cooked / cooked recently / not cooked)
+- Cooked toggle with last-cooked date; "Plan for today"; tappable source link; notes
+- Meal plan week view; shopping list compiled from this week's plan with check-off
 - Add recipe: title, ingredients, steps, tags, servings, net carbs per serving
 - Recipe detail (servings, carbs/serving, total carbs, low-carb badge) and delete
 - Stored on-device (AsyncStorage); two low-carb seed recipes on first launch

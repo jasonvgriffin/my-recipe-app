@@ -5,7 +5,12 @@ Guidance for Cursor cloud agents (and any other coding agent) working in this re
 ## What this is
 
 **My Recipe App** — an AI-friendly, diabetic-friendly recipe app for Jason Griffin.
-Android first; iOS later from the **same codebase**. See [`docs/PLAN.md`](docs/PLAN.md) for the roadmap.
+Android first; iOS later from the **same codebase**.
+
+- **[`docs/SPEC.md`](docs/SPEC.md) is the v1 feature spec** (14 items from Jason, with status and where the code lives).
+  Pick spec items from there; one item (or slice) per PR, and update its status row in the same PR.
+- [`docs/IMPORT_API.md`](docs/IMPORT_API.md) is the recipe import contract (see "Import pipeline" below).
+- [`docs/PLAN.md`](docs/PLAN.md) is the phased roadmap (the remote MCP server / sync backend is a later phase).
 
 ## Stack
 
@@ -20,10 +25,18 @@ Android first; iOS later from the **same codebase**. See [`docs/PLAN.md`](docs/P
 ### Layout
 
 ```
-src/app/            routes: index.tsx (list), add.tsx (form), recipe/[id].tsx (detail), _layout.tsx (Stack)
-src/types/recipe.ts Recipe schema + validation (single source of truth; also used by future export + MCP server)
-src/lib/            pure helpers (parsing, createRecipe, search, theme)
-src/storage/        recipe repository (AsyncStorage by default; inject a store for tests)
+src/app/_layout.tsx           root Stack + dark navigation theme
+src/app/(tabs)/               bottom tabs: index.tsx (Recipes), meal-plan.tsx, shopping.tsx
+src/app/add.tsx               add-recipe form (modal)
+src/app/recipe/[id].tsx       recipe detail (cooked toggle, plan for today, source link, delete)
+src/types/recipe.ts           Recipe + Category schema, validation, migrations (single source of truth)
+src/types/meal-plan.ts        MealPlanEntry, ShoppingList types
+src/import/                   THE import pipeline: importRecipe(), zod contract, parsers (JSON-LD, text,
+                              heuristics stub), deep-link/share adapters — no UI deps (docs/IMPORT_API.md)
+src/lib/                      pure helpers: recipe-utils (create/search/filter/cooked), dates, shopping,
+                              theme (dark colors)
+src/storage/                  repositories over a KeyValueStore (AsyncStorage by default; inject one in tests):
+                              kv.ts (createCollection), recipes.ts (recipes + categories), meal-plan.ts
 src/data/seed.ts    sample recipes inserted on first launch
 __tests__/          jest tests
 .github/workflows/android.yml   CI APK build + `latest-apk` prerelease
@@ -72,11 +85,29 @@ Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the And
 
 ## Product rules (Jason's preferences)
 
+- **Dark theme throughout** (spec #13). Use `colors` from `src/lib/theme.ts`; never hard-code light colors.
+
 - Recipes are **diabetic-friendly and low-carb**. Always track `servings` and `carbsPerServing` (net grams).
 - **Allulose is the only sugar-free sweetener. Never use or suggest monk fruit** (or luo han guo / mogrosides)
   — not in seed data, examples, tests, AI prompts, or suggestions. `validateRecipeInput` enforces this; keep it.
+- Never default unknown carbs to 0 (`carbsPerServing` is optional = unknown); that would mislead a diabetic user.
 - Keep the `Recipe` schema in `src/types/recipe.ts` JSON-serializable and versioned (`schemaVersion`);
-  add a migration when changing the stored shape.
+  bump `RECIPE_SCHEMA_VERSION` and extend `migrateRecipe` when changing the stored shape.
+- Put logic in pure, unit-tested helpers (`src/lib`, `src/storage`); keep screens thin.
+
+## Import pipeline (design constraint)
+
+Eventually an MCP server will let Jason's AI assistant send recipes in by voice ("Hey AI, send this recipe
+to my recipe app"). So:
+
+- **Every** way a recipe enters the app — link-import UI, pasted text, Android share intent, deep link
+  `myrecipeapp://import?url=…`, and later MCP / sync / file import — calls `importRecipe(input)` from `@/import`.
+  Never write imported recipes to storage directly and never add a parallel import path.
+- `src/import/` must stay free of React / react-native imports (it will be reused by a Node MCP server).
+  Inject storage/network/clock through `ImportDeps`.
+- Changing the contract (`src/import/types.ts`) requires updating `docs/IMPORT_API.md` and `__tests__/import.test.ts`.
+- Don't rely on the global `URL` class in shared code (RN's is a partial polyfill); use `src/import/url.ts`.
+- MCP server work itself is a later phase — don't start it without Jason's OK.
 
 ## Signing & secrets
 

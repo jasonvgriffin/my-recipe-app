@@ -1,8 +1,12 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { toIsoDate } from '@/lib/dates';
+import { setCooked } from '@/lib/recipe-utils';
 
 import { colors } from '@/lib/theme';
+import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
 import { isLowCarb, type Recipe } from '@/types/recipe';
 
@@ -24,7 +28,7 @@ export default function RecipeDetailScreen() {
   if (recipe === null) {
     return (
       <View style={styles.center}>
-        <Text>Recipe not found.</Text>
+        <Text style={styles.meta}>Recipe not found.</Text>
       </View>
     );
   }
@@ -37,12 +41,26 @@ export default function RecipeDetailScreen() {
         style: 'destructive',
         onPress: async () => {
           await recipeStore.remove(r.id);
+          await mealPlanStore.removeEntriesForRecipe(r.id);
           router.back();
         },
       },
     ]);
   }
 
+  async function toggleCooked(r: Recipe) {
+    const next = setCooked(r, !r.cooked);
+    await recipeStore.save(next);
+    setRecipe(next);
+  }
+
+  async function planToday(r: Recipe) {
+    await mealPlanStore.addEntry(toIsoDate(new Date()), r.id);
+    Alert.alert('Added to meal plan', `“${r.title}” is planned for today.`);
+  }
+
+  // TODO(spec #2): Edit screen (all fields, substitute/add/delete ingredients).
+  // TODO(spec #4): photo display; TODO(spec #14): Share button (text / photo / link, any combination).
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Stack.Screen options={{ title: recipe.title }} />
@@ -50,8 +68,16 @@ export default function RecipeDetailScreen() {
       {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}
       <View style={styles.stats}>
         <Stat label="Servings" value={String(recipe.servings)} />
-        <Stat label="Net carbs / serving" value={`${recipe.carbsPerServing} g`} />
-        <Stat label="Total net carbs" value={`${+(recipe.carbsPerServing * recipe.servings).toFixed(1)} g`} />
+        <Stat
+          label="Net carbs / serving"
+          value={recipe.carbsPerServing === undefined ? 'unknown' : `${recipe.carbsPerServing} g`}
+        />
+        <Stat
+          label="Total net carbs"
+          value={
+            recipe.carbsPerServing === undefined ? 'unknown' : `${+(recipe.carbsPerServing * recipe.servings).toFixed(1)} g`
+          }
+        />
       </View>
       {isLowCarb(recipe) && <Text style={styles.badge}>Low-carb</Text>}
       {recipe.tags.length > 0 && (
@@ -62,6 +88,24 @@ export default function RecipeDetailScreen() {
             </Text>
           ))}
         </View>
+      )}
+      <View style={styles.actions}>
+        <Pressable style={[styles.action, recipe.cooked && styles.actionOn]} onPress={() => toggleCooked(recipe)}>
+          <Text style={[styles.actionText, recipe.cooked && styles.actionTextOn]}>
+            {recipe.cooked ? '✓ Cooked' : 'Mark cooked'}
+          </Text>
+        </Pressable>
+        <Pressable style={styles.action} onPress={() => planToday(recipe)}>
+          <Text style={styles.actionText}>Plan for today</Text>
+        </Pressable>
+      </View>
+      {recipe.lastCookedAt && (
+        <Text style={styles.meta}>Last cooked {new Date(recipe.lastCookedAt).toLocaleDateString()}</Text>
+      )}
+      {recipe.sourceUrl && (
+        <Text style={styles.link} onPress={() => Linking.openURL(recipe.sourceUrl!)}>
+          Source: {recipe.sourceUrl}
+        </Text>
       )}
       <Text style={styles.section}>Ingredients</Text>
       {recipe.ingredients.map((i, idx) => (
@@ -75,6 +119,12 @@ export default function RecipeDetailScreen() {
           {idx + 1}. {s}
         </Text>
       ))}
+      {recipe.notes ? (
+        <>
+          <Text style={styles.section}>Notes</Text>
+          <Text style={styles.item}>{recipe.notes}</Text>
+        </>
+      ) : null}
       <Pressable style={styles.delete} onPress={() => confirmDelete(recipe)}>
         <Text style={styles.deleteText}>Delete recipe</Text>
       </Pressable>
@@ -128,6 +178,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
   },
+  actions: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  action: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.primary, alignItems: 'center' },
+  actionOn: { backgroundColor: colors.primary },
+  actionText: { color: colors.primary, fontWeight: '600' },
+  actionTextOn: { color: colors.primaryText },
+  meta: { color: colors.muted, marginTop: 8 },
+  link: { color: colors.primary, marginTop: 8, textDecorationLine: 'underline' },
   section: { fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 8, color: colors.text },
   item: { fontSize: 16, lineHeight: 24, color: colors.text, marginBottom: 4 },
   delete: { marginTop: 28, padding: 12, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: colors.danger },

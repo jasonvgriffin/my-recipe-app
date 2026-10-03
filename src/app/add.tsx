@@ -43,10 +43,12 @@ export default function AddRecipeScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Field label="Title">
-        <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Cauliflower Mac & Cheese" />
+        <TextInput
+          placeholderTextColor={colors.placeholder} style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Cauliflower Mac & Cheese" />
       </Field>
       <Field label="Ingredients (one per line)">
         <TextInput
+          placeholderTextColor={colors.placeholder}
           style={[styles.input, styles.multiline]}
           value={ingredients}
           onChangeText={setIngredients}
@@ -56,6 +58,7 @@ export default function AddRecipeScreen() {
       </Field>
       <Field label="Steps (one per line)">
         <TextInput
+          placeholderTextColor={colors.placeholder}
           style={[styles.input, styles.multiline]}
           value={steps}
           onChangeText={setSteps}
@@ -63,18 +66,22 @@ export default function AddRecipeScreen() {
           placeholder={'Preheat oven to 400°F\nRoast 25 minutes'}
         />
       </Field>
+      {/* TODO(spec #1,#3,#4,#6): link import, category picker, photo picker, notes. */}
       <Field label="Tags (comma separated)">
-        <TextInput style={styles.input} value={tags} onChangeText={setTags} autoCapitalize="none" />
+        <TextInput
+          placeholderTextColor={colors.placeholder} style={styles.input} value={tags} onChangeText={setTags} autoCapitalize="none" />
       </Field>
       <View style={styles.row}>
         <View style={styles.flex}>
           <Field label="Servings">
-            <TextInput style={styles.input} value={servings} onChangeText={setServings} keyboardType="numeric" />
+            <TextInput
+          placeholderTextColor={colors.placeholder} style={styles.input} value={servings} onChangeText={setServings} keyboardType="numeric" />
           </Field>
         </View>
         <View style={styles.flex}>
           <Field label="Net carbs / serving (g)">
-            <TextInput style={styles.input} value={carbs} onChangeText={setCarbs} keyboardType="decimal-pad" />
+            <TextInput
+          placeholderTextColor={colors.placeholder} style={styles.input} value={carbs} onChangeText={setCarbs} keyboardType="decimal-pad" />
           </Field>
         </View>
       </View>
@@ -109,7 +116,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 8,
     padding: 10,
-    backgroundColor: colors.card,
+    backgroundColor: colors.input,
+    color: colors.text,
     fontSize: 16,
   },
   multiline: { minHeight: 110, textAlignVertical: 'top' },

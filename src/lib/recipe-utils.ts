@@ -34,12 +34,17 @@ export function createRecipe(input: RecipeInput, now: Date = new Date(), id: str
     tags: [...new Set(input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean))],
     servings: input.servings,
     carbsPerServing: input.carbsPerServing,
+    categoryIds: [...new Set(input.categoryIds ?? [])],
+    photoUri: input.photoUri || undefined,
+    sourceUrl: input.sourceUrl?.trim() || undefined,
+    notes: input.notes?.trim() || undefined,
+    cooked: false,
     createdAt: ts,
     updatedAt: ts,
   };
 }
 
-/** Simple case-insensitive search over title, tags and ingredients. */
+/** Keyword search (spec #8): case-insensitive over title, tags, ingredients, steps and notes. */
 export function searchRecipes(recipes: Recipe[], query: string): Recipe[] {
   const q = query.trim().toLowerCase();
   if (!q) return recipes;
@@ -47,6 +52,36 @@ export function searchRecipes(recipes: Recipe[], query: string): Recipe[] {
     (r) =>
       r.title.toLowerCase().includes(q) ||
       r.tags.some((t) => t.includes(q)) ||
-      r.ingredients.some((i) => i.text.toLowerCase().includes(q)),
+      r.ingredients.some((i) => i.text.toLowerCase().includes(q)) ||
+      r.steps.some((s) => s.toLowerCase().includes(q)) ||
+      (r.notes ?? '').toLowerCase().includes(q),
   );
+}
+
+export interface RecipeFilter {
+  keyword?: string;
+  /** true = only cooked, false = only never cooked, undefined = all. */
+  cooked?: boolean;
+  /** Only recipes cooked within the last N days (spec #9 "cooked recently"). */
+  cookedWithinDays?: number;
+  /** Only recipes in this category (spec #3). */
+  categoryId?: string;
+}
+
+/** Apply list filters (spec #9). */
+export function filterRecipes(recipes: Recipe[], filter: RecipeFilter, now: Date = new Date()): Recipe[] {
+  let out = filter.keyword ? searchRecipes(recipes, filter.keyword) : recipes;
+  if (filter.cooked !== undefined) out = out.filter((r) => r.cooked === filter.cooked);
+  if (filter.cookedWithinDays !== undefined) {
+    const cutoff = now.getTime() - filter.cookedWithinDays * 86_400_000;
+    out = out.filter((r) => r.lastCookedAt !== undefined && Date.parse(r.lastCookedAt) >= cutoff);
+  }
+  if (filter.categoryId) out = out.filter((r) => r.categoryIds.includes(filter.categoryId!));
+  return out;
+}
+
+/** Toggle cooked state (spec #10). Marking cooked records the date. */
+export function setCooked(recipe: Recipe, cooked: boolean, now: Date = new Date()): Recipe {
+  const ts = now.toISOString();
+  return { ...recipe, cooked, lastCookedAt: cooked ? ts : recipe.lastCookedAt, updatedAt: ts };
 }
