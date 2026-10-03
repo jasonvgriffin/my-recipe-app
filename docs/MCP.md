@@ -16,17 +16,19 @@ Solo/offline use of the app still needs no account. Only MCP needs one.
 
 ## Connect
 
-Add a custom connector / remote MCP server with the URL above. No API key is needed. The client opens a
-sign-in page:
+Add a custom connector / remote MCP server with the URL above. No API key, client ID or secret is needed
+(the client registers itself). The client opens a sign-in page (`jasonvgriffin.github.io/my-recipe-app/oauth/consent`):
 
 1. Enter the email you use in the app. You get a 6-digit code by email.
 2. Enter the code, then tap **Connect**. You go back to your assistant, connected.
 
 Examples:
 
+- **Grok** (app or grok.com): Connectors → New Connector → Custom. Name `My Recipe App`, Server URL as above.
+  Leave any OAuth client ID / secret fields empty.
 - **Claude:** Settings → Connectors → Add custom connector → paste the URL.
 - **ChatGPT:** Settings → Connectors (developer mode) → Create → paste the URL, authentication OAuth.
-- **Grok / other clients:** add a remote MCP server (Streamable HTTP) with the URL; choose OAuth.
+- **Other clients:** add a remote MCP server (Streamable HTTP) with the URL; choose OAuth.
 - **MCP Inspector:** `npx @modelcontextprotocol/inspector`, transport "Streamable HTTP", the URL above.
 
 The connection lasts as long as your Supabase session. Sign in again if it ends.
@@ -49,9 +51,10 @@ control stays on the phone: the cook session lives on the device, and assistants
 
 ## Limits and safety
 
-- **Auth:** OAuth 2.1 with PKCE (S256) and dynamic client registration. Sign-in is the household email-code
-  account. The server seals the Supabase session inside its own tokens, so clients never see a raw Supabase
-  token. Every query runs as you, under the same row-level security as the app.
+- **Auth:** OAuth 2.1 with PKCE (S256) and dynamic client registration, provided by Supabase Auth's OAuth 2.1
+  server (free, beta). Sign-in is the household email-code account (existing accounts only). The client gets a
+  Supabase access token for you (1 hour, refreshable); every query runs as you, under the same row-level
+  security as the app. Connected apps show up in Supabase under Authentication → OAuth Apps.
 - **Entitlement:** `mcpAccess` in `src/entitlements` (free in v1). It is checked on every request and at sign-in.
 - **Rate limits (per user):** 60 requests a minute and 2,000 a day (`MCP_RATE_LIMITS`). Over the limit you get
   HTTP 429 with `Retry-After`. Counters live in `public.mcp_rate_limits` (migration `20261003030000_mcp_rate_limits.sql`).
@@ -62,18 +65,28 @@ control stays on the phone: the cook session lives on the device, and assistants
 ## How it is built
 
 - `src/mcp/`: runtime-neutral core, tested in `__tests__/mcp.test.ts`.
-  - `server.ts`: HTTP routes, OAuth endpoints, JSON-RPC.
+  - `server.ts`: HTTP routes, protected resource metadata, consent backend, JSON-RPC.
   - `tools.ts`: tools built on `importRecipeWith`, `applyRecipeEdit`, `filterRecipes`,
     `compileWeekShoppingList`, `addManualItem`, `isInPantry`.
   - `repo.ts`: synced tables through `src/sync/rows.ts`.
-  - `oauth.ts`: stateless sealed clients, codes and tokens.
+  - `oauth.ts`: resource metadata, Supabase issuer, input checks.
   - `rate-limit.ts`
 - `supabase/functions/mcp/`: Supabase Edge Function binding (supabase-js, env).
-- Endpoints, all relative to the server URL:
-  - `/.well-known/oauth-protected-resource`
-  - `/.well-known/oauth-authorization-server` (also `/.well-known/openid-configuration`)
-  - `/register`, `/authorize`, `/token`
-  - `POST /`: MCP Streamable HTTP, JSON responses, stateless
+- `site/oauth/consent.html`: the consent page, published by `.github/workflows/pages.yml` to GitHub Pages
+  (free). An Edge Function can't serve it: Supabase serves function HTML as `text/plain`.
+- OAuth discovery (why Supabase Auth is the authorization server): strict clients follow RFC 9728 / RFC 8414
+  and fetch authorization-server metadata only at the ROOT of the host
+  (`/.well-known/oauth-authorization-server/<issuer path>`). The Supabase gateway owns the root, so a function
+  can't answer there. Grok's connector manager stopped at that 401 ("Couldn't add the connector", Oct 3 2026).
+  Supabase Auth serves its own root-level metadata, so the issuer is `https://<ref>.supabase.co/auth/v1`.
+- Endpoints:
+  - `<server>/.well-known/oauth-protected-resource`: `resource` = the server URL, `authorization_servers` = Supabase Auth
+  - `https://<ref>.supabase.co/.well-known/oauth-authorization-server/auth/v1`: discovery (Supabase)
+  - `.../auth/v1/oauth/clients/register`, `/oauth/authorize`, `/oauth/token`: Supabase
+  - `<server>/consent/send`, `<server>/consent/verify`: JSON backend of the consent page (email code, entitlement,
+    household check, then approves the Supabase authorization and ends the consent session)
+  - `POST <server>`: MCP Streamable HTTP, JSON responses, stateless. Unauthenticated calls get 401 with
+    `WWW-Authenticate: Bearer resource_metadata="…"`
 - Hosting: Supabase Edge Functions on the free plan (500k invocations/month). Nothing here costs money.
 
 ## Deploying
@@ -90,10 +103,14 @@ cd supabase/functions/mcp && deno bundle --platform deno -o /tmp/mcp/index.js in
 supabase functions deploy mcp --project-ref krqmumdgsfimasjawxqn --no-verify-jwt
 ```
 
-Optional function secrets:
+Optional function secret: `MCP_PUBLIC_URL`, only needed behind a custom domain.
 
-- `MCP_OAUTH_SECRET`: sealing key. By default it is derived from the service-role key. Rotating it signs
-  every assistant out.
-- `MCP_PUBLIC_URL`: only needed behind a custom domain.
+Supabase Auth settings this needs (set Oct 3 2026 via the Management API; mirrored in `supabase/config.toml`):
+
+- Authentication → OAuth Server: enabled, dynamic client registration on, authorization path `/oauth/consent`.
+- Authentication → URL Configuration: Site URL `https://jasonvgriffin.github.io/my-recipe-app` (the consent page
+  is Site URL + path). The app's sign-in is unaffected: its emails show a code and it passes its own
+  `myrecipeapp://auth` redirect, which stays in the allow list.
+- Repo Settings → Pages: source "GitHub Actions" (serves `site/`).
 
 The rate-limit table is created by the normal migrations workflow (`supabase-migrations.yml`).

@@ -1,20 +1,14 @@
 /**
  * Remote MCP server (Phase 3, in v1.0 per Jason, Oct 3 2026): Streamable HTTP (JSON responses, stateless),
- * HTTPS only in production, OAuth 2.1 (PKCE + dynamic client registration) on the household email-code
- * account. Every MCP request: valid token → `mcpAccess` entitlement → per-user rate limit → household lookup.
+ * HTTPS only in production. OAuth 2.1 is Supabase Auth's OAuth server (see oauth.ts): this server publishes the
+ * protected resource metadata, accepts Supabase access tokens, and backs the consent page (email code →
+ * approve). Every MCP request: valid token → `mcpAccess` entitlement → per-user rate limit → household lookup.
  * Runtime-neutral `(Request) => Promise<Response>`; the Supabase Edge Function in `supabase/functions/mcp`
  * binds the real dependencies. See docs/MCP.md.
  */
 import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 
-import {
-  authorizationServerMetadata,
-  isAllowedRedirectUri,
-  pkceMatches,
-  protectedResourceMetadata,
-  signInPage,
-  type Sealer,
-} from './oauth';
+import { isAuthorizationId, isEmail, protectedResourceMetadata } from './oauth';
 import type { RateLimiter } from './rate-limit';
 import type { HouseholdRepo } from './repo';
 import { callTool, ToolError, toolDefinitions } from './tools';
@@ -24,24 +18,27 @@ export const SUPPORTED_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03
 
 export interface AuthSession {
   accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
   userId: string;
 }
 
 export interface McpAuthBackend {
-  /** Email a sign-in code to an EXISTING account (no sign-ups from the MCP page). */
+  /** Email a sign-in code to an EXISTING account (no sign-ups from the consent page). */
   sendCode(email: string): Promise<void>;
+  /** A short-lived session for the consent step only. */
   verifyCode(email: string, code: string): Promise<AuthSession>;
-  refresh(refreshToken: string): Promise<AuthSession>;
-  /** The user for a Supabase access token, or undefined if invalid/expired. */
+  /** Approve a pending Supabase OAuth authorization as this user; returns the client's redirect URL (with code). */
+  approve(authorizationId: string, accessToken: string): Promise<{ redirectUrl: string }>;
+  /** End the consent-step session (the OAuth grant keeps its own tokens). */
+  endSession?(accessToken: string): Promise<void>;
+  /** The user for a Supabase access token (app or OAuth), or undefined if invalid/expired. */
   getUser(accessToken: string): Promise<{ id: string; email?: string } | undefined>;
 }
 
 export interface McpServerDeps {
-  /** Public base URL of the server, e.g. https://<ref>.supabase.co/functions/v1/mcp (no trailing slash). */
-  issuer: string;
-  sealer: Sealer;
+  /** Public URL of the MCP endpoint, e.g. https://<ref>.supabase.co/functions/v1/mcp (no trailing slash). */
+  resource: string;
+  /** OAuth issuer: Supabase Auth, e.g. https://<ref>.supabase.co/auth/v1. */
+  authorizationServer: string;
   auth: McpAuthBackend;
   /** Household data for this user (RLS via their token), or undefined if they are in no household. */
   connect(accessToken: string, userId: string): Promise<HouseholdRepo | undefined>;
@@ -54,8 +51,8 @@ export interface McpServerDeps {
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type, Accept, Mcp-Protocol-Version, Mcp-Session-Id',
-  'Access-Control-Expose-Headers': 'WWW-Authenticate, Retry-After',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, Accept, Mcp-Protocol-Version, Mcp-Session-Id, Last-Event-ID',
+  'Access-Control-Expose-Headers': 'WWW-Authenticate, Retry-After, Mcp-Session-Id',
 };
 
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
@@ -64,174 +61,61 @@ const json = (body: unknown, status = 200, headers: Record<string, string> = {})
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...CORS, ...headers },
   });
 
-const html = (body: string, status = 200) =>
-  new Response(body, {
-    status,
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'no-store',
-      'X-Frame-Options': 'DENY',
-      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https: http://localhost:* http://127.0.0.1:*; frame-ancestors 'none'",
-    },
-  });
-
-const oauthError = (error: string, description: string, status = 400) =>
-  json({ error, error_description: description }, status);
-
-async function formBody(req: Request): Promise<Record<string, string>> {
-  const type = req.headers.get('content-type') ?? '';
-  if (type.includes('application/json')) {
-    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-    return Object.fromEntries(Object.entries(body).map(([k, v]) => [k, String(v)]));
-  }
-  const text = await req.text();
-  return Object.fromEntries(new URLSearchParams(text));
-}
-
-interface ClientInfo extends Record<string, unknown> {
-  r: string[];
-  n?: string;
-}
-interface PendingRequest extends Record<string, unknown> {
-  c: string;
-  r: string;
-  s?: string;
-  ch: string;
-  n?: string;
+async function jsonBody(req: Request): Promise<Record<string, string>> {
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown> | null;
+  return Object.fromEntries(Object.entries(body ?? {}).map(([k, v]) => [k, typeof v === 'string' ? v : String(v ?? '')]));
 }
 
 export function createMcpHandler(deps: McpServerDeps) {
-  const issuer = deps.issuer.replace(/\/+$/, '');
-  const issuerPath = new URL(issuer).pathname.replace(/\/+$/, '');
+  const resource = deps.resource.replace(/\/+$/, '');
+  const resourcePath = new URL(resource).pathname.replace(/\/+$/, '');
   const canUse = deps.canUse ?? defaultCanUse;
   const now = deps.now ?? (() => new Date());
-  const resourceMetadataUrl = `${issuer}/.well-known/oauth-protected-resource`;
+  const resourceMetadataUrl = `${resource}/.well-known/oauth-protected-resource`;
 
-  async function tokensFor(session: AuthSession) {
-    return {
-      access_token: await deps.sealer.seal('access', { at: session.accessToken, u: session.userId }, session.expiresIn),
-      token_type: 'Bearer',
-      expires_in: session.expiresIn,
-      refresh_token: await deps.sealer.seal('refresh', { rt: session.refreshToken }),
-      scope: 'recipes',
-    };
-  }
-
-  async function register(req: Request) {
-    const body = (await req.json().catch(() => undefined)) as { redirect_uris?: unknown; client_name?: unknown } | undefined;
-    const uris = Array.isArray(body?.redirect_uris) ? body!.redirect_uris.filter((u): u is string => typeof u === 'string') : [];
-    if (uris.length === 0 || uris.length > 10 || !uris.every(isAllowedRedirectUri)) {
-      return oauthError('invalid_redirect_uri', 'redirect_uris must be https (or http on localhost) URLs.');
+  /** Consent page step 1: email a code (existing household accounts only). */
+  async function consentSend(req: Request) {
+    const email = ((await jsonBody(req)).email ?? '').trim().toLowerCase();
+    if (!isEmail(email)) return json({ error: 'Enter a valid email.' }, 400);
+    try {
+      await deps.auth.sendCode(email);
+    } catch {
+      return json({ error: 'Could not send a code. Use the email you signed in with in the app (Settings → Household).' }, 400);
     }
-    const name = typeof body?.client_name === 'string' ? body.client_name.slice(0, 100) : undefined;
-    const clientId = await deps.sealer.seal('client', { r: uris, ...(name ? { n: name } : {}) });
-    return json(
-      {
-        client_id: clientId,
-        client_id_issued_at: Math.floor(now().getTime() / 1000),
-        redirect_uris: uris,
-        ...(name ? { client_name: name } : {}),
-        token_endpoint_auth_method: 'none',
-        grant_types: ['authorization_code', 'refresh_token'],
-        response_types: ['code'],
-      },
-      201,
-    );
+    return json({ ok: true, email });
   }
 
-  async function authorizeStart(url: URL) {
-    const p = url.searchParams;
-    const client = await deps.sealer.open<ClientInfo>('client', p.get('client_id') ?? '');
-    const redirect = p.get('redirect_uri') ?? client?.r[0] ?? '';
-    if (!client) return html(signInError('Unknown app. Remove the connector and add it again.'), 400);
-    if (!client.r.includes(redirect)) return html(signInError('This redirect address is not registered for the app.'), 400);
-    const back = (error: string, description: string) => {
-      const to = new URL(redirect);
-      to.searchParams.set('error', error);
-      to.searchParams.set('error_description', description);
-      if (p.get('state')) to.searchParams.set('state', p.get('state')!);
-      return Response.redirect(to.toString(), 302);
-    };
-    if (p.get('response_type') !== 'code') return back('unsupported_response_type', 'Only response_type=code is supported.');
-    const challenge = p.get('code_challenge');
-    if (!challenge || (p.get('code_challenge_method') ?? 'S256') !== 'S256') {
-      return back('invalid_request', 'PKCE with code_challenge_method=S256 is required.');
-    }
-    const request = await deps.sealer.seal(
-      'request',
-      { c: p.get('client_id')!, r: redirect, ch: challenge, ...(p.get('state') ? { s: p.get('state')! } : {}), ...(client.n ? { n: client.n } : {}) },
-      1800,
-    );
-    return html(signInPage({ action: `${issuer}/authorize`, request, clientName: client.n }));
-  }
-
-  function signInError(message: string) {
-    return `<!doctype html><meta charset="utf-8"><title>My Recipe App</title><body style="font-family:system-ui;padding:32px"><h1>Can't connect</h1><p>${message}</p></body>`;
-  }
-
-  async function authorizeSubmit(req: Request) {
-    const form = await formBody(req);
-    const pending = await deps.sealer.open<PendingRequest>('request', form.request ?? '');
-    if (!pending) return html(signInError('This sign-in page expired. Start connecting again from your assistant.'), 400);
-    const page = (extra: { email?: string; error?: string; info?: string }) =>
-      html(signInPage({ action: `${issuer}/authorize`, request: form.request, clientName: pending.n, ...extra }));
+  /** Consent page step 2: check the code, entitlement and household, then approve the Supabase authorization. */
+  async function consentVerify(req: Request) {
+    const form = await jsonBody(req);
     const email = (form.email ?? '').trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return page({ error: 'Enter a valid email.' });
-    if (form.step !== 'verify') {
-      try {
-        await deps.auth.sendCode(email);
-      } catch {
-        return page({ error: 'Could not send a code. Use the email you signed in with in the app (Settings → Household).' });
-      }
-      return page({ email, info: 'Check your email for a 6-digit code.' });
-    }
+    const authorizationId = form.authorization_id ?? '';
+    if (!isAuthorizationId(authorizationId)) return json({ error: 'This sign-in link is incomplete. Start connecting again from your assistant.' }, 400);
+    if (!isEmail(email)) return json({ error: 'Enter a valid email.' }, 400);
     let session: AuthSession;
     try {
       session = await deps.auth.verifyCode(email, (form.code ?? '').replace(/\s/g, ''));
     } catch {
-      return page({ email, error: 'That code did not work. Check it or send a new one.' });
+      return json({ error: 'That code did not work. Check it or send a new one.' }, 400);
     }
-    if (!canUse('mcpAccess')) return page({ error: 'AI assistant access is not available for this account.' });
-    const repo = await deps.connect(session.accessToken, session.userId);
-    if (!repo) {
-      return page({
-        error: 'No household found. In the app, open Settings → Household, create or join a household, and let your recipes sync.',
-      });
-    }
-    const code = await deps.sealer.seal(
-      'code',
-      { c: pending.c, r: pending.r, ch: pending.ch, at: session.accessToken, rt: session.refreshToken, ei: session.expiresIn, u: session.userId },
-      120,
-    );
-    const to = new URL(pending.r);
-    to.searchParams.set('code', code);
-    if (pending.s) to.searchParams.set('state', pending.s);
-    return Response.redirect(to.toString(), 302);
-  }
-
-  async function token(req: Request) {
-    const form = await formBody(req);
-    if (form.grant_type === 'authorization_code') {
-      const code = await deps.sealer.open<{ c: string; r: string; ch: string; at: string; rt: string; ei: number; u: string }>(
-        'code',
-        form.code ?? '',
-      );
-      if (!code) return oauthError('invalid_grant', 'Authorization code is invalid or expired.');
-      if (form.client_id && form.client_id !== code.c) return oauthError('invalid_grant', 'client_id does not match.');
-      if (form.redirect_uri && form.redirect_uri !== code.r) return oauthError('invalid_grant', 'redirect_uri does not match.');
-      if (!(await pkceMatches(form.code_verifier ?? '', code.ch))) return oauthError('invalid_grant', 'PKCE verification failed.');
-      return json(await tokensFor({ accessToken: code.at, refreshToken: code.rt, expiresIn: code.ei, userId: code.u }));
-    }
-    if (form.grant_type === 'refresh_token') {
-      const rt = await deps.sealer.open<{ rt: string }>('refresh', form.refresh_token ?? '');
-      if (!rt) return oauthError('invalid_grant', 'Refresh token is invalid.');
-      try {
-        return json(await tokensFor(await deps.auth.refresh(rt.rt)));
-      } catch {
-        return oauthError('invalid_grant', 'Session ended. Connect again.');
+    try {
+      if (!canUse('mcpAccess')) return json({ error: 'AI assistant access is not available for this account.' }, 403);
+      const repo = await deps.connect(session.accessToken, session.userId);
+      if (!repo) {
+        return json(
+          { error: 'No household found. In the app, open Settings → Household, create or join a household, and let your recipes sync.' },
+          403,
+        );
       }
+      try {
+        const { redirectUrl } = await deps.auth.approve(authorizationId, session.accessToken);
+        return json({ redirect_url: redirectUrl });
+      } catch {
+        return json({ error: 'This sign-in request expired. Start connecting again from your assistant.' }, 400);
+      }
+    } finally {
+      await deps.auth.endSession?.(session.accessToken).catch(() => undefined);
     }
-    return oauthError('unsupported_grant_type', 'Use authorization_code or refresh_token.');
   }
 
   const unauthorized = (description: string) =>
@@ -247,10 +131,9 @@ export function createMcpHandler(deps: McpServerDeps) {
     const auth = req.headers.get('authorization') ?? '';
     const bearer = auth.match(/^Bearer\s+(.+)$/i)?.[1];
     if (!bearer) return unauthorized('Sign in required.');
-    const tok = await deps.sealer.open<{ at: string; u: string }>('access', bearer);
-    if (!tok) return unauthorized('Token is invalid or expired.');
-    const user = await deps.auth.getUser(tok.at);
-    if (!user) return unauthorized('Session expired.');
+    const user = await deps.auth.getUser(bearer);
+    if (!user) return unauthorized('Token is invalid or expired.');
+    const tok = { at: bearer };
     if (!canUse('mcpAccess')) return json(rpcError(null, -32001, 'AI assistant access is not available for this account.'), 403);
     const limit = await deps.rateLimiter(tok.at).hit(user.id);
     if (!limit.ok) {
@@ -323,18 +206,15 @@ export function createMcpHandler(deps: McpServerDeps) {
     const url = new URL(req.url);
     let path = url.pathname.replace(/\/+$/, '');
     // Accept both the public path (/functions/v1/mcp/...) and the function-local one (/mcp/...).
-    if (issuerPath && path.startsWith(issuerPath)) path = path.slice(issuerPath.length);
+    if (resourcePath && path.startsWith(resourcePath)) path = path.slice(resourcePath.length);
     else path = path.replace(/^.*?\/mcp(?=\/|$)/, '');
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     try {
-      if (req.method === 'GET' && path === '/.well-known/oauth-protected-resource') return json(protectedResourceMetadata(issuer));
-      if (req.method === 'GET' && (path === '/.well-known/oauth-authorization-server' || path === '/.well-known/openid-configuration')) {
-        return json(authorizationServerMetadata(issuer));
+      if (req.method === 'GET' && path.startsWith('/.well-known/oauth-protected-resource')) {
+        return json(protectedResourceMetadata(resource, deps.authorizationServer));
       }
-      if (req.method === 'POST' && path === '/register') return await register(req);
-      if (req.method === 'GET' && path === '/authorize') return await authorizeStart(url);
-      if (req.method === 'POST' && path === '/authorize') return await authorizeSubmit(req);
-      if (req.method === 'POST' && path === '/token') return await token(req);
+      if (req.method === 'POST' && path === '/consent/send') return await consentSend(req);
+      if (req.method === 'POST' && path === '/consent/verify') return await consentVerify(req);
       if (path === '' || path === '/' || path === '/mcp') {
         if (req.method === 'POST') return await mcp(req);
         return json({ error: 'method_not_allowed', error_description: 'Use POST (Streamable HTTP, JSON responses).' }, 405, { Allow: 'POST' });
