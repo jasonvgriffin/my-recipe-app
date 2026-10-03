@@ -1,6 +1,6 @@
 import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
@@ -16,7 +16,7 @@ import { useSettings } from '@/hooks/use-settings';
 import { formatCookedOn, toIsoDate } from '@/lib/dates';
 import { presentIngredient } from '@/lib/ingredients';
 import { addRecipeTags, removeRecipeTag, setCooked, setRating, toggleRecipeCategory } from '@/lib/recipe-utils';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { formatDuration } from '@/lib/timers';
 import { effectiveUnitSystem } from '@/lib/units';
 import { startBackgroundStepTimer } from '@/notifications/step-timers';
@@ -42,6 +42,8 @@ export interface RecipeDetailProps {
  * (medium/expanded, spec #23). Keep it free of navigation side effects — use the callbacks.
  */
 export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesProp }: RecipeDetailProps) {
+  const styles = useStyles();
+  const colors = useColors();
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined);
   // Optional cross-links (meal plan) only appear when that feature is enabled — recipes-first rule.
   // Gated entry points (src/entitlements) — recipe view/edit/delete itself is never gated.
@@ -394,6 +396,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.stat}>
       <Text style={styles.statValue}>{value}</Text>
@@ -402,7 +405,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { padding: 16, paddingBottom: 48 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   photo: { width: '100%', height: 200, borderRadius: 10, marginBottom: 12, backgroundColor: colors.card },
@@ -466,4 +469,4 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
   },
   deleteText: { color: colors.danger, fontWeight: '600' },
-});
+}));

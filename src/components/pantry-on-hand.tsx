@@ -1,9 +1,9 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 
 import { useFeatureVisible } from '@/hooks/use-feature';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 import { pantryStore } from '@/storage/pantry';
 import type { PantryItem } from '@/types/recipe';
 
@@ -13,6 +13,7 @@ import type { PantryItem } from '@/types/recipe';
  * Hidden pantry stays quiet — no prompt to open it.
  */
 export function PantryOnHand() {
+  const styles = useStyles();
   const visible = useFeatureVisible('pantry');
   const [items, setItems] = useState<PantryItem[]>([]);
 
@@ -52,9 +53,9 @@ export function PantryOnHand() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   box: { padding: 16, gap: 8 },
   heading: { color: colors.text, fontSize: 18, fontWeight: '700' },
   muted: { color: colors.muted },
   item: { color: colors.text, fontSize: 16, paddingVertical: 6 },
-});
+}));

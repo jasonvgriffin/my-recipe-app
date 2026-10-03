@@ -1,10 +1,10 @@
 import { router, type Href } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { MAX_CONTENT_WIDTH, MaxWidthContainer } from '@/components/layout';
 import type { FeatureId } from '@/entitlements';
 import { useFeature } from '@/hooks/use-feature';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 
 interface HomeAction {
   label: string;
@@ -56,6 +56,7 @@ const ACTIONS: HomeAction[] = [
 ];
 
 export default function RecipesHomeScreen() {
+  const styles = useStyles();
   const shareOk = useFeature('householdSync').available;
   const pantryOk = useFeature('pantry').available;
   const allowed = (gate?: FeatureId) => (gate === 'householdSync' ? shareOk : gate === 'pantry' ? pantryOk : true);
@@ -82,10 +83,10 @@ export default function RecipesHomeScreen() {
 
 // v1.0.2 (Jason): no cards — each option is its title as tappable green text (the selected-tab color),
 // with a 56dp tap target and comfortable spacing.
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   scroll: { padding: 16, flexGrow: 1 },
   actions: { gap: 8 },
   button: { minHeight: 56, justifyContent: 'center', paddingHorizontal: 4, paddingVertical: 12 },
   pressed: { opacity: 0.6 },
   label: { color: colors.primary, fontSize: 20, fontWeight: '700' },
-});
+}));

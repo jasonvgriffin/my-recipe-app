@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
 import { FeatureGate } from '@/components/feature-gate';
@@ -11,7 +11,8 @@ import { featureGate, type FeatureId } from '@/entitlements';
 import { useFeature } from '@/hooks/use-feature';
 import { useHousehold } from '@/hooks/use-household';
 import { useSettings } from '@/hooks/use-settings';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColorSchemeResolved, useColors } from '@/hooks/use-theme';
+import { ACCENTS, THEME_MODES } from '@/lib/theme';
 import { settingsStore } from '@/storage/settings';
 import { syncStatusLabel } from '@/sync/status';
 import type { OptionalFeatures, UnitSystem } from '@/types/recipe';
@@ -28,7 +29,8 @@ const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; h
 ];
 
 /**
- * Settings. Recipes are the core: everything here is optional. AI assistant (MCP) connection info, units,
+ * Settings. Recipes are the core: everything here is optional. AI assistant (MCP) connection info, appearance
+ * (theme mode + accent color, v1.0.3; free, not gated), units,
  * cooking mode, and optional-feature toggles; the app version at the bottom. (The "cooked recently" window is
  * fixed at 14 days since v1.0.2 — `COOKED_RECENTLY_DAYS`.) Turning every optional feature off makes the
  * app a pure recipe box.
@@ -40,6 +42,7 @@ const UNIT_CHOICES: { id: UnitSystem | 'original'; label: string }[] = [
 ];
 
 function HouseholdSettingsLink() {
+  const styles = useStyles();
   const { account, sync } = useHousehold();
   const subtitle = !account.user
     ? 'Share recipes with your household. Optional — recipes work without an account.'
@@ -60,6 +63,8 @@ function HouseholdSettingsLink() {
 }
 
 export default function SettingsScreen() {
+  const styles = useStyles();
+  const colors = useColors();
   const settings = useSettings();
   // Subscribe to gate changes; toggles for gated-off (e.g. future premium) features are not shown.
   useFeature('mealPlan');
@@ -70,6 +75,7 @@ export default function SettingsScreen() {
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
       <ScrollView contentContainerStyle={styles.container} testID="settings-screen">
         <McpServerSection />
+        <AppearanceSection />
         <Text style={styles.section}>Optional features</Text>
         <Text style={styles.help}>Recipes always work on their own. Show only the extras you want.</Text>
         {FEATURES.filter((f) => featureGate.canUse(f.gate)).map((f) => (
@@ -143,8 +149,69 @@ export default function SettingsScreen() {
   );
 }
 
+/**
+ * Appearance (v1.0.3): theme mode System / Light / Dark (default System) and an accent color applied app-wide
+ * (tab highlight, links and buttons, the + button and + menu icons). Saved locally in settings; not gated.
+ */
+function AppearanceSection() {
+  const styles = useStyles();
+  const colors = useColors();
+  const scheme = useColorSchemeResolved();
+  const { appearance } = useSettings();
+  return (
+    <>
+      <Text style={styles.section}>Appearance</Text>
+      <Text style={styles.help}>Theme</Text>
+      <View style={styles.units} accessibilityRole="radiogroup" accessibilityLabel="Theme">
+        {THEME_MODES.map((m) => {
+          const selected = appearance.themeMode === m.id;
+          return (
+            <Pressable
+              key={m.id}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              testID={`settings-theme-${m.id}`}
+              style={[styles.unit, selected && styles.unitOn]}
+              onPress={() => {
+                void settingsStore.update({ appearance: { themeMode: m.id } });
+              }}>
+              <Text style={[styles.unitText, selected && styles.unitTextOn]}>{m.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={styles.help}>Accent color</Text>
+      <View style={styles.accents} accessibilityRole="radiogroup" accessibilityLabel="Accent color">
+        {ACCENTS.map((a) => {
+          const selected = appearance.accent === a.id;
+          const swatch = a[scheme].primary;
+          return (
+            <Pressable
+              key={a.id}
+              accessibilityRole="radio"
+              accessibilityLabel={`${a.label} accent`}
+              accessibilityState={{ selected }}
+              testID={`settings-accent-${a.id}`}
+              style={[styles.accent, selected && { borderColor: colors.primary }]}
+              onPress={() => {
+                void settingsStore.update({ appearance: { accent: a.id } });
+              }}>
+              <View style={[styles.swatch, { backgroundColor: swatch }]}>
+                {selected ? <Ionicons name="checkmark" size={20} color={a[scheme].primaryText} /> : null}
+              </View>
+              <Text style={styles.accentLabel}>{a.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </>
+  );
+}
+
 /** AI assistants (MCP): the server URL (`MCP_SERVER_URL`, src/config) with a copy button. Spec #28, docs/MCP.md. */
 function McpServerSection() {
+  const styles = useStyles();
+  const colors = useColors();
   const [copied, setCopied] = useState(false);
   return (
     <>
@@ -174,7 +241,7 @@ function McpServerSection() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { padding: 16, gap: 12 },
   section: { color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 8 },
   url: { color: colors.text, fontSize: 14, flexShrink: 1 },
@@ -223,4 +290,19 @@ const styles = StyleSheet.create({
   unitOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   unitText: { color: colors.text, fontWeight: '600' },
   unitTextOn: { color: colors.primaryText },
-});
+  accents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  accent: {
+    minWidth: 72,
+    minHeight: 44,
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+  },
+  swatch: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  accentLabel: { color: colors.text, fontSize: 13, fontWeight: '600' },
+}));

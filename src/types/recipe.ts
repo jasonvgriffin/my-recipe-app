@@ -8,6 +8,8 @@
  * v1 feature spec: docs/SPEC.md. Fields marked (spec #N) map to items in that spec.
  */
 
+import type { AccentId, ThemeMode } from '../lib/theme';
+
 import type { SyncMeta } from './sync';
 
 /** Current schema version. Bump when the stored shape changes and add a migration in `migrateRecipe`. */
@@ -253,6 +255,13 @@ export interface AppSettings {
    * every cross-link from recipe screens, turning the app into a pure recipe box.
    */
   features: OptionalFeatures;
+  /** Settings → Appearance (v1.0.3): theme mode and accent color. Core app setting, never gated. */
+  appearance: AppearanceSettings;
+}
+
+export interface AppearanceSettings {
+  themeMode: ThemeMode;
+  accent: AccentId;
 }
 
 export interface OptionalFeatures {
@@ -265,4 +274,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   unitSystem: 'original',
   cookingModeKeepAwake: true,
   features: { mealPlan: true, shopping: true, pantry: true },
+  appearance: { themeMode: 'system', accent: 'green' }, // DEFAULT_THEME_MODE / DEFAULT_ACCENT in src/lib/theme.ts
 };

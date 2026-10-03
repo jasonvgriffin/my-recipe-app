@@ -1,7 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { WEEKDAY_LABELS, formatLongDate } from '@/lib/dates';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 import type { IsoDate, MealPlanEntry } from '@/types/meal-plan';
 import type { Recipe } from '@/types/recipe';
 
@@ -33,6 +33,7 @@ export function MealCalendar({
   onToday,
   onSelect,
 }: MealCalendarProps) {
+  const styles = useStyles();
   return (
     <View style={styles.wrap} testID="meal-calendar">
       <View style={styles.modes}>
@@ -98,7 +99,7 @@ export function MealCalendar({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   wrap: { padding: 12, paddingBottom: 8 },
   modes: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   hint: { flex: 1, color: colors.muted, fontSize: 13 },
@@ -124,4 +125,4 @@ const styles = StyleSheet.create({
   outside: { color: colors.placeholder },
   entry: { color: colors.text, fontSize: 10, marginTop: 2 },
   count: { color: colors.primary, fontWeight: '700', fontSize: 12, marginTop: 2 },
-});
+}));

@@ -1,10 +1,10 @@
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
 import { StarRating } from '@/components/star-rating';
 import { COOKED_RECENTLY_DAYS, type RecipeBrowse, type RecipeSort } from '@/lib/recipe-utils';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 import type { Category } from '@/types/recipe';
 
 const SORTS: { id: RecipeSort; label: string }[] = [
@@ -42,6 +42,7 @@ export function RecipeFilters({
   filtersActive: boolean;
   onClear: () => void;
 }) {
+  const styles = useStyles();
   function patch(partial: Partial<RecipeBrowse>) {
     onChange({ ...browse, ...partial });
   }
@@ -161,11 +162,11 @@ export function RecipeFilters({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   wrap: { gap: 12, paddingTop: 10 },
   block: { gap: 6 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   label: { color: colors.muted, fontSize: 13, fontWeight: '600' },
   manage: { minHeight: 44, justifyContent: 'center' },
   manageText: { color: colors.primary, fontWeight: '600', fontSize: 15 },
-});
+}));

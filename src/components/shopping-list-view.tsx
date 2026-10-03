@@ -1,7 +1,7 @@
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { formatShortDate } from '@/lib/dates';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import type { IsoDate, ShoppingList } from '@/types/meal-plan';
 
 export interface ShoppingListViewProps {
@@ -45,6 +45,8 @@ export function ShoppingListView({
   onScan,
   added,
 }: ShoppingListViewProps) {
+  const styles = useStyles();
+  const colors = useColors();
   const checked = list?.items.some((i) => i.checked) ?? false;
   return (
     <View style={styles.fill}>
@@ -148,7 +150,7 @@ export function ShoppingListView({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   added: { color: colors.primary, fontWeight: '700', fontSize: 16, marginHorizontal: 12, marginTop: 8 },
   fill: { flex: 1, padding: 12 },
   nav: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
@@ -220,4 +222,4 @@ const styles = StyleSheet.create({
   itemText: { color: colors.text, fontSize: 16 },
   checked: { color: colors.muted, textDecorationLine: 'line-through' },
   manual: { color: colors.muted, fontSize: 12, marginTop: 2 },
-});
+}));

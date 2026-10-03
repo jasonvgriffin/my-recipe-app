@@ -1,6 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 import type { UnitSystem } from '@/types/recipe';
 
 const CHOICES: { id: UnitSystem | 'original'; label: string }[] = [
@@ -27,6 +27,7 @@ export function ServingsUnits({
   unitSystem: UnitSystem | 'original';
   onUnitSystem: (system: UnitSystem | 'original') => void;
 }) {
+  const styles = useStyles();
   const scaled = targetServings !== baseServings;
   return (
     <View style={styles.wrap} testID="servings-units">
@@ -79,7 +80,7 @@ export function ServingsUnits({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   wrap: { gap: 8, marginTop: 8 },
   servingsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   label: { color: colors.text, fontSize: 16, fontWeight: '600', flex: 1 },
@@ -110,4 +111,4 @@ const styles = StyleSheet.create({
   unitOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   unitText: { color: colors.text, fontWeight: '600' },
   unitTextOn: { color: colors.primaryText },
-});
+}));

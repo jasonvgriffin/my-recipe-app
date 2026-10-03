@@ -1,6 +1,6 @@
 import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
 import { RecipeDetail } from '@/components/recipe-detail';
@@ -18,7 +18,7 @@ import {
   sortRecipes,
   type RecipeBrowse,
 } from '@/lib/recipe-utils';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
 import type { Category, Recipe } from '@/types/recipe';
 
@@ -27,6 +27,8 @@ import type { Category, Recipe } from '@/types/recipe';
  * Opened from the Recipes tab's "Existing Recipes" and "Search" buttons (`?focus=search` focuses the box).
  */
 export default function RecipeListScreen() {
+  const styles = useStyles();
+  const colors = useColors();
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   const [recipes, setRecipes] = useState<Recipe[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -228,7 +230,7 @@ export default function RecipeListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   importLink: { marginHorizontal: 12, marginTop: 10, minHeight: 44, justifyContent: 'center' },
@@ -269,4 +271,4 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fabText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
-});
+}));

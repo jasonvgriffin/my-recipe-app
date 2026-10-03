@@ -1,17 +1,19 @@
 import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { CategoryChips } from '@/components/category-chips';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
 import { StarRating } from '@/components/star-rating';
 import { useFeature } from '@/hooks/use-feature';
 import { createRecipe, parseLines, parseTags } from '@/lib/recipe-utils';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
 import { PREFERRED_SWEETENER, validateRecipeInput, type Category, type RecipeInput } from '@/types/recipe';
 
 export default function AddRecipeScreen() {
+  const styles = useStyles();
+  const colors = useColors();
   const [title, setTitle] = useState('');
   const [ingredients, setIngredients] = useState('');
   const [steps, setSteps] = useState('');
@@ -203,6 +205,7 @@ export default function AddRecipeScreen() {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -211,7 +214,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { padding: 16, paddingBottom: 48 },
   field: { marginBottom: 14 },
   label: { fontWeight: '600', marginBottom: 6, color: colors.text },
@@ -250,4 +253,4 @@ const styles = StyleSheet.create({
   buttonText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
   importLink: { minHeight: 44, justifyContent: 'center', marginBottom: 12 },
   importLinkText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
-});
+}));

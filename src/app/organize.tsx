@@ -1,10 +1,10 @@
 import { Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
 import { useFeature } from '@/hooks/use-feature';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
 import type { Category } from '@/types/recipe';
 
@@ -13,6 +13,8 @@ import type { Category } from '@/types/recipe';
  * Assigning a category or tag to one recipe happens on the recipe itself.
  */
 export default function OrganizeScreen() {
+  const styles = useStyles();
+  const colors = useColors();
   const categoriesOn = useFeature('categories').available;
   const tagsOn = useFeature('tags').available;
   const [categories, setCategories] = useState<Category[] | null>(null);
@@ -292,7 +294,7 @@ export default function OrganizeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { padding: 16, paddingBottom: 48, gap: 24 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   section: { gap: 10 },
@@ -351,4 +353,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dangerText: { color: colors.danger, fontWeight: '600' },
-});
+}));

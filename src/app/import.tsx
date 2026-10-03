@@ -1,6 +1,6 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import * as Sharing from 'expo-sharing';
 
 import { FeatureGate, FeatureLocked } from '@/components/feature-gate';
@@ -18,7 +18,7 @@ import {
 import { importErrorMessage } from '@/lib/import-messages';
 import { isRemotePhoto } from '@/lib/photo-path';
 import { downloadRecipePhoto } from '@/lib/photos';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
 import { PREFERRED_SWEETENER } from '@/types/recipe';
 
@@ -37,6 +37,8 @@ export default function ImportScreen() {
 }
 
 function ImportBody() {
+  const styles = useStyles();
+  const colors = useColors();
   const params = useLocalSearchParams<{ url?: string; text?: string; incoming?: string }>();
   const photos = useFeature('photos').available;
   const [url, setUrl] = useState(typeof params.url === 'string' ? params.url : '');
@@ -281,7 +283,7 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { padding: 16, paddingBottom: 48 },
   lead: { color: colors.muted, marginBottom: 16, fontSize: 15, lineHeight: 22 },
   label: { color: colors.text, fontWeight: '600', marginBottom: 6 },
@@ -341,4 +343,4 @@ const styles = StyleSheet.create({
   warning: { color: colors.text, marginBottom: 4 },
   row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
-});
+}));

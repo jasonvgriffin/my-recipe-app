@@ -8,7 +8,7 @@ import { cookSession, parseCookDeepLink, runCookCommand, type CookCommand, type 
 import { useFeature } from '@/hooks/use-feature';
 import { useSettings } from '@/hooks/use-settings';
 import { effectiveUnitSystem } from '@/lib/units';
-import { colors } from '@/lib/theme';
+import { useColors } from '@/hooks/use-theme';
 import { armStepTimer, cancelStepTimerNotifications } from '@/notifications/step-timers';
 import { recipeStore } from '@/storage/recipes';
 import { setCooked } from '@/lib/recipe-utils';
@@ -30,6 +30,7 @@ export default function CookScreen() {
 }
 
 function CookSessionScreen({ via }: { via: 'app' | 'deep_link' }) {
+  const colors = useColors();
   const params = useLocalSearchParams<{ action: string; step?: string }>();
   const action = String(params.action);
   const stepQuery = typeof params.step === 'string' ? params.step : undefined;

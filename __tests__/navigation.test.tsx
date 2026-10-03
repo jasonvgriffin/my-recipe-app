@@ -159,8 +159,10 @@ describe('bottom bar, header and + sheet', () => {
 
 describe('Recipes home (v1.0.2)', () => {
   it('shows the five options as plain green titles (no subtitles)', async () => {
-    const { colors } = require('@/lib/theme');
+    const { buildColors } = require('@/lib/theme');
     const { StyleSheet } = require('react-native');
+    await settingsStore.update({ appearance: { themeMode: 'dark', accent: 'green' } });
+    const colors = buildColors('dark', 'green');
     renderRouter(routes(), { initialUrl: '/' });
     await screen.findByTestId('add-recipe-button');
     for (const label of [

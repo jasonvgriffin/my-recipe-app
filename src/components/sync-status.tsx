@@ -1,11 +1,12 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { requestHouseholdSync } from '@/household/runtime';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 import { syncStatusLabel, type SyncStatus } from '@/sync/status';
 
 /** Clear sync status. Hidden concerns stay quiet: solo mode is one muted line, errors name the problem. */
 export function SyncStatusBanner({ status, inHousehold }: { status: SyncStatus; inHousehold: boolean }) {
+  const styles = useStyles();
   const label = inHousehold ? syncStatusLabel(status) : 'Sync starts after you create or join a household.';
   const problem = status.phase === 'error' || status.phase === 'offline';
   return (
@@ -30,7 +31,7 @@ export function SyncStatusBanner({ status, inHousehold }: { status: SyncStatus; 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   box: {
     backgroundColor: colors.card,
     borderRadius: 10,
@@ -53,4 +54,4 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   buttonText: { color: colors.primary, fontWeight: '700' },
-});
+}));

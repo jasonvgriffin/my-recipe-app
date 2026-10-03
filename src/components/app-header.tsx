@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 
 export const APP_TITLE = 'My Recipe App';
 
@@ -12,6 +12,7 @@ export const APP_TITLE = 'My Recipe App';
  * `headerTitle` with `headerTitleAlign: 'center'` by the tab layout and the root stack.
  */
 export function AppHeaderTitle({ section }: { section: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.title} testID="app-header">
       <Text style={styles.app} accessibilityRole="header" numberOfLines={1}>
@@ -26,6 +27,8 @@ export function AppHeaderTitle({ section }: { section: string }) {
 
 /** Settings gear (Ionicons `settings-outline`) on the right of every main screen's header. */
 export function SettingsGearButton() {
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <Link href="/settings" asChild>
       <Pressable accessibilityLabel="Settings" hitSlop={12} style={styles.gear} testID="settings-button">
@@ -35,9 +38,9 @@ export function SettingsGearButton() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   title: { alignItems: 'center', justifyContent: 'center' },
   app: { color: colors.text, fontSize: 22, lineHeight: 26, fontWeight: '800' },
   section: { color: colors.muted, fontSize: 14, lineHeight: 18, fontWeight: '600' },
   gear: { paddingHorizontal: 16 },
-});
+}));

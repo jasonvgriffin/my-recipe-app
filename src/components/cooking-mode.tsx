@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PanResponder, Pressable, ScrollView, Text, View } from 'react-native';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
 import { TwoPaneLayout } from '@/components/layout';
@@ -7,7 +7,7 @@ import { ServingsUnits } from '@/components/servings-units';
 import type { CurrentStep } from '@/cooking';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { formatIngredient, presentIngredient } from '@/lib/ingredients';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 import { formatDuration } from '@/lib/timers';
 import type { Recipe, UnitSystem } from '@/types/recipe';
 
@@ -63,6 +63,7 @@ export function CookingMode({
   onEnd: () => void;
   onMarkCooked?: () => void;
 }) {
+  const styles = useStyles();
   useEffect(() => {
     if (!keepAwake) return;
     activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => undefined);
@@ -207,6 +208,7 @@ function Btn({
   disabled?: boolean;
   testID?: string;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       onPress={onPress}
@@ -220,7 +222,7 @@ function Btn({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   fill: { flex: 1, backgroundColor: colors.background },
   stepPane: { padding: 24, paddingBottom: 48, gap: 16 },
   ingPane: { padding: 20, paddingBottom: 48, gap: 8 },
@@ -249,4 +251,4 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.4 },
   btnText: { color: colors.primary, fontSize: 20, fontWeight: '700' },
   btnTextPrimary: { color: colors.primaryText },
-});
+}));

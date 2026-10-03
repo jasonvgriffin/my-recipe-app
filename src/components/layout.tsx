@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 
 /** Max readable widths so content never stretches across a wide unfolded screen / hinge (spec #23). */
 export const MAX_CONTENT_WIDTH = { text: 720, list: 560, form: 640 } as const;
@@ -17,6 +17,7 @@ export function MaxWidthContainer({
   maxWidth?: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const styles = useStyles();
   return (
     <View style={[styles.maxOuter]}>
       <View style={[styles.maxInner, { maxWidth }, style]}>{children}</View>
@@ -54,6 +55,7 @@ export function TwoPaneLayout({
   primaryWidth,
   testID = 'two-pane-layout',
 }: TwoPaneLayoutProps) {
+  const styles = useStyles();
   const { isTwoPane, sizeClass } = useWindowSizeClass();
   const width = primaryWidth ?? (sizeClass === 'expanded' ? 400 : 360);
 
@@ -81,7 +83,7 @@ export function TwoPaneLayout({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   fill: { flex: 1 },
   row: { flex: 1, flexDirection: 'row' },
   primary: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.border },
@@ -90,4 +92,4 @@ const styles = StyleSheet.create({
   placeholder: { color: colors.muted, textAlign: 'center', marginTop: 48 },
   maxOuter: { flex: 1, alignItems: 'center' },
   maxInner: { flex: 1, width: '100%' },
-});
+}));

@@ -1,14 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View, type ColorValue } from 'react-native';
+import { Pressable, View, type ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddMenuSheet } from '@/components/add-menu-sheet';
 import { AppHeaderTitle, SettingsGearButton } from '@/components/app-header';
 import { useFeatureVisible } from '@/hooks/use-feature';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 
 /**
  * Tabs (v1.0.2, Cronometer-style): Recipes · Meal Plan · (+) · Shopping · More. RECIPES ARE THE CORE: the app
@@ -21,6 +21,8 @@ function TabIcon({ name, color }: { name: keyof typeof Ionicons.glyphMap; color:
 }
 
 function PlusTabButton({ onPress, rail }: { onPress: () => void; rail: boolean }) {
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <View style={styles.plusSlot}>
       <Pressable
@@ -37,6 +39,7 @@ function PlusTabButton({ onPress, rail }: { onPress: () => void; rail: boolean }
 }
 
 export default function TabsLayout() {
+  const colors = useColors();
   // Expanded width (unfolded foldable / tablet): navigation moves to a side rail (spec #23).
   const { useNavigationRail } = useWindowSizeClass();
   // Optional tabs need BOTH the feature gate (paywall-ready, src/entitlements) and the user's Settings toggle.
@@ -119,7 +122,7 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   plusSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 64 },
   plus: {
     width: 58,
@@ -129,7 +132,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOpacity: 0.35,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
@@ -143,4 +146,4 @@ const styles = StyleSheet.create({
     borderRadius: 33,
   },
   plusPressed: { opacity: 0.85 },
-});
+}));

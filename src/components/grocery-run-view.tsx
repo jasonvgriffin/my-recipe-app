@@ -1,7 +1,7 @@
-import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { Pressable, SectionList, Text, View } from 'react-native';
 
 import { groupByAisle, shoppingProgress } from '@/lib/shopping';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 import type { ShoppingListItem } from '@/types/meal-plan';
 
 export interface GroceryRunViewProps {
@@ -16,6 +16,7 @@ export interface GroceryRunViewProps {
  * The screen keeps the display awake and owns persistence.
  */
 export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunViewProps) {
+  const styles = useStyles();
   const progress = shoppingProgress(items);
   const percent = Math.round(progress.fraction * 100);
   const sections = groupByAisle(items).map((group) => ({
@@ -86,6 +87,7 @@ export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunV
 
 /** Aisle counts for the expanded secondary pane. */
 export function GroceryAisleSummary({ items }: { items: ShoppingListItem[] }) {
+  const styles = useStyles();
   const groups = groupByAisle(items);
   return (
     <View style={styles.summary} testID="grocery-summary">
@@ -103,7 +105,7 @@ export function GroceryAisleSummary({ items }: { items: ShoppingListItem[] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   list: { flex: 1 },
   content: { padding: 16, paddingBottom: 48 },
   header: { gap: 10, marginBottom: 8 },
@@ -153,4 +155,4 @@ const styles = StyleSheet.create({
   summary: { padding: 16, gap: 8 },
   summaryTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
   summaryRow: { color: colors.text, fontSize: 16 },
-});
+}));

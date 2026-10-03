@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 import { AppHeaderTitle } from '@/components/app-header';
 import { useHouseholdSync } from '@/hooks/use-household-sync';
-import { colors, navigationTheme } from '@/lib/theme';
+import { AppThemeProvider, useColorSchemeResolved, useColors, useNavigationTheme } from '@/hooks/use-theme';
 import { configureStepTimerNotifications } from '@/notifications/step-timers';
 import { recipeStore } from '@/storage/recipes';
 
@@ -20,8 +20,20 @@ export default function RootLayout() {
     recipeStore.removeUntouchedSamples().catch(() => undefined);
   }, []);
   return (
+    <AppThemeProvider>
+      <ThemedRoot />
+    </AppThemeProvider>
+  );
+}
+
+/** Navigator + status bar themed from Settings → Appearance (v1.0.3). */
+function ThemedRoot() {
+  const colors = useColors();
+  const scheme = useColorSchemeResolved();
+  const navigationTheme = useNavigationTheme();
+  return (
     <ThemeProvider value={navigationTheme}>
-      <StatusBar style="light" />
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <HouseholdSyncHost />
       <Stack
         screenOptions={{

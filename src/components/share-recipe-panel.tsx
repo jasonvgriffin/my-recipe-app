@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { useFeature } from '@/hooks/use-feature';
 import { presentShare } from '@/lib/present-share';
 import { buildShareRequest, type ShareParts } from '@/lib/share-recipe';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import type { Recipe } from '@/types/recipe';
 
 /** Choose recipe text, photo, and/or the source link, then open the share sheet (spec #14). */
 export function ShareRecipePanel({ recipe, onClose }: { recipe: Recipe; onClose: () => void }) {
+  const styles = useStyles();
+  const colors = useColors();
   const photos = useFeature('photos').available;
   const [parts, setParts] = useState<ShareParts>({ text: true, photo: false, link: false });
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +98,7 @@ function Toggle({
   onPress: () => void;
   testID: string;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       style={[styles.toggle, disabled && styles.disabled]}
@@ -110,7 +113,7 @@ function Toggle({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   panel: {
     marginTop: 16,
     padding: 14,
@@ -147,4 +150,4 @@ const styles = StyleSheet.create({
   },
   secondaryText: { color: colors.text, fontWeight: '600' },
   disabled: { opacity: 0.5 },
-});
+}));
