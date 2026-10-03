@@ -1,7 +1,7 @@
 import { ingredientKey } from '@/lib/ingredients';
 import { generateId } from '@/lib/recipe-utils';
 import { findUnit } from '@/lib/units';
-import { isPantryItem, withSyncDefaults, type PantryItem } from '@/types/recipe';
+import { isPantryItem, slimPantryItem, withSyncDefaults, type PantryItem } from '@/types/recipe';
 
 import { createCollection, defaultStore, type Collection, type KeyValueStore } from './kv';
 
@@ -10,9 +10,6 @@ export interface PantryWrite {
   name: string;
   quantity?: number;
   unit?: string;
-  category?: string;
-  expiresAt?: string;
-  brand?: string;
   barcode?: string;
 }
 
@@ -21,7 +18,7 @@ export const PANTRY_STORAGE_KEY = 'my-recipe-app/pantry/v1';
 /** Pantry tracker (spec #21). Names are normalized so they match ingredient names. */
 export function createPantryStore(store: KeyValueStore = defaultStore) {
   const items = createCollection<PantryItem>(store, PANTRY_STORAGE_KEY, (v) =>
-    isPantryItem(v) ? withSyncDefaults(v) : undefined,
+    isPantryItem(v) ? withSyncDefaults(slimPantryItem(v)) : undefined,
   );
   return {
     async list(): Promise<PantryItem[]> {
@@ -47,7 +44,7 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
      * Add a scanned product (spec #27) or increment the existing item with the same barcode or name.
      * `count` = number of packages scanned.
      */
-    async addScanned(product: { barcode: string; name: string; brand?: string }, count = 1, now: Date = new Date()) {
+    async addScanned(product: { barcode: string; name: string }, count = 1, now: Date = new Date()) {
       const key = ingredientKey({ text: product.name });
       const all = await items.all();
       const existing = all.find((p) => p.barcode === product.barcode) ?? all.find((p) => p.name === key);
@@ -62,7 +59,6 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
         {
           id: generateId(),
           name: key,
-          brand: product.brand,
           barcode: product.barcode,
           quantity: count,
           unit: 'package',
@@ -74,7 +70,7 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
     },
     /**
      * Create or replace an item from the pantry form (spec #21).
-     * Quantity, unit, category, and expiry are all optional. A blank expiry clears it.
+     * Only name, quantity and unit are tracked; quantity and unit are optional.
      */
     async saveDetails(draft: PantryWrite, now: Date = new Date()): Promise<PantryItem> {
       return writeItem(items, draft, 'replace', now);
@@ -100,12 +96,6 @@ function canonUnit(unit: string | undefined): string | undefined {
   return findUnit(trimmed)?.id ?? trimmed.toLowerCase();
 }
 
-function assertExpiry(expiresAt: string | undefined) {
-  if (expiresAt !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(expiresAt)) {
-    throw new Error('Expiry must be YYYY-MM-DD.');
-  }
-}
-
 async function writeItem(
   items: Collection<PantryItem>,
   draft: PantryWrite,
@@ -117,8 +107,6 @@ async function writeItem(
   if (draft.quantity !== undefined && (!Number.isFinite(draft.quantity) || draft.quantity < 0)) {
     throw new Error('Quantity must be a number of 0 or more.');
   }
-  const expiresAt = clean(draft.expiresAt);
-  assertExpiry(expiresAt);
   const all = await items.all();
   const byId = draft.id ? all.find((item) => item.id === draft.id) : undefined;
   const byName = all.find((item) => item.name === key && item.id !== byId?.id);
@@ -128,12 +116,11 @@ async function writeItem(
   const quantity = mode === 'add' ? (existing?.quantity ?? 0) + added : draft.quantity;
   const ts = now.toISOString();
   const next: PantryItem = {
-    ...existing,
+    ...(existing ? slimPantryItem(existing) : {}),
     id: existing?.id ?? generateId(),
     name: key,
     createdAt: existing?.createdAt ?? ts,
     updatedAt: ts,
-    brand: draft.brand ?? existing?.brand,
     barcode: draft.barcode ?? existing?.barcode,
   };
   if (quantity === undefined) delete next.quantity;
@@ -142,13 +129,7 @@ async function writeItem(
   const unit = mode === 'add' ? (existing?.unit ?? incomingUnit) : incomingUnit;
   if (unit) next.unit = unit;
   else delete next.unit;
-  const category = clean(draft.category);
-  if (category) next.category = category;
-  else if (mode === 'replace') delete next.category;
-  else if (existing?.category) next.category = existing.category;
-  if (expiresAt) next.expiresAt = expiresAt;
-  else if (mode === 'replace') delete next.expiresAt;
-  else if (existing?.expiresAt) next.expiresAt = existing.expiresAt;
+  if (next.barcode === undefined) delete next.barcode;
   return items.save(next, now);
 }
 

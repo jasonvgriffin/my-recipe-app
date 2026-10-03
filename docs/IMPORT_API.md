@@ -46,9 +46,6 @@ interface RecipeDraft {
   tags?: string[]; // lower-cased + deduped
   categories?: string[]; // category NAMES; created if missing (spec #3)
   servings?: number; // > 0; defaults to 1 with a warning
-  nutrition?: { calories?; carbsG?; netCarbsG?; proteinG?; fatG?; fiberG? }; // per serving (spec #17)
-  carbsPerServing?: number; // shorthand for nutrition.netCarbsG; if neither given, net = carbs − fiber
-  // when both known, else left UNKNOWN (never 0) with a warning
   rating?: number; // 1–5 (spec #22)
   notes?: string;
   photoUrl?: string; // http(s) or file://
@@ -79,7 +76,7 @@ type ImportErrorCode =
 1. **Validate input** (`RecipeImportInputSchema`, zod discriminated union on `kind`).
 2. **Produce a draft**
    - `url`: `deps.fetchHtml(url)` → `extractJsonLdRecipe` (schema.org `Recipe` JSON-LD, incl. `@graph`,
-     `HowToSection`, `recipeYield`, `keywords`, `recipeCategory`, `image`, `nutrition`) → fallback
+     `HowToSection`, `recipeYield`, `keywords`, `recipeCategory`, `image`; schema.org nutrition is ignored — recipe app, not a nutrition app) → fallback
      `extractRecipeHeuristically` (microdata, WP Recipe Maker, Tasty Recipes, then heading + lists)
      when JSON-LD is missing or has no ingredients and no steps. The page URL becomes `sourceUrl`.
    - `text`: `parseRecipeText` (first line = title; "Ingredients" / "Steps|Instructions|Directions" sections).

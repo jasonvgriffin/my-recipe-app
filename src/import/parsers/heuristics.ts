@@ -20,6 +20,7 @@ export function extractRecipeHeuristically(html: string, sourceUrl?: string): Pa
 
 const ING_HEADING = /^(ingredients?)\s*:?\s*$/i;
 const STEP_HEADING = /^(steps?|instructions?|directions?|method|preparation)\s*:?\s*$/i;
+// Stop at a nutrition panel too: imports never keep nutrition (recipe app, not a nutrition app).
 const STOP_HEADING = /^(notes?|nutrition|you may also like|related( recipes)?|comments?|reviews?)$/i;
 
 function usable(draft: Partial<RecipeDraft> | undefined): Partial<RecipeDraft> | undefined {

@@ -4,7 +4,7 @@ import { rankRecipesByPantry } from '@/lib/pantry';
 import { createRecipe, filterRecipes, setRating, sortRecipes } from '@/lib/recipe-utils';
 import { compileItems } from '@/lib/shopping';
 import { detectStepDuration, formatDuration } from '@/lib/timers';
-import { migrateRecipe, netCarbs, type PantryItem } from '@/types/recipe';
+import { migrateRecipe, type PantryItem } from '@/types/recipe';
 
 describe('ingredient parsing / scaling / conversion (spec #16, #12)', () => {
   it.each([
@@ -51,25 +51,20 @@ describe('step timers (spec #15)', () => {
   });
 });
 
-describe('nutrition (spec #17)', () => {
-  it('computes net carbs from carbs - fiber only when needed', () => {
-    expect(netCarbs({ netCarbsG: 4 })).toBe(4);
-    expect(netCarbs({ carbsG: 10, fiberG: 6 })).toBe(4);
-    expect(netCarbs({ carbsG: 10 })).toBeUndefined();
-  });
-
-  it('migrates v2 recipes (string steps, carbsPerServing)', () => {
+describe('recipe migration', () => {
+  it('migrates v2 recipes (string steps) and drops legacy nutrition fields', () => {
     const v2 = {
       ...SEED_RECIPES[0],
       schemaVersion: 2,
       steps: ['Bake 10 minutes'],
       carbsPerServing: 5,
-      nutrition: undefined,
+      nutrition: { netCarbsG: 5, calories: 300 },
     };
     const r = migrateRecipe(v2)!;
     expect(r.steps).toEqual([{ text: 'Bake 10 minutes' }]);
-    expect(r.nutrition).toEqual({ netCarbsG: 5, source: 'manual' });
+    expect('nutrition' in r).toBe(false);
     expect('carbsPerServing' in r).toBe(false);
+    expect(r.schemaVersion).toBe(5);
   });
 });
 
@@ -79,9 +74,8 @@ describe('ratings + tags (spec #20, #22)', () => {
     const rated = [setRating(a, 3), setRating(b, 5)];
     expect(sortRecipes(rated, 'rating').map((r) => r.rating)).toEqual([5, 3]);
     expect(filterRecipes(rated, { minRating: 4 })).toHaveLength(1);
-    expect(filterRecipes(rated, { tags: ['dessert', 'low-carb'] }).map((r) => r.id)).toEqual([b.id]);
+    expect(filterRecipes(rated, { tags: ['dessert', 'diabetic-friendly'] }).map((r) => r.id)).toEqual([b.id]);
     expect(setRating(a, 9).rating).toBe(5);
-    expect(sortRecipes(rated, 'netCarbs')[0].id).toBe(b.id);
   });
 });
 

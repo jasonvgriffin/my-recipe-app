@@ -11,7 +11,7 @@ const CHOICES: { id: UnitSystem | 'original'; label: string }[] = [
 
 /**
  * Servings scaler and metric/imperial toggle (spec #16). Scaling only changes the
- * ingredient amounts on screen; nutrition stays per serving of the saved recipe.
+ * ingredient amounts on screen; the saved recipe keeps its original servings.
  */
 export function ServingsUnits({
   baseServings,
@@ -55,7 +55,7 @@ export function ServingsUnits({
         </View>
       </View>
       {scaled ? (
-        <Text style={styles.hint}>Scaled from {baseServings}. Nutrition per serving does not change.</Text>
+        <Text style={styles.hint}>Scaled from {baseServings}.</Text>
       ) : (
         <Text style={styles.hint}>Recipe makes {baseServings}.</Text>
       )}

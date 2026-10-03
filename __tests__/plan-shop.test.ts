@@ -131,7 +131,7 @@ describe('shopping list merge, manual lines, pantry skip (spec #12, #18)', () =>
 });
 
 describe('aisles (spec #18)', () => {
-  it('classifies low-carb staples and does not special-case other sweeteners', () => {
+  it('classifies baking staples and does not special-case other sweeteners', () => {
     expect(aisleForIngredient('6 bone-in, skin-on chicken thighs')).toBe('Meat & seafood');
     expect(aisleForIngredient('1 lb green beans, trimmed')).toBe('Produce');
     expect(aisleForIngredient('1/3 cup powdered allulose')).toBe('Pantry');

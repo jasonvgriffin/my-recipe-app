@@ -199,11 +199,9 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     await act(async () => fireEvent.press(screen.getByTestId('add-recipe-button')));
     await screen.findByText('Save recipe');
     expect(screen.queryByText('Tags (comma separated)')).toBeNull();
-    expect(screen.queryByTestId('nutrition-add-calories')).toBeNull();
     fireEvent.changeText(screen.getByPlaceholderText('e.g. Cauliflower Mac & Cheese'), 'Zucchini Lasagna');
     fireEvent.changeText(screen.getByPlaceholderText(/1 head cauliflower/), '2 zucchini\n1 cup ricotta');
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Layer\nBake 30 minutes');
-    fireEvent.changeText(screen.getByTestId('carbs-input'), '7');
     await act(async () => fireEvent.press(screen.getByText('Save recipe')));
 
     await act(async () => fireEvent.press(await screen.findByText('Zucchini Lasagna')));
@@ -215,9 +213,7 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     expect(screen.queryByTestId('share-recipe-button')).toBeNull();
     expect(screen.getByTestId('edit-recipe-button')).toBeTruthy();
     expect(screen.queryByText(/⏱/)).toBeNull();
-    expect(screen.queryByTestId('nutrition-panel')).toBeNull();
     expect(screen.queryByTestId('servings-units')).toBeNull();
-    expect(screen.queryByTestId('nutrition-add-calories')).toBeNull();
 
     await act(async () => fireEvent.press(screen.getByTestId('edit-recipe-button')));
     expect(await screen.findByTestId('recipe-editor')).toBeTruthy();

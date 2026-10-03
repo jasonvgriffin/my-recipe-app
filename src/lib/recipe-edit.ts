@@ -19,7 +19,6 @@ export interface RecipeEditorState {
   description: string;
   notes: string;
   servings: string;
-  netCarbs: string;
   sourceUrl: string;
   photoUri?: string;
   ingredients: IngredientDraft[];
@@ -38,7 +37,6 @@ export function recipeToEditorState(recipe: Recipe): RecipeEditorState {
     description: recipe.description ?? '',
     notes: recipe.notes ?? '',
     servings: String(recipe.servings),
-    netCarbs: recipe.nutrition.netCarbsG === undefined ? '' : String(recipe.nutrition.netCarbsG),
     sourceUrl: recipe.sourceUrl ?? '',
     photoUri: recipe.photoUri,
     ingredients: recipe.ingredients.length
@@ -89,17 +87,8 @@ export function editorStateToInput(
   });
   const sourceUrl = state.sourceUrl.trim();
   if (sourceUrl && !isHttpUrl(sourceUrl)) errors.push('Source link must be an http(s) URL.');
-  const carbsRaw = state.netCarbs.trim();
-  let netCarbsG: number | undefined;
-  if (carbsRaw) {
-    const n = Number(carbsRaw);
-    if (!Number.isFinite(n) || n < 0) errors.push('Net carbs per serving must be a number of 0 or more.');
-    else netCarbsG = n;
-  }
   if (errors.length) return { ok: false, errors };
 
-  const nutrition = { ...original.nutrition, netCarbsG };
-  if (netCarbsG !== original.nutrition.netCarbsG) nutrition.source = 'manual';
   const input: RecipeInput = {
     title: state.title,
     description: state.description.trim() || undefined,
@@ -108,14 +97,13 @@ export function editorStateToInput(
     steps,
     tags: original.tags,
     servings: Number(state.servings),
-    nutrition,
     categoryIds: original.categoryIds,
     photoUri: state.photoUri,
     sourceUrl: sourceUrl || undefined,
     rating: original.rating,
     unitSystem: original.unitSystem,
   };
-  const validated = validateRecipeInput(input, { requireCarbs: false });
+  const validated = validateRecipeInput(input);
   if (!validated.ok) return { ok: false, errors: validated.errors };
   return { ok: true, input };
 }

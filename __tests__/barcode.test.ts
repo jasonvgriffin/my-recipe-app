@@ -1,8 +1,10 @@
 import {
   createBarcodeLookup,
   normalizeBarcode,
+  OFF_PRODUCT_URL,
   OFF_USER_AGENT,
   parseOpenFoodFacts,
+  withoutNutrition,
   type BarcodeItem,
 } from '@/pantry/barcodeLookup';
 import { createCollection, type KeyValueStore } from '@/storage/kv';
@@ -26,13 +28,8 @@ const OFF_OK = {
     brands: 'Bob’s Red Mill, Other',
     quantity: '453 g',
     image_front_url: 'https://images.openfoodfacts.org/x.jpg',
-    nutriments: {
-      'energy-kcal_100g': 607,
-      carbohydrates_100g: 21.4,
-      fiber_100g: 10.7,
-      proteins_100g: 21.4,
-      fat_100g: 53.6,
-    },
+    // Extra OFF data must be ignored: the pantry stores the product name only (no brand/size/image/nutrition).
+    nutriments: { 'energy-kcal_100g': 607 },
   },
 };
 
@@ -60,15 +57,13 @@ describe('barcode lookup (spec #27)', () => {
     expect(normalizeBarcode('12345')).toBeUndefined();
   });
 
-  it('parses Open Food Facts incl. net carbs per 100 g', () => {
+  it('parses the Open Food Facts product name (never nutrition)', () => {
     expect(parseOpenFoodFacts(EAN, OFF_OK)).toEqual({
       barcode: EAN,
       name: 'Almond Flour',
-      brand: 'Bob’s Red Mill',
-      quantity: '453 g',
-      imageUrl: 'https://images.openfoodfacts.org/x.jpg',
-      nutritionPer100g: { calories: 607, carbsG: 21.4, fiberG: 10.7, netCarbsG: 10.7, proteinG: 21.4, fatG: 53.6 },
     });
+    expect(OFF_PRODUCT_URL(EAN)).not.toMatch(/nutri/);
+    expect(OFF_PRODUCT_URL(EAN)).toMatch(/fields=code,product_name$/);
     expect(parseOpenFoodFacts(EAN, { status: 0, status_verbose: 'product not found' })).toBeUndefined();
   });
 
@@ -103,10 +98,17 @@ describe('barcode lookup (spec #27)', () => {
 
   it('adds a scanned product to the pantry or increments the existing item', async () => {
     const pantry = createPantryStore(memoryStore());
-    await pantry.addScanned({ barcode: EAN, name: 'Almond Flour', brand: 'Bob’s' });
+    await pantry.addScanned({ barcode: EAN, name: 'Almond Flour' });
     await pantry.addScanned({ barcode: EAN, name: 'Almond Flour' }, 2);
     const items = await pantry.list();
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({ name: 'almond flour', barcode: EAN, quantity: 3, unit: 'package' });
+  });
+});
+
+describe('legacy barcode nutrition', () => {
+  it('drops brand, size and nutrition cached by older builds', () => {
+    const legacy = { barcode: EAN, name: 'Almond Flour', brand: 'B', quantity: '1 kg', nutritionPer100g: { x: 1 } };
+    expect(withoutNutrition(legacy)).toEqual({ barcode: EAN, name: 'Almond Flour' });
   });
 });

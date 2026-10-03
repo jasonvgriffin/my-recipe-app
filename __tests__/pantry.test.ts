@@ -1,8 +1,8 @@
 import { compileItems } from '@/lib/shopping';
-import { expiryState, rankRecipesByPantry } from '@/lib/pantry';
+import { rankRecipesByPantry } from '@/lib/pantry';
 import { isInPantry } from '@/pantry/isInPantry';
 import { createRecipe } from '@/lib/recipe-utils';
-import { createPantryStore } from '@/storage/pantry';
+import { PANTRY_STORAGE_KEY, createPantryStore } from '@/storage/pantry';
 import { createReceiptAliasStore } from '@/storage/receipt-aliases';
 import type { KeyValueStore } from '@/storage/kv';
 import type { PantryItem } from '@/types/recipe';
@@ -48,28 +48,41 @@ describe('isInPantry (spec #21)', () => {
 });
 
 describe('pantry store details', () => {
-  it('saves quantity, unit, category, and optional expiry, then increments', async () => {
+  it('saves name, quantity and unit only, then increments', async () => {
     const pantry = createPantryStore(memoryStore());
-    const saved = await pantry.saveDetails({
-      name: 'Chicken Breast',
-      quantity: 1,
-      unit: 'lb',
-      category: 'Meat',
-      expiresAt: '2026-10-20',
-    });
-    expect(saved).toMatchObject({
-      name: 'chicken breast',
-      quantity: 1,
-      unit: 'lb',
-      category: 'Meat',
-      expiresAt: '2026-10-20',
-    });
+    const saved = await pantry.saveDetails({ name: 'Chicken Breast', quantity: 1, unit: 'lb' });
+    expect(saved).toMatchObject({ name: 'chicken breast', quantity: 1, unit: 'lb' });
     const next = await pantry.addQuantity({ name: 'chicken breast', quantity: 2, unit: 'package' });
-    expect(next).toMatchObject({ quantity: 3, unit: 'lb', category: 'Meat' });
-    await expect(pantry.saveDetails({ name: 'Milk', expiresAt: 'October 3' })).rejects.toThrow(/YYYY-MM-DD/);
+    expect(next).toMatchObject({ quantity: 3, unit: 'lb' });
   });
 
-  it('ranks recipes and describes expiry', () => {
+  it('drops category, expiry, brand and nutrition stored by older builds', async () => {
+    const kv = memoryStore();
+    await kv.setItem(
+      PANTRY_STORAGE_KEY,
+      JSON.stringify([
+        {
+          id: 'p1',
+          name: 'milk',
+          quantity: 1,
+          category: 'Dairy',
+          expiresAt: '2026-10-20',
+          brand: 'Acme',
+          nutritionPer100g: { x: 1 },
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ]),
+    );
+    const pantry = createPantryStore(kv);
+    const [item] = await pantry.list();
+    expect(Object.keys(item).sort()).toEqual(['createdAt', 'id', 'name', 'quantity', 'updatedAt']);
+    const saved = await pantry.addQuantity({ name: 'milk' });
+    expect(saved).not.toHaveProperty('category');
+    expect(saved).not.toHaveProperty('expiresAt');
+  });
+
+  it('ranks recipes by what is on hand', () => {
     const recipe = createRecipe({
       title: 'Chicken',
       servings: 2,
@@ -87,11 +100,6 @@ describe('pantry store details', () => {
     const ranked = rankRecipesByPantry([other, recipe], [row('chicken thighs'), row('olive oil')]);
     expect(ranked[0].recipe.title).toBe('Chicken');
     expect(ranked[0].have).toBe(2);
-    const today = new Date(2026, 9, 3);
-    expect(expiryState('2026-10-01', today)).toBe('expired');
-    expect(expiryState('2026-10-05', today)).toBe('soon');
-    expect(expiryState('2026-12-01', today)).toBe('ok');
-    expect(expiryState(undefined, today)).toBe('none');
   });
 });
 

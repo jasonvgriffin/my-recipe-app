@@ -11,7 +11,6 @@ const SORTS: { id: RecipeSort; label: string }[] = [
   { id: 'newest', label: 'Newest' },
   { id: 'title', label: 'A–Z' },
   { id: 'rating', label: 'Rating' },
-  { id: 'netCarbs', label: 'Net carbs' },
   { id: 'lastCooked', label: 'Last cooked' },
 ];
 
