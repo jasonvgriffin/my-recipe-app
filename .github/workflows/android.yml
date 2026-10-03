@@ -168,7 +168,9 @@ jobs:
         run: |
           src=$(ls android/app/build/outputs/apk/release/*.apk | head -n1)
           mkdir -p dist
-          name="my-recipe-app${{ steps.release.outputs.tag && format('-{0}', steps.release.outputs.tag) || '' }}.apk"
+          tag="${{ steps.release.outputs.tag }}"
+          # Release asset is my-recipe-app-<version>.apk (tag without the leading "v"), e.g. my-recipe-app-1.0.1.apk
+          name="my-recipe-app${tag:+-${tag#v}}.apk"
           cp "$src" "dist/$name"
           ls -la dist
 
