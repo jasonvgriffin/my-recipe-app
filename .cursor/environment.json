@@ -1,0 +1,4 @@
+{
+  "install": "bash .cursor/setup.sh",
+  "terminals": []
+}

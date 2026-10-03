@@ -1,0 +1,89 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # needed to publish the rolling `latest-apk` prerelease
+
+env:
+  CI: 1
+  NODE_VERSION: '22'
+  # Build only the ABIs that matter (real phones + x86_64 emulators) to keep CI fast.
+  RN_ARCHS: arm64-v8a,x86_64
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck, lint and test
+        run: |
+          npm run typecheck
+          npm run lint
+          npm test -- --ci
+
+      - name: Expo prebuild (generate android/)
+        # `--non-interactive` is deprecated in current Expo CLI; CI=1 makes prebuild non-interactive.
+        run: npx expo prebuild --platform android --clean
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK (signed with debug keystore)
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=${{ env.RN_ARCHS }}
+
+      - name: Collect APK
+        id: apk
+        run: |
+          src=$(ls android/app/build/outputs/apk/release/*.apk | head -n1)
+          mkdir -p dist
+          cp "$src" dist/my-recipe-app.apk
+          ls -la dist
+          echo "path=dist/my-recipe-app.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-recipe-app-apk
+          path: dist/my-recipe-app.apk
+          if-no-files-found: error
+
+      - name: Publish rolling prerelease `latest-apk`
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest-apk --yes --cleanup-tag || true
+          git push origin :refs/tags/latest-apk || true
+          gh release create latest-apk dist/my-recipe-app.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Latest APK (${GITHUB_SHA::7})" \
+            --notes "Rolling build of \`main\` at ${GITHUB_SHA}. Release APK signed with the Expo debug keystore (sideload only, not for Play Store). Built $(date -u +'%Y-%m-%d %H:%M UTC') by run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
