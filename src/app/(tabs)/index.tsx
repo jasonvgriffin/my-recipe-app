@@ -28,6 +28,7 @@ export default function RecipeListScreen() {
   const [tagNames, setTagNames] = useState<string[]>([]);
   const [catalogReady, setCatalogReady] = useState(false);
   const [browse, setBrowse] = useState<RecipeBrowse>(DEFAULT_BROWSE);
+  const canImport = useFeature('linkImport').available;
   /** Selected recipe for the detail pane (medium/expanded). Kept across fold/unfold. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { isTwoPane } = useWindowSizeClass();
@@ -131,6 +132,13 @@ export default function RecipeListScreen() {
         accessibilityLabel="Search recipes"
         testID="search-input"
       />
+      {canImport ? (
+        <Link href="/import" asChild>
+          <Pressable style={styles.importLink} accessibilityRole="button" testID="import-recipe-button">
+            <Text style={styles.importLinkText}>Import from link</Text>
+          </Pressable>
+        </Link>
+      ) : null}
       <FlatList
         data={visible}
         keyExtractor={(r) => r.id}
@@ -219,6 +227,8 @@ export default function RecipeListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  importLink: { marginHorizontal: 12, marginTop: 10, minHeight: 44, justifyContent: 'center' },
+  importLinkText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
   search: {
     margin: 12,
     marginBottom: 0,

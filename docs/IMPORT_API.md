@@ -5,10 +5,10 @@ Every entry point must call it — never write imported recipes to storage direc
 
 | Entry point                                                         | Status                              | Adapter                                                                     |
 | ------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------- |
-| In-app "Import from link" (spec #1)                                 | ⬜ UI TODO                          | `{ kind: 'url', url, source: { channel: 'app-link' } }`                     |
-| Paste / dictate text                                                | ⬜ UI TODO                          | `{ kind: 'text', text, source: { channel: 'app-text' } }`                   |
-| Deep link `myrecipeapp://import?url=…` / `?text=…`                  | 🟡 parser done, route TODO          | `parseImportDeepLink(link)`                                                 |
-| Android share sheet → app (SEND `text/plain`)                       | 🟡 adapter done, intent filter TODO | `shareTextToImportInput(sharedText)`                                        |
+| In-app "Import from link" (spec #1)                                 | ✅ `src/app/import.tsx`             | `{ kind: 'url', url, source: { channel: 'app-link' } }`                     |
+| Paste / dictate text                                                | ✅ same screen                      | `{ kind: 'text', text, source: { channel: 'app-text' } }`                   |
+| Deep link `myrecipeapp://import?url=…` / `?text=…`                  | ✅ route shows a draft              | `parseImportDeepLink(link)`                                                 |
+| Android share sheet → app (SEND `text/plain`)                       | ✅ `expo-sharing` + `+native-intent` | `shareTextToImportInput(sharedText)`                                        |
 | **Future MCP server** ("Hey AI, send this recipe to my recipe app") | later phase                         | `{ kind: 'structured', recipe, source: { channel: 'mcp', label: 'Grok' } }` |
 | Future sync / JSON file import                                      | later phase                         | `{ kind: 'structured', …, source: { channel: 'sync' \| 'file' } }`          |
 
@@ -80,7 +80,8 @@ type ImportErrorCode =
 2. **Produce a draft**
    - `url`: `deps.fetchHtml(url)` → `extractJsonLdRecipe` (schema.org `Recipe` JSON-LD, incl. `@graph`,
      `HowToSection`, `recipeYield`, `keywords`, `recipeCategory`, `image`, `nutrition`) → fallback
-     `extractRecipeHeuristically` (**stub — TODO**). The page URL becomes `sourceUrl`.
+     `extractRecipeHeuristically` (microdata, WP Recipe Maker, Tasty Recipes, then heading + lists)
+     when JSON-LD is missing or has no ingredients and no steps. The page URL becomes `sourceUrl`.
    - `text`: `parseRecipeText` (first line = title; "Ingredients" / "Steps|Instructions|Directions" sections).
    - `structured`: used as given.
 3. **Validate the draft** (`RecipeDraftSchema`).
@@ -119,9 +120,9 @@ return importRecipeWith(
   { onDuplicate: 'update' },
 );
 
-// Deep link / share intent
+// Deep link / share intent — the import screen previews with dryRun, then saves on confirm.
 const input = parseImportDeepLink(url) ?? shareTextToImportInput(sharedText);
-await importRecipe(input);
+await importRecipe(input, { dryRun: true });
 ```
 
 ## Files
@@ -133,7 +134,8 @@ src/import/import-recipe.ts  importRecipeWith pipeline (portable core, deps requ
 src/import/app-deps.ts       on-device deps (AsyncStorage store, fetch, clock)
 src/import/normalize.ts      draft → RecipeInput, normalizeSourceUrl
 src/import/parsers/json-ld.ts     schema.org Recipe JSON-LD
-src/import/parsers/heuristics.ts  HTML fallback (TODO)
+src/import/parsers/heuristics.ts  HTML fallback (microdata, plugin markup, headings)
+src/import/html.ts               tiny HTML parser used by the fallback
 src/import/parsers/text.ts        plain text
 src/import/deep-link.ts      myrecipeapp://import + share-text adapters
 src/import/url.ts            URL helpers (RN's global URL is a partial polyfill — don't rely on it)

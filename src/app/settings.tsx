@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
@@ -51,18 +52,7 @@ export default function SettingsScreen() {
             />
           ))}
         </View>
-        <TextInput
-          style={styles.input}
-          value={String(settings.cookedRecentlyDays)}
-          onChangeText={(text) => {
-            if (!/^\d{1,3}$/.test(text)) return;
-            void settingsStore.update({ cookedRecentlyDays: clampCookedRecentlyDays(Number(text)) });
-          }}
-          keyboardType="number-pad"
-          accessibilityLabel="Cooked recently window in days"
-          placeholderTextColor={colors.placeholder}
-          testID="cooked-recently-input"
-        />
+        <CookedRecentlyInput days={settings.cookedRecentlyDays} />
         <Text style={styles.section}>Optional features</Text>
         <Text style={styles.help}>Recipes always work on their own. Show only the extras you want.</Text>
         {FEATURES.filter((f) => featureGate.canUse(f.gate)).map((f) => (
@@ -83,6 +73,32 @@ export default function SettingsScreen() {
         ))}
       </ScrollView>
     </MaxWidthContainer>
+  );
+}
+
+/**
+ * Free-form "cooked recently" days (1–365). Keeps a local draft so the field can be cleared while typing;
+ * valid values save immediately, and leaving the field restores the saved value if the draft is invalid.
+ */
+function CookedRecentlyInput({ days }: { days: number }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  return (
+    <TextInput
+      style={styles.input}
+      value={draft ?? String(days)}
+      onChangeText={(text) => {
+        if (!/^\d{0,3}$/.test(text)) return;
+        setDraft(text);
+        const n = Number(text);
+        if (text && n >= 1) void settingsStore.update({ cookedRecentlyDays: clampCookedRecentlyDays(n) });
+      }}
+      onBlur={() => setDraft(null)}
+      keyboardType="number-pad"
+      accessibilityLabel="Cooked recently window in days"
+      placeholder="14"
+      placeholderTextColor={colors.placeholder}
+      testID="cooked-recently-input"
+    />
   );
 }
 
