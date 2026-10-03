@@ -173,8 +173,6 @@ const routes = () => ({
 beforeAll(() => {
   routes();
 }, 60_000);
-// Full-router integration tests: the first render still pulls in navigation code, which is slow on shared CI runners.
-jest.setTimeout(20_000);
 
 describe('UI entry points follow the gate (separate from Settings toggles)', () => {
   beforeEach(async () => {
