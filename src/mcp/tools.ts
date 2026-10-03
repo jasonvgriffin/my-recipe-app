@@ -74,7 +74,22 @@ const schemas = {
     .object({
       url: z.string().url().optional().describe('Recipe web page to import'),
       text: z.string().min(1).max(50000).optional().describe('Recipe as plain text'),
-      recipe: z.unknown().optional().describe('Structured recipe: title, ingredients[], steps[], servings, tags[], categories[], notes, sourceUrl'),
+      // Typed (not `unknown`) so strict tool-schema validators in assistants accept it; extra fields pass through
+      // to the import pipeline, which validates the draft.
+      recipe: z
+        .looseObject({
+          title: z.string().describe('Recipe title'),
+          description: z.string().optional(),
+          ingredients: z.array(z.string()).optional().describe('One ingredient per line, e.g. "1 cup almond flour"'),
+          steps: z.array(z.string()).optional().describe('One step per entry'),
+          servings: z.number().optional(),
+          tags: z.array(z.string()).optional(),
+          categories: z.array(z.string()).optional(),
+          notes: z.string().optional(),
+          sourceUrl: z.string().optional(),
+        })
+        .optional()
+        .describe('Structured recipe'),
     })
     .refine((a) => [a.url, a.text, a.recipe].filter((v) => v !== undefined).length === 1, {
       message: 'Provide exactly one of url, text or recipe',
@@ -127,11 +142,23 @@ const descriptions: Record<ToolName, string> = {
   check_shopping_item: 'Check or uncheck a shopping list item.',
 };
 
+const READ_ONLY = new Set<ToolName>(['search_recipes', 'get_recipe', 'list_tags', 'list_categories', 'get_meal_plan', 'get_shopping_list']);
+
+const titleOf = (name: ToolName) => name.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+
 export function toolDefinitions() {
   return (Object.keys(schemas) as ToolName[]).map((name) => {
     const json = z.toJSONSchema(schemas[name], { io: 'input', unrepresentable: 'any' }) as Record<string, unknown>;
     delete json.$schema;
-    return { name, description: descriptions[name], inputSchema: json };
+    const readOnly = READ_ONLY.has(name);
+    return {
+      name,
+      title: titleOf(name),
+      description: descriptions[name],
+      inputSchema: json,
+      // MCP tool annotations (hints for clients deciding how to present / confirm a tool call).
+      annotations: { title: titleOf(name), readOnlyHint: readOnly, destructiveHint: false, idempotentHint: readOnly, openWorldHint: name === 'add_recipe' },
+    };
   });
 }
 

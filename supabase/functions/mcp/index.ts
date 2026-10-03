@@ -1,24 +1,23 @@
 // Supabase Edge Function: remote MCP server for My Recipe App (docs/MCP.md).
 // Thin binding only — all logic lives in src/mcp (tested with jest). Deploy:
 //   supabase functions deploy mcp --no-verify-jwt --project-ref <ref>
-// Env (set automatically by Supabase): SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY.
-// Optional secrets: MCP_OAUTH_SECRET (sealing key; defaults to one derived from the service role key),
-// MCP_PUBLIC_URL (defaults to <SUPABASE_URL>/functions/v1/mcp).
+// Env (set automatically by Supabase): SUPABASE_URL, SUPABASE_ANON_KEY.
+// Optional secret: MCP_PUBLIC_URL (defaults to <SUPABASE_URL>/functions/v1/mcp).
+// OAuth itself is Supabase Auth's OAuth 2.1 server (project Auth settings; docs/MCP.md "Deploying").
 import { createClient } from '@supabase/supabase-js';
 
 import {
   createMcpHandler,
   createRpcRateLimiter,
-  createSealer,
   createSupabaseRepo,
-  type AuthSession,
+  supabaseAuthIssuer,
   type SupabaseLike,
 } from '@/mcp/index.ts';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!.replace(/\/+$/, '');
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-const SECRET = Deno.env.get('MCP_OAUTH_SECRET') ?? `derived:${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''}`;
-const ISSUER = (Deno.env.get('MCP_PUBLIC_URL') ?? `${SUPABASE_URL}/functions/v1/mcp`).replace(/\/+$/, '');
+const RESOURCE = (Deno.env.get('MCP_PUBLIC_URL') ?? `${SUPABASE_URL}/functions/v1/mcp`).replace(/\/+$/, '');
+const AUTH_URL = supabaseAuthIssuer(SUPABASE_URL);
 
 const anon = () => createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 const asUser = (accessToken: string) =>
@@ -27,16 +26,21 @@ const asUser = (accessToken: string) =>
     global: { headers: { Authorization: `Bearer ${accessToken}` } },
   });
 
-function toSession(s: { access_token: string; refresh_token: string; expires_in: number; user: { id: string } } | null): AuthSession {
-  if (!s) throw new Error('no session');
-  return { accessToken: s.access_token, refreshToken: s.refresh_token, expiresIn: s.expires_in, userId: s.user.id };
+/** Supabase Auth REST call as a user (OAuth consent endpoints have no server-side supabase-js helper). */
+async function authFetch(path: string, accessToken: string, init: { method?: string; body?: unknown } = {}) {
+  const res = await fetch(`${AUTH_URL}${path}`, {
+    method: init.method ?? 'GET',
+    headers: { apikey: ANON_KEY, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`auth ${path}: HTTP ${res.status}`);
+  return text ? (JSON.parse(text) as Record<string, unknown>) : {};
 }
 
-const sealer = await createSealer(SECRET);
-
 const handler = createMcpHandler({
-  issuer: ISSUER,
-  sealer,
+  resource: RESOURCE,
+  authorizationServer: AUTH_URL,
   auth: {
     async sendCode(email) {
       const { error } = await anon().auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
@@ -44,13 +48,23 @@ const handler = createMcpHandler({
     },
     async verifyCode(email, code) {
       const { data, error } = await anon().auth.verifyOtp({ email, token: code, type: 'email' });
-      if (error) throw error;
-      return toSession(data.session);
+      if (error || !data.session) throw error ?? new Error('no session');
+      return { accessToken: data.session.access_token, userId: data.session.user.id };
     },
-    async refresh(refreshToken) {
-      const { data, error } = await anon().auth.refreshSession({ refresh_token: refreshToken });
-      if (error) throw error;
-      return toSession(data.session);
+    async approve(authorizationId, accessToken) {
+      const id = encodeURIComponent(authorizationId);
+      // Loads the request for this user; already-consented clients come back with redirect_url directly.
+      const details = await authFetch(`/oauth/authorizations/${id}`, accessToken);
+      if (typeof details.redirect_url === 'string' && !details.authorization_id) return { redirectUrl: details.redirect_url };
+      const out = await authFetch(`/oauth/authorizations/${id}/consent`, accessToken, { method: 'POST', body: { action: 'approve' } });
+      if (typeof out.redirect_url !== 'string') throw new Error('no redirect_url');
+      return { redirectUrl: out.redirect_url };
+    },
+    async endSession(accessToken) {
+      await fetch(`${AUTH_URL}/logout?scope=local`, {
+        method: 'POST',
+        headers: { apikey: ANON_KEY, Authorization: `Bearer ${accessToken}` },
+      });
     },
     async getUser(accessToken) {
       const { data, error } = await anon().auth.getUser(accessToken);
