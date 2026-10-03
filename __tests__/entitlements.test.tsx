@@ -70,6 +70,7 @@ describe('feature gate', () => {
     expect(() => gate.assert('pantry')).toThrow(FeatureLockedError);
     // Children follow their parent (barcode/receipt scanning need pantry)
     expect(gate.check('barcodeScan')).toMatchObject({ available: false, reason: 'requires' });
+    expect(gate.check('receiptScan')).toMatchObject({ available: false, reason: 'requires' });
     expect(gate.canUse('mealPlan')).toBe(true);
 
     gate.setProvider(new StaticEntitlements(['pantry']));
@@ -158,9 +159,16 @@ const routes = () => ({
   '(tabs)/index': require('@/app/(tabs)/index').default,
   '(tabs)/meal-plan': require('@/app/(tabs)/meal-plan').default,
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
+  '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
+  'pantry/scan': require('@/app/pantry/scan').default,
+  'pantry/receipt': require('@/app/pantry/receipt').default,
   add: require('@/app/add').default,
-  'recipe/[id]': require('@/app/recipe/[id]').default,
+  'recipe/[id]': require('@/app/recipe/[id]/index').default,
+  'recipe/[id]/edit': require('@/app/recipe/[id]/edit').default,
+  import: require('@/app/import').default,
   'cook/[action]': require('@/app/cook/[action]').default,
+  'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
+  'grocery-run': require('@/app/grocery-run').default,
   settings: require('@/app/settings').default,
   household: require('@/app/household').default,
 });
@@ -177,12 +185,15 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     featureGate.setConfig(premium(...ALL_FEATURE_IDS));
     renderRouter(routes(), { initialUrl: '/' });
     await screen.findByTestId('add-recipe-button');
+    expect(screen.queryByTestId('import-recipe-button')).toBeNull();
     await waitFor(() => expect(screen.queryByText('Meal plan')).toBeNull());
     expect(screen.queryByText('Shopping list')).toBeNull();
+    expect(screen.queryByText('Pantry')).toBeNull();
 
     await act(async () => fireEvent.press(screen.getByTestId('add-recipe-button')));
     await screen.findByText('Save recipe');
     expect(screen.queryByText('Tags (comma separated)')).toBeNull();
+    expect(screen.queryByTestId('nutrition-add-calories')).toBeNull();
     fireEvent.changeText(screen.getByPlaceholderText('e.g. Cauliflower Mac & Cheese'), 'Zucchini Lasagna');
     fireEvent.changeText(screen.getByPlaceholderText(/1 head cauliflower/), '2 zucchini\n1 cup ricotta');
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Layer\nBake 30 minutes');
@@ -195,7 +206,33 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     expect(screen.getByText('Delete recipe')).toBeTruthy();
     expect(screen.queryByTestId('cook-button')).toBeNull();
     expect(screen.queryByTestId('plan-today-button')).toBeNull();
+    expect(screen.queryByTestId('share-recipe-button')).toBeNull();
+    expect(screen.getByTestId('edit-recipe-button')).toBeTruthy();
     expect(screen.queryByText(/⏱/)).toBeNull();
+    expect(screen.queryByTestId('nutrition-panel')).toBeNull();
+    expect(screen.queryByTestId('servings-units')).toBeNull();
+    expect(screen.queryByTestId('nutrition-add-calories')).toBeNull();
+
+    await act(async () => fireEvent.press(screen.getByTestId('edit-recipe-button')));
+    expect(await screen.findByTestId('recipe-editor')).toBeTruthy();
+    expect(screen.queryByTestId('take-photo-button')).toBeNull();
+    expect(screen.queryByTestId('choose-photo-button')).toBeNull();
+  });
+
+  it('a locked link-import route shows a neutral message (no payment UI)', async () => {
+    featureGate.setProvider(new NoEntitlements());
+    featureGate.setConfig(premium('linkImport'));
+    renderRouter(routes(), { initialUrl: '/import' });
+    expect(await screen.findByTestId('feature-locked-linkImport')).toBeTruthy();
+    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
+  });
+
+  it('locked pantry scan routes show a neutral message (no payment UI)', async () => {
+    featureGate.setProvider(new NoEntitlements());
+    featureGate.setConfig(premium('pantry'));
+    renderRouter(routes(), { initialUrl: '/pantry/scan' });
+    expect(await screen.findByTestId('feature-locked-barcodeScan')).toBeTruthy();
+    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
   });
 
   it('a locked cook-with-me deep link shows a neutral message (no payment UI)', async () => {
@@ -204,6 +241,16 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     renderRouter(routes(), { initialUrl: '/cook/current' });
     expect(await screen.findByTestId('feature-locked-cookWithMe')).toBeTruthy();
     expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
+  });
+
+  it('hides unit default and keep-awake when those features are locked', async () => {
+    featureGate.setProvider(new NoEntitlements());
+    featureGate.setConfig(premium('unitConversion', 'cookingMode'));
+    renderRouter(routes(), { initialUrl: '/settings' });
+    await screen.findByText('Optional features');
+    expect(screen.queryByTestId('settings-unit-metric')).toBeNull();
+    expect(screen.queryByTestId('keep-awake-toggle')).toBeNull();
+    expect(screen.getByTestId('feature-toggle-shopping')).toBeTruthy();
   });
 
   it('settings hides toggles for locked features; entitlement brings tabs back live', async () => {

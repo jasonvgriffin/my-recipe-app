@@ -1,106 +1,138 @@
-import { Link, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
-import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { DayPlan } from '@/components/day-plan';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
+import { MealCalendar } from '@/components/meal-calendar';
+import { OptionalFeature } from '@/components/optional-feature';
+import { ensureRecipesSeeded } from '@/data/ensure-seed';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
-import { fromIsoDate, startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
-import { colors } from '@/lib/theme';
+import { useWindowSizeClass } from '@/hooks/use-window-size-class';
+import {
+  addDays,
+  addMonths,
+  formatMonthYear,
+  formatShortDate,
+  fromIsoDate,
+  inMonth,
+  monthGrid,
+  startOfWeek,
+  toIsoDate,
+  weekDates,
+} from '@/lib/dates';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
-import type { MealPlanEntry } from '@/types/meal-plan';
+import type { IsoDate, MealPlanEntry } from '@/types/meal-plan';
 import type { Recipe } from '@/types/recipe';
 
+type CalendarMode = 'week' | 'month';
+
 /**
- * Meal plan tab (spec #11) — week view scaffold.
- * TODO(spec #23): medium/expanded → TwoPaneLayout (calendar + day detail).
- * TODO(spec #11): month calendar view, add/link recipes to a day (recipe picker), move/remove entries.
- * Recipes can already be planned from the recipe detail screen ("Plan for today").
+ * Meal plan tab (spec #11, #23). Calendar stays mounted across fold/unfold; the selected day is parent state.
+ * Compact opens the day on its own route. Medium/expanded shows that day beside the calendar.
  */
 export default function MealPlanScreen() {
-  const [weekStart, setWeekStart] = useState(() => toIsoDate(startOfWeek(new Date())));
-  const days = useMemo(() => weekDates(weekStart), [weekStart]);
+  return (
+    <OptionalFeature id="mealPlan" hiddenLabel="Meal plan is hidden.">
+      <MealPlanBody />
+    </OptionalFeature>
+  );
+}
+
+function MealPlanBody() {
+  const { isTwoPane } = useWindowSizeClass();
+  const [mode, setMode] = useState<CalendarMode>('week');
+  const [anchor, setAnchor] = useState(() => new Date());
+  const [selected, setSelected] = useState<IsoDate>(() => toIsoDate(new Date()));
   const [entries, setEntries] = useState<MealPlanEntry[]>([]);
   const [recipes, setRecipes] = useState<Map<string, Recipe>>(new Map());
+
+  const today = toIsoDate(new Date());
+  const dates = useMemo(() => {
+    if (mode === 'week') return weekDates(toIsoDate(startOfWeek(anchor)));
+    return monthGrid(anchor.getFullYear(), anchor.getMonth());
+  }, [mode, anchor]);
+
+  const label =
+    mode === 'week'
+      ? `Week of ${formatShortDate(toIsoDate(startOfWeek(anchor)))}`
+      : formatMonthYear(anchor.getFullYear(), anchor.getMonth());
+
+  const load = useCallback(async () => {
+    await ensureRecipesSeeded();
+    const [nextEntries, list] = await Promise.all([mealPlanStore.entriesForDates(dates), recipeStore.list()]);
+    setEntries(nextEntries);
+    setRecipes(new Map(list.map((recipe) => [recipe.id, recipe])));
+  }, [dates]);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      (async () => {
-        const [e, r] = await Promise.all([mealPlanStore.entriesForDates(days), recipeStore.list()]);
+      load().catch(() => {
         if (!active) return;
-        setEntries(e);
-        setRecipes(new Map(r.map((x) => [x.id, x])));
-      })();
+      });
       return () => {
         active = false;
       };
-    }, [days]),
+    }, [load]),
   );
   useOnDataChange(() => {
-    void (async () => {
-      const [e, r] = await Promise.all([mealPlanStore.entriesForDates(days), recipeStore.list()]);
-      setEntries(e);
-      setRecipes(new Map(r.map((x) => [x.id, x])));
-    })();
+    void load();
   });
 
-  function shiftWeek(delta: number) {
-    const d = fromIsoDate(weekStart);
-    d.setDate(d.getDate() + 7 * delta);
-    setWeekStart(toIsoDate(d));
+  const entriesByDate = useMemo(() => {
+    const map = new Map<IsoDate, MealPlanEntry[]>();
+    for (const entry of entries) {
+      const bucket = map.get(entry.date) ?? [];
+      bucket.push(entry);
+      map.set(entry.date, bucket);
+    }
+    return map;
+  }, [entries]);
+
+  function selectDay(date: IsoDate) {
+    setSelected(date);
+    if (!isTwoPane) router.push({ pathname: '/meal-plan/[date]', params: { date } });
   }
 
-  const today = toIsoDate(new Date());
+  const monthFilter =
+    mode === 'month' ? (iso: IsoDate) => inMonth(iso, anchor.getFullYear(), anchor.getMonth()) : undefined;
+
+  const calendar = (
+    <MealCalendar
+      mode={mode}
+      label={label}
+      dates={dates}
+      today={today}
+      selected={selected}
+      inMonth={monthFilter}
+      entriesByDate={entriesByDate}
+      recipes={recipes}
+      onMode={setMode}
+      onPrev={() => setAnchor((d) => (mode === 'week' ? fromIsoDate(addDays(toIsoDate(d), -7)) : addMonths(d, -1)))}
+      onNext={() => setAnchor((d) => (mode === 'week' ? fromIsoDate(addDays(toIsoDate(d), 7)) : addMonths(d, 1)))}
+      onToday={() => {
+        const now = new Date();
+        setAnchor(now);
+        setSelected(toIsoDate(now));
+      }}
+      onSelect={selectDay}
+    />
+  );
 
   return (
-    <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.text}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.weekNav}>
-          <Pressable onPress={() => shiftWeek(-1)} hitSlop={12}>
-            <Text style={styles.navText}>‹ Prev</Text>
-          </Pressable>
-          <Text style={styles.weekLabel}>Week of {fromIsoDate(weekStart).toLocaleDateString()}</Text>
-          <Pressable onPress={() => shiftWeek(1)} hitSlop={12}>
-            <Text style={styles.navText}>Next ›</Text>
-          </Pressable>
-        </View>
-        {days.map((day) => {
-          const dayEntries = entries.filter((e) => e.date === day);
-          return (
-            <View key={day} style={[styles.day, day === today && styles.today]}>
-              <Text style={styles.dayLabel}>
-                {fromIsoDate(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-              </Text>
-              {dayEntries.length === 0 ? (
-                <Text style={styles.empty}>Nothing planned</Text>
-              ) : (
-                dayEntries.map((e) => {
-                  const r = recipes.get(e.recipeId);
-                  return r ? (
-                    <Link key={e.id} href={{ pathname: '/recipe/[id]', params: { id: r.id } }} style={styles.entry}>
-                      {e.slot ? `${e.slot}: ` : ''}
-                      {r.title}
-                    </Link>
-                  ) : null;
-                })
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
-    </MaxWidthContainer>
+    <TwoPaneLayout
+      testID="meal-plan-layout"
+      primary={
+        <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.text}>
+          <ScrollView>{calendar}</ScrollView>
+        </MaxWidthContainer>
+      }
+      secondary={
+        <DayPlan key={selected} date={selected} onChanged={() => void load()} />
+      }
+      placeholder={<View />}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: { padding: 12, gap: 8, paddingBottom: 32 },
-  weekNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  navText: { color: colors.primary, fontWeight: '600', fontSize: 16 },
-  weekLabel: { color: colors.text, fontWeight: '600' },
-  day: { backgroundColor: colors.card, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border },
-  today: { borderColor: colors.primary },
-  dayLabel: { color: colors.text, fontWeight: '700', marginBottom: 4 },
-  empty: { color: colors.muted },
-  entry: { color: colors.primary, fontSize: 16, paddingVertical: 2 },
-});

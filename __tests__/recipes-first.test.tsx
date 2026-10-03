@@ -13,9 +13,16 @@ const routes = () => ({
   '(tabs)/index': require('@/app/(tabs)/index').default,
   '(tabs)/meal-plan': require('@/app/(tabs)/meal-plan').default,
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
+  '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
+  'pantry/scan': require('@/app/pantry/scan').default,
+  'pantry/receipt': require('@/app/pantry/receipt').default,
   add: require('@/app/add').default,
-  'recipe/[id]': require('@/app/recipe/[id]').default,
+  'recipe/[id]': require('@/app/recipe/[id]/index').default,
+  'recipe/[id]/edit': require('@/app/recipe/[id]/edit').default,
   'cook/[action]': require('@/app/cook/[action]').default,
+  import: require('@/app/import').default,
+  'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
+  'grocery-run': require('@/app/grocery-run').default,
   settings: require('@/app/settings').default,
   household: require('@/app/household').default,
 });
@@ -38,6 +45,7 @@ describe('recipes-first', () => {
     await screen.findByTestId('add-recipe-button');
     await waitFor(() => expect(screen.queryByText('Meal plan')).toBeNull());
     expect(screen.queryByText('Shopping list')).toBeNull();
+    expect(screen.queryByText('Pantry')).toBeNull();
 
     // Add a recipe
     await act(async () => fireEvent.press(screen.getByTestId('add-recipe-button')));
@@ -62,5 +70,6 @@ describe('recipes-first', () => {
     renderRouter(routes(), { initialUrl: '/' });
     expect(await screen.findByText('Meal plan')).toBeTruthy();
     expect(screen.getByText('Shopping list')).toBeTruthy();
+    expect(screen.getByText('Pantry')).toBeTruthy();
   });
 });

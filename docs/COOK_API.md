@@ -20,7 +20,7 @@ cookSession.next(): Promise<CookResult>       // on the last step → { event: '
 cookSession.previous(): Promise<CookResult>   // clamps at step 0
 cookSession.repeat(): Promise<CookResult>     // same step, event 'repeated'
 cookSession.goTo(stepIndex: number): Promise<CookResult>
-cookSession.startStepTimer(durationSeconds?): Promise<CookResult> // default = step.durationSeconds
+cookSession.startStepTimer(durationSeconds?, stepIndex?): Promise<CookResult> // current step if stepIndex omitted; other steps' timers keep running
 cookSession.endSession(): Promise<CookResult>
 cookSession.getState(): Promise<CookSessionState | undefined>
 
@@ -33,20 +33,25 @@ interface CurrentStep {
   ingredientsForStep?: string[]; // ingredients mentioned in the step, formatted ("2 tbsp olive oil")
   isFirst: boolean; isLast: boolean;
   timer?: { stepIndex; durationSeconds; startedAt; endsAt; remainingSeconds };
+  /** Every running timer in the session (several steps can count down at once, spec #15). */
+  activeTimers?: { stepIndex; durationSeconds; startedAt; endsAt; remainingSeconds }[];
 }
 
 type CookResult =
   | { ok: true; event: 'started' | 'current' | 'advanced' | 'went_back' | 'repeated' | 'timer_started'; step: CurrentStep }
   | { ok: true; event: 'finished' | 'ended'; recipeId: string; title: string }
-  | { ok: false; code: 'no_session' | 'recipe_not_found' | 'no_steps' | 'no_timer_for_step'; message: string };
+  | { ok: false; code: 'no_session' | 'recipe_not_found' | 'no_steps' | 'no_timer_for_step' | 'feature_locked'; message: string };
 ```
 
 Functions never throw for expected conditions; check `ok`. If the recipe is edited mid-session, the step index
 is clamped to the new step count.
 
-**Timers:** `startStepTimer` records `{ startedAt, endsAt }` in state. The UI layer is responsible for scheduling
-the local notification (expo-notifications, spec #15) for `endsAt` and for showing the countdown; any reader can
-compute `remainingSeconds` from state.
+**Timers:** `startStepTimer` records `{ startedAt, endsAt }` in state (one per step, so timers on different steps
+run together). The UI layer (`src/notifications/step-timers.ts`) schedules the local notification
+(expo-notifications, spec #15) for `endsAt`, asks for notification permission (Android 13+ needs a channel
+before the prompt; the manifest also declares exact-alarm permissions so the alert can fire on time), and
+plays the default notification sound — including when the app is backgrounded. The cooking screen shows the
+countdown. Any reader can compute `remainingSeconds` from state (`activeTimers` lists every running timer).
 
 ## Deep links
 
@@ -59,9 +64,11 @@ compute `remainingSeconds` from state.
 | `myrecipeapp://cook/timer`                        | start the current step's timer          |
 | `myrecipeapp://cook/end`                          | end the session                         |
 
-Handled by the route `src/app/cook/[action].tsx` via `parseCookDeepLink` + `runCookCommand`. Deep links can
-drive the app but can't return data to the caller; returning the step text to an assistant is the job of the
-future MCP server.
+Handled by the route `src/app/cook/[action].tsx` via `parseCookDeepLink` + `runCookCommand`, which renders
+cooking mode (`src/components/cooking-mode.tsx`, spec #19). On-screen buttons call the same `cookSession`
+methods, so a deep link and the cooking screen always show the same step. `?step=3` is read from the route's
+query as well as from the link string. Deep links can drive the app but can't return data to the caller;
+returning the step text to an assistant is the job of the future MCP server. There is no in-app text-to-speech.
 
 ## Future MCP server mapping (later phase, not v1)
 

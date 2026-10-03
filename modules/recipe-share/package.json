@@ -1,0 +1,11 @@
+{
+  "name": "recipe-share",
+  "version": "1.0.0",
+  "description": "Android share sheet for a recipe: text, photo, source link, or any combination.",
+  "main": "src/index.ts",
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

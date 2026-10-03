@@ -11,6 +11,7 @@ export const SYNC_TABLES: SyncTable[] = [
   'meal_plan_entries',
   'shopping_items',
   'barcode_items',
+  'receipt_aliases',
 ];
 /** Persisted pull/push cursors for one household. */
 export function syncCursorStorageKey(householdId: string): string {

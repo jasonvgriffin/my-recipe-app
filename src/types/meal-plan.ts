@@ -28,6 +28,8 @@ export interface ShoppingListItem extends SyncMeta {
   checked: boolean;
   /** Recipes this item came from; empty for manually added items. */
   recipeIds: string[];
+  /** Grocery aisle / category (spec #18). Omitted on older rows; inferred from the name when missing. */
+  aisle?: string;
 }
 
 /** A shopping list for a planned week — a VIEW assembled from ShoppingListItem rows (not stored itself). */

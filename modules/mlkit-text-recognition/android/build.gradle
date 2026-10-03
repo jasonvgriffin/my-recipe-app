@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.jasonvgriffin.myrecipeapp'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.mlkittextrecognition"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}
+
+dependencies {
+  // Bundled Latin model — works offline, no Google account. (Unbundled play-services models download.)
+  implementation "com.google.mlkit:text-recognition:16.0.1"
+}

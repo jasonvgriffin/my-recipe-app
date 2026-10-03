@@ -23,6 +23,7 @@ const EXTRA_COLUMNS: Record<SyncTable, Record<string, string>> = {
   meal_plan_entries: { date: 'date', recipe_id: 'recipeId' },
   shopping_items: { week_start: 'weekStart', checked: 'checked' },
   barcode_items: { barcode: 'barcode', name: 'name' },
+  receipt_aliases: { alias: 'alias', name: 'name' },
 };
 
 export function toRow(table: SyncTable, rec: StoredRecord & Record<string, unknown>): DbRow {

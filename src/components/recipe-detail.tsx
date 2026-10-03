@@ -1,20 +1,29 @@
-import { Link } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Link, router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { toIsoDate } from '@/lib/dates';
+import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
+import { NutritionPanel } from '@/components/nutrition-panel';
+import { ServingsUnits } from '@/components/servings-units';
 import { SharedBy } from '@/components/shared-by';
+import { ShareRecipePanel } from '@/components/share-recipe-panel';
+import { StarRating } from '@/components/star-rating';
+import { TagEditor } from '@/components/tag-editor';
+import { cookSession } from '@/cooking';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
-import { formatIngredient } from '@/lib/ingredients';
-import { setCooked } from '@/lib/recipe-utils';
-import { formatDuration } from '@/lib/timers';
-
+import { useSettings } from '@/hooks/use-settings';
+import { formatCookedOn, toIsoDate } from '@/lib/dates';
+import { presentIngredient } from '@/lib/ingredients';
+import { addRecipeTags, removeRecipeTag, setCooked, setRating, toggleRecipeCategory } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
+import { formatDuration } from '@/lib/timers';
+import { effectiveUnitSystem } from '@/lib/units';
+import { startBackgroundStepTimer } from '@/notifications/step-timers';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
-import { isLowCarb, netCarbs, type Recipe } from '@/types/recipe';
+import { isLowCarb, netCarbs, type Category, type Recipe, type UnitSystem } from '@/types/recipe';
 
 export interface RecipeDetailProps {
   id: string;
@@ -22,36 +31,69 @@ export interface RecipeDetailProps {
   onDeleted?: () => void;
   /** Called whenever the recipe loads or changes (route: set header title; two-pane: refresh list). */
   onChange?: (recipe: Recipe) => void;
+  /**
+   * Categories to assign (spec #3). Pass them from a focused screen so the list refreshes on return.
+   * When omitted, the detail loads them once.
+   */
+  categories?: Category[];
 }
 
 /**
  * Recipe detail body, used by the /recipe/[id] route (compact) AND the Recipes tab's secondary pane
  * (medium/expanded, spec #23). Keep it free of navigation side effects — use the callbacks.
  */
-export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
+export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesProp }: RecipeDetailProps) {
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined);
   // Optional cross-links (meal plan) only appear when that feature is enabled — recipes-first rule.
   // Gated entry points (src/entitlements) — recipe view/edit/delete itself is never gated.
   const showPlanToday = useFeatureVisible('mealPlan');
+  const showGroceryRun = useFeatureVisible('groceryRun');
   const timers = useFeature('timers').available;
-  const tags = useFeature('tags').available;
+  const tagsOn = useFeature('tags').available;
+  const categoriesOn = useFeature('categories').available;
+  const ratingsOn = useFeature('ratings').available;
+  const photos = useFeature('photos').available;
+  const share = useFeature('share').available;
+  const unitsEnabled = useFeature('unitConversion').available;
+  const nutritionEnabled = useFeature('nutrition').available;
+  const settings = useSettings();
+  const [scaled, setScaled] = useState<{ id: string; value: number } | undefined>();
+  const targetServings = scaled?.id === id ? scaled.value : undefined;
+  const [shareOpen, setShareOpen] = useState(false);
+  const [loadedCategories, setLoadedCategories] = useState<Category[]>([]);
+  const categories = categoriesProp ?? loadedCategories;
 
   // Parents should pass `key={id}` when switching recipes so state resets cleanly.
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
   });
+  // Reload when the screen is focused again (after Edit) and on first show. Adapts live; state stays here.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      recipeStore.get(id).then((r) => {
+        if (!active) return;
+        setRecipe(r ?? null);
+        if (r) onChangeRef.current?.(r);
+      });
+      return () => {
+        active = false;
+      };
+    }, [id]),
+  );
+
   useEffect(() => {
+    if (categoriesProp || !categoriesOn) return;
     let active = true;
-    recipeStore.get(id).then((r) => {
-      if (!active) return;
-      setRecipe(r ?? null);
-      if (r) onChangeRef.current?.(r);
+    recipeStore.listCategories().then((c) => {
+      if (active) setLoadedCategories(c);
     });
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [categoriesOn, categoriesProp, id]);
+  // Household sync (spec #25): reload when this recipe changes on another device.
   useOnDataChange(() => {
     void recipeStore.get(id).then((r) => {
       setRecipe(r ?? null);
@@ -91,11 +133,18 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
 
   const net = netCarbs(recipe.nutrition);
 
-  async function toggleCooked(r: Recipe) {
-    const next = setCooked(r, !r.cooked);
+  async function persist(next: Recipe) {
     await recipeStore.save(next);
     setRecipe(next);
     onChange?.(next);
+  }
+
+  async function toggleCooked(r: Recipe) {
+    await persist(setCooked(r, !r.cooked));
+  }
+
+  async function logCook(r: Recipe) {
+    await persist(setCooked(r, true));
   }
 
   async function planToday(r: Recipe) {
@@ -103,12 +152,60 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
     Alert.alert('Added to meal plan', `“${r.title}” is planned for today.`);
   }
 
-  // TODO(spec #15, #19): tap ⏱ to start a background step timer w/ notification; "Cook" button → cooking mode.
-  // TODO(spec #16, #22, #18): unit toggle (convertIngredient), star rating (setRating), grocery-run for this recipe.
-  // TODO(spec #2): Edit screen (all fields, substitute/add/delete ingredients).
-  // TODO(spec #4): photo display; TODO(spec #14): Share button (text / photo / link, any combination).
+  const history = [...(recipe.cookHistory ?? [])].reverse();
+  const current = recipe;
+  const unitSystem = effectiveUnitSystem(current, settings);
+  const scaledServings = targetServings ?? current.servings;
+  const factor = current.servings > 0 ? scaledServings / current.servings : 1;
+
+  async function openCook() {
+    const state = await cookSession.getState();
+    const action = state?.recipeId === current.id ? 'current' : current.id;
+    router.push({ pathname: '/cook/[action]', params: { action, via: 'app' } });
+  }
+
+  async function setUnit(next: UnitSystem | 'original') {
+    const saved = await recipeStore.save({ ...current, unitSystem: next });
+    setRecipe(saved);
+    onChange?.(saved);
+  }
+
+  function startTimer(stepIndex: number, durationSeconds: number | undefined) {
+    void startBackgroundStepTimer(cookSession, {
+      recipeId: current.id,
+      recipeTitle: current.title,
+      stepIndex,
+      durationSeconds,
+    }).then((outcome) => {
+      if (!outcome.ok) {
+        Alert.alert('Timer', outcome.result.ok ? 'Could not start that timer.' : outcome.result.message);
+        return;
+      }
+      const label = durationSeconds ? formatDuration(durationSeconds) : 'Timer';
+      if (outcome.permission === 'granted') {
+        Alert.alert(
+          'Timer started',
+          `${label}. You’ll get a notification and a sound when it ends, even if you leave this screen.`,
+        );
+      } else {
+        Alert.alert(
+          'Timer running',
+          'Notifications are off, so this countdown only updates while the app is open. Allow notifications to hear it in the background.',
+        );
+      }
+    });
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container} testID="recipe-detail">
+      {photos && recipe.photoUri ? (
+        <Image
+          source={{ uri: recipe.photoUri }}
+          style={styles.photo}
+          accessibilityLabel={`Photo of ${recipe.title}`}
+          testID="recipe-photo"
+        />
+      ) : null}
       <Text style={styles.title}>{recipe.title}</Text>
       <SharedBy createdBy={recipe.createdBy} />
       {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}
@@ -121,61 +218,190 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
         />
       </View>
       {isLowCarb(recipe) && <Text style={styles.badge}>Low-carb</Text>}
-      {tags && recipe.tags.length > 0 && (
-        <View style={styles.tagRow}>
-          {recipe.tags.map((t) => (
-            <Text key={t} style={styles.tag}>
-              #{t}
-            </Text>
-          ))}
+      {ratingsOn ? (
+        <View style={styles.block}>
+          <Text style={styles.section}>Rating</Text>
+          <StarRating
+            value={recipe.rating}
+            testID="detail-rating"
+            onChange={(rating) => {
+              void persist(setRating(recipe, rating));
+            }}
+          />
+          {recipe.rating ? null : <Text style={styles.meta}>Not rated</Text>}
         </View>
-      )}
+      ) : null}
+      {categoriesOn && categories.length > 0 ? (
+        <View style={styles.block}>
+          <Text style={styles.section}>Categories</Text>
+          <CategoryChips
+            categories={categories}
+            selectedIds={recipe.categoryIds}
+            onToggle={(categoryId) => {
+              void persist(toggleRecipeCategory(recipe, categoryId));
+            }}
+            testIDPrefix="assign-category"
+          />
+        </View>
+      ) : null}
+      {tagsOn ? (
+        <View style={styles.block}>
+          <Text style={styles.section}>Tags</Text>
+          <TagEditor
+            tags={recipe.tags}
+            onAdd={(text) => {
+              const next = addRecipeTags(recipe, text);
+              if (next !== recipe) void persist(next);
+            }}
+            onRemove={(tag) => {
+              const next = removeRecipeTag(recipe, tag);
+              if (next !== recipe) void persist(next);
+            }}
+          />
+        </View>
+      ) : null}
       <View style={styles.actions}>
-        <Pressable style={[styles.action, recipe.cooked && styles.actionOn]} onPress={() => toggleCooked(recipe)}>
+        <Pressable
+          style={[styles.action, recipe.cooked && styles.actionOn]}
+          onPress={() => toggleCooked(recipe)}
+          testID="cooked-toggle"
+          accessibilityRole="button">
           <Text style={[styles.actionText, recipe.cooked && styles.actionTextOn]}>
             {recipe.cooked ? '✓ Cooked' : 'Mark cooked'}
           </Text>
         </Pressable>
         <FeatureGate id="cookingMode">
-          <Link href={{ pathname: '/cook/[action]', params: { action: recipe.id, via: 'app' } }} asChild>
-            <Pressable style={styles.action} testID="cook-button">
-              <Text style={styles.actionText}>Cook</Text>
-            </Pressable>
-          </Link>
+          <Pressable style={styles.action} testID="cook-button" onPress={() => void openCook()}>
+            <Text style={styles.actionText}>Cook</Text>
+          </Pressable>
         </FeatureGate>
         {showPlanToday ? (
           <Pressable style={styles.action} onPress={() => planToday(recipe)} testID="plan-today-button">
             <Text style={styles.actionText}>Plan for today</Text>
           </Pressable>
         ) : null}
+        {showGroceryRun ? (
+          <Link href={{ pathname: '/grocery-run', params: { recipeId: recipe.id } }} asChild>
+            <Pressable style={styles.action} accessibilityRole="button" testID="grocery-run-button">
+              <Text style={styles.actionText}>Grocery run</Text>
+            </Pressable>
+          </Link>
+        ) : null}
+        <Link href={{ pathname: '/recipe/[id]/edit', params: { id: recipe.id } }} asChild>
+          <Pressable style={styles.action} accessibilityRole="button" testID="edit-recipe-button">
+            <Text style={styles.actionText}>Edit</Text>
+          </Pressable>
+        </Link>
+        {share ? (
+          <Pressable
+            style={styles.action}
+            accessibilityRole="button"
+            testID="share-recipe-button"
+            onPress={() => setShareOpen((open) => !open)}>
+            <Text style={styles.actionText}>Share</Text>
+          </Pressable>
+        ) : null}
       </View>
-      {recipe.lastCookedAt && (
-        <Text style={styles.meta}>Last cooked {new Date(recipe.lastCookedAt).toLocaleDateString()}</Text>
-      )}
-      {recipe.sourceUrl && (
-        <Text style={styles.link} onPress={() => Linking.openURL(recipe.sourceUrl!)}>
-          Source: {recipe.sourceUrl}
+      {shareOpen && share ? <ShareRecipePanel recipe={recipe} onClose={() => setShareOpen(false)} /> : null}
+      {recipe.lastCookedAt ? (
+        <Text style={styles.meta} testID="last-cooked">
+          Last cooked {formatCookedOn(recipe.lastCookedAt)}
         </Text>
-      )}
+      ) : null}
+      {recipe.cooked ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => logCook(recipe)}
+          style={styles.logCook}
+          testID="log-cook-button">
+          <Text style={styles.actionText}>Cooked again</Text>
+        </Pressable>
+      ) : null}
+      {history.length > 0 ? (
+        <View testID="cook-history" style={styles.block}>
+          <Text style={styles.meta}>
+            Cooked {history.length} {history.length === 1 ? 'time' : 'times'}
+          </Text>
+          {history.map((ts, i) => (
+            <Text key={`${ts}-${i}`} style={styles.historyItem}>
+              {formatCookedOn(ts)}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+      {recipe.sourceUrl ? (
+        <Pressable
+          accessibilityRole="link"
+          testID="source-link"
+          style={styles.linkHit}
+          onPress={() => Linking.openURL(recipe.sourceUrl!)}>
+          <Text style={styles.link}>Source: {recipe.sourceUrl}</Text>
+        </Pressable>
+      ) : null}
       <Text style={styles.section}>Ingredients</Text>
+      {unitsEnabled ? (
+        <ServingsUnits
+          baseServings={recipe.servings}
+          targetServings={scaledServings}
+          onAdjust={(delta) =>
+            setScaled((prev) => {
+              const base = prev?.id === id ? prev.value : current.servings;
+              return { id, value: Math.max(1, base + delta) };
+            })
+          }
+          unitSystem={unitSystem}
+          onUnitSystem={(u) => void setUnit(u)}
+        />
+      ) : null}
       {recipe.ingredients.map((i, idx) => (
-        <Text key={idx} style={styles.item}>
-          • {formatIngredient(i)}
-        </Text>
+        <View key={idx}>
+          <Text style={styles.item}>
+            •{' '}
+            {presentIngredient(i, {
+              unitSystem: unitsEnabled ? unitSystem : 'original',
+              factor: unitsEnabled ? factor : 1,
+            })}
+          </Text>
+          {i.substitutionNote ? (
+            <Text style={styles.substitution} testID={`substitution-${idx}`}>
+              Substitution: {i.substitutionNote}
+            </Text>
+          ) : null}
+        </View>
       ))}
       <Text style={styles.section}>Steps</Text>
       {recipe.steps.map((st, idx) => (
-        <Text key={idx} style={styles.item}>
-          {idx + 1}. {st.text}
+        <View key={idx} style={styles.stepBlock}>
+          <Text style={styles.item}>
+            {idx + 1}. {st.text}
+          </Text>
           {timers && st.durationSeconds ? (
-            <Text style={styles.timer}> ⏱ {formatDuration(st.durationSeconds)}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Start ${formatDuration(st.durationSeconds)} timer for step ${idx + 1}`}
+              testID={`step-timer-${idx}`}
+              style={styles.timerBtn}
+              onPress={() => startTimer(idx, st.durationSeconds)}>
+              <Text style={styles.timer}>⏱ {formatDuration(st.durationSeconds)}</Text>
+            </Pressable>
           ) : null}
-        </Text>
+        </View>
       ))}
+      {nutritionEnabled ? (
+        <NutritionPanel
+          recipe={recipe}
+          onChange={(next) => {
+            setRecipe(next);
+            onChange?.(next);
+          }}
+        />
+      ) : null}
       {recipe.notes ? (
         <>
           <Text style={styles.section}>Notes</Text>
-          <Text style={styles.item}>{recipe.notes}</Text>
+          <Text style={styles.item} testID="recipe-notes">
+            {recipe.notes}
+          </Text>
         </>
       ) : null}
       <Pressable style={styles.delete} onPress={() => confirmDelete(recipe)}>
@@ -197,6 +423,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: { padding: 16, paddingBottom: 48 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  photo: { width: '100%', height: 200, borderRadius: 10, marginBottom: 12, backgroundColor: colors.card },
   title: { fontSize: 24, fontWeight: '700', color: colors.text },
   description: { marginTop: 6, color: colors.muted, fontSize: 15 },
   stats: { flexDirection: 'row', gap: 8, marginTop: 16 },
@@ -222,23 +449,41 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     fontWeight: '600',
   },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
-  tag: {
-    backgroundColor: colors.tagBg,
-    color: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    overflow: 'hidden',
+  block: { marginTop: 4 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  action: {
+    minWidth: 108,
+    flexGrow: 1,
+    minHeight: 44,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  action: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.primary, alignItems: 'center' },
+  logCook: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyItem: { color: colors.text, fontSize: 15, marginTop: 2 },
   actionOn: { backgroundColor: colors.primary },
   actionText: { color: colors.primary, fontWeight: '600' },
   actionTextOn: { color: colors.primaryText },
-  timer: { color: colors.primary, fontWeight: '600' },
+  stepBlock: { marginBottom: 8 },
+  timerBtn: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
+  timer: { color: colors.primary, fontWeight: '700', fontSize: 16 },
   meta: { color: colors.muted, marginTop: 8 },
-  link: { color: colors.primary, marginTop: 8, textDecorationLine: 'underline' },
+  linkHit: { minHeight: 44, justifyContent: 'center', marginTop: 8 },
+  link: { color: colors.primary, textDecorationLine: 'underline' },
+  substitution: { color: colors.muted, marginLeft: 16, marginBottom: 4 },
   section: { fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 8, color: colors.text },
   item: { fontSize: 16, lineHeight: 24, color: colors.text, marginBottom: 4 },
   delete: {

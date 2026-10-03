@@ -64,7 +64,7 @@ export const RecipeDraftSchema = z
       .optional(),
     rating: z.number().int().min(1).max(5).optional(),
     notes: z.string().max(20000).optional(),
-    /** http(s) or file:// URI of a photo. TODO(spec #4): download remote photos into app storage. */
+    /** http(s) or file:// URI of a photo. The import screen copies remote http(s) photos into app documents (spec #4). */
     photoUrl: z
       .string()
       .trim()

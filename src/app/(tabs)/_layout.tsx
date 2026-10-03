@@ -8,7 +8,7 @@ import { colors } from '@/lib/theme';
 /**
  * Tabs. RECIPES ARE THE CORE: the app opens to Recipes; Meal plan / Shopping are optional and hidden via
  * Settings (href: null). With every optional feature hidden the tab bar disappears — a pure recipe box.
- * TODO(spec #21): Pantry tab gated by settings.features.pantry.
+ * Pantry is optional too (spec #21): hidden unless the gate allows it and Settings → Pantry is on.
  */
 function TabIcon({ glyph, color }: { glyph: string; color: ColorValue }) {
   return <Text style={{ color, fontSize: 18 }}>{glyph}</Text>;
@@ -20,7 +20,8 @@ export default function TabsLayout() {
   // Optional tabs need BOTH the feature gate (paywall-ready, src/entitlements) and the user's Settings toggle.
   const showMealPlan = useFeatureVisible('mealPlan');
   const showShopping = useFeatureVisible('shoppingList');
-  const anyOptionalTab = showMealPlan || showShopping;
+  const showPantry = useFeatureVisible('pantry');
+  const anyOptionalTab = showMealPlan || showShopping || showPantry;
   return (
     <Tabs
       screenOptions={{
@@ -68,6 +69,14 @@ export default function TabsLayout() {
           title: 'Shopping list',
           href: showShopping ? undefined : null,
           tabBarIcon: ({ color }) => <TabIcon glyph="🛒" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="pantry"
+        options={{
+          title: 'Pantry',
+          href: showPantry ? undefined : null,
+          tabBarIcon: ({ color }) => <TabIcon glyph="🥫" color={color} />,
         }}
       />
     </Tabs>

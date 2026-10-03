@@ -8,19 +8,23 @@
     "scheme": "myrecipeapp",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.jasonvgriffin.myrecipeapp"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#121412",
+        "backgroundColor": "#16211A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.jasonvgriffin.myrecipeapp",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "output": "static",
@@ -35,7 +39,41 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow My Recipe App to use the camera for optional recipe photos, barcodes, and receipt photos.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#66BB6A",
+          "defaultChannel": "step-timers"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow My Recipe App to use photos from your gallery for an optional recipe photo or a grocery receipt.",
+          "cameraPermission": "Allow My Recipe App to use the camera for optional recipe photos, barcodes, and receipt photos.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-sharing",
+        {
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": ["text/plain", "text/html"]
+          }
+        }
+      ],
+      "mlkit-text-recognition"
     ],
     "experiments": {
       "typedRoutes": true,

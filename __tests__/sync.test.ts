@@ -1,6 +1,7 @@
 import { SEED_RECIPES } from '@/data/seed';
 import { createMealPlanStore } from '@/storage/meal-plan';
 import { createPantryStore } from '@/storage/pantry';
+import { createReceiptAliasStore } from '@/storage/receipt-aliases';
 import { createRecipeStore, type KeyValueStore } from '@/storage/recipes';
 import { createCollection, type Collection, type StoredRecord } from '@/storage/kv';
 import { setIdentity } from '@/storage/identity';
@@ -48,6 +49,7 @@ function device() {
     meal_plan_entries: c(plan.collections.entries),
     shopping_items: c(plan.collections.items),
     barcode_items: c(createCollection<StoredRecord>(kv, 'barcodes', (v) => v as StoredRecord)),
+    receipt_aliases: c(createReceiptAliasStore(kv).collection),
   };
   return { kv, recipes, plan, pantry, collections };
 }

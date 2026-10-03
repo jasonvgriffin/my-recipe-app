@@ -17,6 +17,6 @@ export function importRecipe(
 }
 
 export { importRecipeWith, appImportDeps, type ImportDeps };
-export { parseImportDeepLink, shareTextToImportInput } from './deep-link';
+export { importPathFromIncomingUrl, parseImportDeepLink, sharedPayloadToText, shareTextToImportInput } from './deep-link';
 export { normalizeSourceUrl } from './normalize';
 export * from './types';

@@ -20,4 +20,10 @@ export interface SyncMeta {
 
 /** Names of the synced tables (match supabase/migrations). */
 export type SyncTable =
-  'recipes' | 'categories' | 'pantry_items' | 'meal_plan_entries' | 'shopping_items' | 'barcode_items';
+  | 'recipes'
+  | 'categories'
+  | 'pantry_items'
+  | 'meal_plan_entries'
+  | 'shopping_items'
+  | 'barcode_items'
+  | 'receipt_aliases';

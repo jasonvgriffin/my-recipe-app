@@ -140,6 +140,22 @@ export function formatIngredient(ing: Ingredient): string {
   return [qty, unitLabel, ing.name].filter(Boolean).join(' ') + (ing.note ? `, ${ing.note}` : '');
 }
 
+/**
+ * Ingredient line for display (spec #16): scale for a servings change, then convert
+ * to metric/imperial. `'original'` (or an omitted system) keeps the written units.
+ * Unparsed lines stay as written.
+ */
+export function presentIngredient(
+  ing: Ingredient,
+  options: { unitSystem?: UnitSystem | 'original'; factor?: number } = {},
+): string {
+  const factor = options.factor ?? 1;
+  const scaled = factor === 1 ? ing : scaleIngredient(ing, factor);
+  const system = options.unitSystem ?? 'original';
+  const converted = system === 'original' ? scaled : convertIngredient(scaled, system);
+  return formatIngredient(converted);
+}
+
 /** Key used to merge shopping-list lines and match the pantry. */
 export function ingredientKey(ing: Ingredient): string {
   return (ing.name ?? ing.text)
