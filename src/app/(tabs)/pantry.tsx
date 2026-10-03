@@ -13,6 +13,7 @@ import {
 import { FeatureLocked } from '@/components/feature-gate';
 import { MAX_CONTENT_WIDTH, MaxWidthContainer, TwoPaneLayout } from '@/components/layout';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
+import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { PANTRY_CATEGORIES, expiryState, rankRecipesByPantry } from '@/lib/pantry';
 import { colors } from '@/lib/theme';
@@ -65,6 +66,10 @@ export default function PantryScreen() {
       void reload();
     }, [reload]),
   );
+  // Household sync (spec #25): reload when another member's changes land.
+  useOnDataChange(() => {
+    void reload().catch(() => undefined);
+  });
 
   if (!gate.available) return <FeatureLocked id="pantry" />;
   if (!visible) {

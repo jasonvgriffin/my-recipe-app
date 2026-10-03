@@ -2,6 +2,11 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
+jest.mock('expo-clipboard', () => ({
+  setStringAsync: jest.fn(async () => true),
+  getStringAsync: jest.fn(async () => ''),
+}));
+
 // Native camera / gallery / ML Kit are not available under Jest. Screen tests override these when they
 // need to simulate a scan or a photo.
 jest.mock('expo-camera', () => {

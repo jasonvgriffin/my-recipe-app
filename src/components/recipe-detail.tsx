@@ -6,11 +6,13 @@ import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
 import { NutritionPanel } from '@/components/nutrition-panel';
 import { ServingsUnits } from '@/components/servings-units';
+import { SharedBy } from '@/components/shared-by';
 import { ShareRecipePanel } from '@/components/share-recipe-panel';
 import { StarRating } from '@/components/star-rating';
 import { TagEditor } from '@/components/tag-editor';
 import { cookSession } from '@/cooking';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
+import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { useSettings } from '@/hooks/use-settings';
 import { formatCookedOn, toIsoDate } from '@/lib/dates';
 import { presentIngredient } from '@/lib/ingredients';
@@ -91,6 +93,13 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
       active = false;
     };
   }, [categoriesOn, categoriesProp, id]);
+  // Household sync (spec #25): reload when this recipe changes on another device.
+  useOnDataChange(() => {
+    void recipeStore.get(id).then((r) => {
+      setRecipe(r ?? null);
+      if (r) onChangeRef.current?.(r);
+    });
+  });
 
   if (recipe === undefined) {
     return (
@@ -198,6 +207,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
         />
       ) : null}
       <Text style={styles.title}>{recipe.title}</Text>
+      <SharedBy createdBy={recipe.createdBy} />
       {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}
       <View style={styles.stats}>
         <Stat label="Servings" value={String(recipe.servings)} />

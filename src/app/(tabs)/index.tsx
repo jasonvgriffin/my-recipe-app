@@ -7,6 +7,7 @@ import { RecipeDetail } from '@/components/recipe-detail';
 import { RecipeFilters } from '@/components/recipe-filters';
 import { StarRating } from '@/components/star-rating';
 import { useFeature } from '@/hooks/use-feature';
+import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { useSettings } from '@/hooks/use-settings';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import {
@@ -57,6 +58,9 @@ export default function RecipeListScreen() {
     ]);
     applyCatalog(list, cats, tags);
   }, [applyCatalog]);
+  useOnDataChange(() => {
+    void reload();
+  });
 
   function openRecipe(id: string) {
     if (isTwoPane) setSelectedId(id);

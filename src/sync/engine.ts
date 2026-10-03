@@ -13,7 +13,10 @@ export const SYNC_TABLES: SyncTable[] = [
   'barcode_items',
   'receipt_aliases',
 ];
-const CURSOR_KEY = (householdId: string) => `my-recipe-app/sync-cursors/${householdId}`;
+/** Persisted pull/push cursors for one household. */
+export function syncCursorStorageKey(householdId: string): string {
+  return `my-recipe-app/sync-cursors/${householdId}`;
+}
 /** Tombstones are kept this long after a successful sync, then purged locally. */
 export const TOMBSTONE_TTL_DAYS = 30;
 
@@ -56,7 +59,7 @@ export function createSyncEngine({
 }: SyncEngineDeps) {
   async function loadCursors(): Promise<Cursors> {
     try {
-      const raw = await kv.getItem(CURSOR_KEY(householdId));
+      const raw = await kv.getItem(syncCursorStorageKey(householdId));
       return raw ? (JSON.parse(raw) as Cursors) : { pulled: {}, pushed: {} };
     } catch {
       return { pulled: {}, pushed: {} };
@@ -107,7 +110,7 @@ export function createSyncEngine({
       const cutoff = new Date(now().getTime() - TOMBSTONE_TTL_DAYS * 86_400_000).toISOString();
       await col.purgeTombstones(cutoff);
 
-      await kv.setItem(CURSOR_KEY(householdId), JSON.stringify(cursors));
+      await kv.setItem(syncCursorStorageKey(householdId), JSON.stringify(cursors));
     }
     return result;
   }

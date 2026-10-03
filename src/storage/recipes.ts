@@ -17,16 +17,26 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
   const categories = createCollection<Category>(store, CATEGORIES_STORAGE_KEY, (v) =>
     isCategory(v) ? withSyncDefaults(v) : undefined,
   );
+  let seeding: Promise<void> | undefined;
 
   return {
     /**
      * Insert sample recipes once, on first launch. Each device gets fresh UUIDs so seeds never collide
      * across households when synced (spec #25).
      */
-    async seedIfNeeded(seed: Recipe[] = SEED_RECIPES, now: Date = new Date()): Promise<void> {
-      if (await store.getItem(SEEDED_KEY)) return;
-      for (const r of seed) await recipes.save({ ...r, id: generateId() }, now);
-      await store.setItem(SEEDED_KEY, '1');
+    seedIfNeeded(seed: Recipe[] = SEED_RECIPES, now: Date = new Date()): Promise<void> {
+      // Coalesce overlapping calls: each save fires a data-change event, and screens that reload on
+      // that event call this again while the first seed is still writing (which used to duplicate samples).
+      if (!seeding) {
+        seeding = (async () => {
+          if (await store.getItem(SEEDED_KEY)) return;
+          for (const r of seed) await recipes.save({ ...r, id: generateId() }, now);
+          await store.setItem(SEEDED_KEY, '1');
+        })().finally(() => {
+          seeding = undefined;
+        });
+      }
+      return seeding;
     },
 
     /** All recipes, newest first. */

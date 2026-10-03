@@ -7,6 +7,7 @@ import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/component
 import { MealCalendar } from '@/components/meal-calendar';
 import { OptionalFeature } from '@/components/optional-feature';
 import { ensureRecipesSeeded } from '@/data/ensure-seed';
+import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import {
   addDays,
@@ -76,6 +77,9 @@ function MealPlanBody() {
       };
     }, [load]),
   );
+  useOnDataChange(() => {
+    void load();
+  });
 
   const entriesByDate = useMemo(() => {
     const map = new Map<IsoDate, MealPlanEntry[]>();

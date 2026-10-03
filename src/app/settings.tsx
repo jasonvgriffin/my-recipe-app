@@ -1,13 +1,17 @@
+import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { FeatureGate } from '@/components/feature-gate';
 import { featureGate, type FeatureId } from '@/entitlements';
 import { useFeature } from '@/hooks/use-feature';
+import { useHousehold } from '@/hooks/use-household';
 import { useSettings } from '@/hooks/use-settings';
 import { colors } from '@/lib/theme';
 import { clampCookedRecentlyDays, settingsStore } from '@/storage/settings';
+import { syncStatusLabel } from '@/sync/status';
 import type { OptionalFeatures, UnitSystem } from '@/types/recipe';
 
 const RECENT_PRESETS = [7, 14, 30, 90];
@@ -26,13 +30,33 @@ const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; h
 /**
  * Settings. Recipes are the core: everything here is optional. Recipe list preferences (cooked-recently
  * window), units, cooking mode, and optional-feature toggles. Turning every optional feature off makes the
- * app a pure recipe box. TODO(spec #25): "Household sharing" section (opt-in sign-in).
+ * app a pure recipe box.
  */
 const UNIT_CHOICES: { id: UnitSystem | 'original'; label: string }[] = [
   { id: 'original', label: 'As written' },
   { id: 'metric', label: 'Metric' },
   { id: 'imperial', label: 'Imperial' },
 ];
+
+function HouseholdSettingsLink() {
+  const { account, sync } = useHousehold();
+  const subtitle = !account.user
+    ? 'Share recipes with your household. Optional — recipes work without an account.'
+    : account.household
+      ? `${account.household.name} · ${syncStatusLabel(sync)}`
+      : 'Signed in, not in a household yet.';
+  return (
+    <Link href="/household" asChild>
+      <Pressable accessibilityRole="button" testID="household-settings-link" style={styles.row}>
+        <View style={styles.flex}>
+          <Text style={styles.label}>Household</Text>
+          <Text style={styles.help}>{subtitle}</Text>
+        </View>
+        <Text style={styles.label}>›</Text>
+      </Pressable>
+    </Link>
+  );
+}
 
 export default function SettingsScreen() {
   const settings = useSettings();
@@ -121,6 +145,9 @@ export default function SettingsScreen() {
             />
           </View>
         ) : null}
+        <FeatureGate id="householdSync">
+          <HouseholdSettingsLink />
+        </FeatureGate>
       </ScrollView>
     </MaxWidthContainer>
   );

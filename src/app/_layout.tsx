@@ -2,8 +2,14 @@ import { Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { useHouseholdSync } from '@/hooks/use-household-sync';
 import { colors, navigationTheme } from '@/lib/theme';
 import { configureStepTimerNotifications } from '@/notifications/step-timers';
+
+function HouseholdSyncHost() {
+  useHouseholdSync();
+  return null;
+}
 
 export default function RootLayout() {
   useEffect(() => {
@@ -12,6 +18,7 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={navigationTheme}>
       <StatusBar style="light" />
+      <HouseholdSyncHost />
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: colors.card },
@@ -27,6 +34,7 @@ export default function RootLayout() {
         <Stack.Screen name="meal-plan/[date]" options={{ title: 'Meal plan' }} />
         <Stack.Screen name="grocery-run" options={{ title: 'Grocery run' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="household" options={{ title: 'Household' }} />
         <Stack.Screen name="pantry/scan" options={{ title: 'Scan barcode' }} />
         <Stack.Screen name="pantry/receipt" options={{ title: 'Scan receipt' }} />
       </Stack>

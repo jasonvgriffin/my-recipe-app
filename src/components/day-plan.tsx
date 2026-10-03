@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ensureRecipesSeeded } from '@/data/ensure-seed';
+import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { addDays, formatLongDate } from '@/lib/dates';
 import { searchRecipes } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
@@ -47,6 +48,10 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
       };
     }, [load]),
   );
+  // Household sync (spec #25): reload when another member's changes land.
+  useOnDataChange(() => {
+    void load().catch(() => undefined);
+  });
 
   async function changed() {
     await load();

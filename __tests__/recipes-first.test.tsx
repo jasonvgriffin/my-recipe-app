@@ -19,10 +19,12 @@ const routes = () => ({
   add: require('@/app/add').default,
   'recipe/[id]': require('@/app/recipe/[id]/index').default,
   'recipe/[id]/edit': require('@/app/recipe/[id]/edit').default,
+  'cook/[action]': require('@/app/cook/[action]').default,
   import: require('@/app/import').default,
   'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
   'grocery-run': require('@/app/grocery-run').default,
   settings: require('@/app/settings').default,
+  household: require('@/app/household').default,
 });
 
 // Requiring every screen transforms most of the app. On a cold CI cache that alone can exceed Jest's 5 s

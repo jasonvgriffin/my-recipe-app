@@ -149,6 +149,15 @@ describe.each([
     expect((await screen.findAllByText(text)).length).toBeGreaterThan(0);
   });
 
+  it('Household settings screen shows account and members panes', async () => {
+    const Household = require('@/app/household').default;
+    renderRouter({ index: Household }, { initialUrl: '/' });
+    expect(await screen.findByTestId(width >= 600 ? 'household-layout-dual' : 'household-layout-single')).toBeTruthy();
+    expect(screen.getByTestId('household-screen')).toBeTruthy();
+    expect(screen.getByText(/Invite code and members/)).toBeTruthy();
+    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
+  });
+
   it('Pantry tab: list at compact, list + suggestions side by side when expanded', async () => {
     const Pantry = require('@/app/(tabs)/pantry').default;
     renderRouter({ index: Pantry }, { initialUrl: '/' });

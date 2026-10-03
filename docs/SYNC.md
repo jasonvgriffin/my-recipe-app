@@ -37,7 +37,10 @@ Per table:
 3. **Pull** remote rows with `updated_at` > pull cursor → `applyRemote`, **last-write-wins by `updatedAt`**.
 4. **Purge** local tombstones older than 30 days.
    Cursors are persisted per household. Run on: sign-in/household join, app foreground, debounced after local
-   writes, and (optional) on Supabase **realtime** change events for the household.
+   writes, pull-to-refresh (Household screen), and (optional) on Supabase **realtime** change events for the household.
+   A failed push or pull leaves the cursors unmoved — that on-device backlog is the offline queue — and the
+   coordinator retries with backoff while the status indicator says offline. Other failures show the error
+   with Sync now. Signed out, or with the feature gated off, nothing is uploaded and the UI stays solo.
 
 `updatedAt` is the client write time (needed for offline edits). The server also enforces LWW (a stale
 update keeps the newer row), keeps `created_by`/`household_id` immutable, and stamps `server_updated_at`.
@@ -85,10 +88,41 @@ Session persisted in AsyncStorage. Household flow: create household (shows invit
 - Auth: email OTP/magic link is Supabase's default provider (enabled). Free-tier built-in SMTP is rate limited
   (a few emails/hour); custom SMTP is a later decision for Jason.
 
-## What exists vs. TODO
+## Account UI (Settings → Household)
+
+Opt-in. The recipes tab never asks anyone to sign in. `householdSync` gates the Settings row, the
+`/household` route, sync, and the "Shared by" line (`FeatureGate` / `canUse`). With the feature locked or
+Supabase env vars absent, the screen explains that recipes still work on this device.
+
+- **Sign in:** email, then the 6-digit code (`verifyEmailOtp`). Magic link to `myrecipeapp://auth` is optional;
+  other app deep links are ignored.
+- **Household:** create (shows the invite code), join with a code, or pick one if you already belong to several.
+- **Invite code:** shown to members; Copy, Share, and (owner only) rotate.
+- **Members:** list with Owner / Member. Owners can remove someone else. Anyone can leave. Display name is what
+  recipe detail shows as "Shared by <name>" (blank when the author never set a name — no raw user ids).
+- **Sign out / leave** keep every recipe already on the device. New edits stay local until you join again.
+
+## Sync triggers
+
+`src/household/runtime.ts` owns the app singleton (tests replace it with a fake backend — they never call Supabase):
+
+| Trigger | When |
+| --- | --- |
+| Sign-in / join / restore | Household id becomes active |
+| App foreground | `AppState` → `active` |
+| Local write | Debounced (~1.5s) after `Collection.save` / `remove` |
+| Pull-to-refresh / Sync now | Household screen |
+| Realtime | Optional Supabase channel; a burst is debounced. If it fails, the other triggers still run |
+| Offline retry | After a network error, backoff up to 30s while the queue is dirty |
+
+Status phases: solo, pending, syncing, synced, offline, error (`syncStatusLabel`). Last-write-wins is unchanged
+(`updatedAt`, including tombstones). Every synced table — recipes, categories, pantry, meal plan, shopping items,
+and barcode/receipt product aliases (`barcode_items`) — round-trips `household_id` + `created_by`.
+
+## What exists
 
 - ✅ Data model (SyncMeta on all synced records, UUIDs, tombstones), repository interface, identity stamping,
   LWW sync engine + tests with a fake remote, row mapping, Supabase adapter + auth/household helpers,
   SQL migrations with RLS, env config, CI migration workflow, project configured in GitHub.
-- ⬜ (feature PRs) Account screen: sign in with email code, create/join household, show invite code, sign out
-  (keeps local data); background sync triggers + realtime; "shared by <name>" attribution in UI.
+- ✅ Settings → Household (email code, magic link, create/join/leave, invite code, members, sign out),
+  background sync triggers, offline queue, status indicator, optional realtime, "Shared by" attribution.
