@@ -1,9 +1,10 @@
-import { Link } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Link, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { toIsoDate } from '@/lib/dates';
 import { FeatureGate } from '@/components/feature-gate';
+import { ShareRecipePanel } from '@/components/share-recipe-panel';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { formatIngredient } from '@/lib/ingredients';
 import { setCooked } from '@/lib/recipe-utils';
@@ -33,23 +34,29 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
   const showPlanToday = useFeatureVisible('mealPlan');
   const timers = useFeature('timers').available;
   const tags = useFeature('tags').available;
+  const photos = useFeature('photos').available;
+  const share = useFeature('share').available;
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Parents should pass `key={id}` when switching recipes so state resets cleanly.
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
   });
-  useEffect(() => {
-    let active = true;
-    recipeStore.get(id).then((r) => {
-      if (!active) return;
-      setRecipe(r ?? null);
-      if (r) onChangeRef.current?.(r);
-    });
-    return () => {
-      active = false;
-    };
-  }, [id]);
+  // Reload when the screen is focused again (after Edit) and on first show. Adapts live; state stays here.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      recipeStore.get(id).then((r) => {
+        if (!active) return;
+        setRecipe(r ?? null);
+        if (r) onChangeRef.current?.(r);
+      });
+      return () => {
+        active = false;
+      };
+    }, [id]),
+  );
 
   if (recipe === undefined) {
     return (
@@ -95,12 +102,18 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
     Alert.alert('Added to meal plan', `“${r.title}” is planned for today.`);
   }
 
-  // TODO(spec #15, #19): tap ⏱ to start a background step timer w/ notification; "Cook" button → cooking mode.
+  // TODO(spec #15, #19): tap ⏱ to start a background step timer w/ notification; full cooking mode UI.
   // TODO(spec #16, #22, #18): unit toggle (convertIngredient), star rating (setRating), grocery-run for this recipe.
-  // TODO(spec #2): Edit screen (all fields, substitute/add/delete ingredients).
-  // TODO(spec #4): photo display; TODO(spec #14): Share button (text / photo / link, any combination).
   return (
     <ScrollView contentContainerStyle={styles.container} testID="recipe-detail">
+      {photos && recipe.photoUri ? (
+        <Image
+          source={{ uri: recipe.photoUri }}
+          style={styles.photo}
+          accessibilityLabel={`Photo of ${recipe.title}`}
+          testID="recipe-photo"
+        />
+      ) : null}
       <Text style={styles.title}>{recipe.title}</Text>
       {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}
       <View style={styles.stats}>
@@ -139,20 +152,44 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
             <Text style={styles.actionText}>Plan for today</Text>
           </Pressable>
         ) : null}
+        <Link href={{ pathname: '/recipe/[id]/edit', params: { id: recipe.id } }} asChild>
+          <Pressable style={styles.action} accessibilityRole="button" testID="edit-recipe-button">
+            <Text style={styles.actionText}>Edit</Text>
+          </Pressable>
+        </Link>
+        {share ? (
+          <Pressable
+            style={styles.action}
+            accessibilityRole="button"
+            testID="share-recipe-button"
+            onPress={() => setShareOpen((open) => !open)}>
+            <Text style={styles.actionText}>Share</Text>
+          </Pressable>
+        ) : null}
       </View>
+      {shareOpen && share ? <ShareRecipePanel recipe={recipe} onClose={() => setShareOpen(false)} /> : null}
       {recipe.lastCookedAt && (
         <Text style={styles.meta}>Last cooked {new Date(recipe.lastCookedAt).toLocaleDateString()}</Text>
       )}
-      {recipe.sourceUrl && (
-        <Text style={styles.link} onPress={() => Linking.openURL(recipe.sourceUrl!)}>
-          Source: {recipe.sourceUrl}
-        </Text>
-      )}
+      {recipe.sourceUrl ? (
+        <Pressable
+          accessibilityRole="link"
+          testID="source-link"
+          style={styles.linkHit}
+          onPress={() => Linking.openURL(recipe.sourceUrl!)}>
+          <Text style={styles.link}>Source: {recipe.sourceUrl}</Text>
+        </Pressable>
+      ) : null}
       <Text style={styles.section}>Ingredients</Text>
       {recipe.ingredients.map((i, idx) => (
-        <Text key={idx} style={styles.item}>
-          • {formatIngredient(i)}
-        </Text>
+        <View key={idx}>
+          <Text style={styles.item}>• {formatIngredient(i)}</Text>
+          {i.substitutionNote ? (
+            <Text style={styles.substitution} testID={`substitution-${idx}`}>
+              Substitution: {i.substitutionNote}
+            </Text>
+          ) : null}
+        </View>
       ))}
       <Text style={styles.section}>Steps</Text>
       {recipe.steps.map((st, idx) => (
@@ -166,7 +203,9 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
       {recipe.notes ? (
         <>
           <Text style={styles.section}>Notes</Text>
-          <Text style={styles.item}>{recipe.notes}</Text>
+          <Text style={styles.item} testID="recipe-notes">
+            {recipe.notes}
+          </Text>
         </>
       ) : null}
       <Pressable style={styles.delete} onPress={() => confirmDelete(recipe)}>
@@ -188,6 +227,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: { padding: 16, paddingBottom: 48 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  photo: { width: '100%', height: 200, borderRadius: 10, marginBottom: 12, backgroundColor: colors.card },
   title: { fontSize: 24, fontWeight: '700', color: colors.text },
   description: { marginTop: 6, color: colors.muted, fontSize: 15 },
   stats: { flexDirection: 'row', gap: 8, marginTop: 16 },
@@ -222,14 +262,26 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
   },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  action: { flex: 1, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.primary, alignItems: 'center' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
+  action: {
+    minWidth: 108,
+    flexGrow: 1,
+    minHeight: 44,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   actionOn: { backgroundColor: colors.primary },
   actionText: { color: colors.primary, fontWeight: '600' },
   actionTextOn: { color: colors.primaryText },
   timer: { color: colors.primary, fontWeight: '600' },
   meta: { color: colors.muted, marginTop: 8 },
-  link: { color: colors.primary, marginTop: 8, textDecorationLine: 'underline' },
+  linkHit: { minHeight: 44, justifyContent: 'center', marginTop: 8 },
+  link: { color: colors.primary, textDecorationLine: 'underline' },
+  substitution: { color: colors.muted, marginLeft: 16, marginBottom: 4 },
   section: { fontSize: 18, fontWeight: '700', marginTop: 20, marginBottom: 8, color: colors.text },
   item: { fontSize: 16, lineHeight: 24, color: colors.text, marginBottom: 4 },
   delete: {

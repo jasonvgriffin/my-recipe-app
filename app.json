@@ -34,6 +34,23 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow My Recipe App to add an optional photo to a recipe.",
+          "cameraPermission": "Allow My Recipe App to take an optional photo of a recipe.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-sharing",
+        {
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": ["text/plain", "text/html"]
+          }
+        }
       ]
     ],
     "experiments": {

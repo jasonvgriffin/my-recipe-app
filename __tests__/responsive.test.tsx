@@ -8,7 +8,6 @@ import { useEffect } from 'react';
 import { Text } from 'react-native';
 
 import { TwoPaneLayout } from '@/components/layout';
-import { RecipeDetail } from '@/components/recipe-detail';
 import { SEED_RECIPES } from '@/data/seed';
 import { getWindowSizeClass } from '@/hooks/use-window-size-class';
 
@@ -82,14 +81,35 @@ describe.each([
     const { recipeStore } = require('@/storage/recipes');
     await recipeStore.seedIfNeeded();
     const [first] = await recipeStore.list();
-    await render(<RecipeDetail id={first.id} />);
-    expect(await screen.findAllByText(first.title)).toHaveLength(1);
+    const RecipeRoute = require('@/app/recipe/[id]/index').default;
+    renderRouter({ 'recipe/[id]': RecipeRoute }, { initialUrl: `/recipe/${first.id}` });
+    expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
     expect(screen.getByText('Ingredients')).toBeTruthy();
+    expect(screen.getByTestId('edit-recipe-button')).toBeTruthy();
+  });
+
+  it('edit screen shows the full editor', async () => {
+    const { recipeStore } = require('@/storage/recipes');
+    await recipeStore.seedIfNeeded();
+    const [first] = await recipeStore.list();
+    const EditRoute = require('@/app/recipe/[id]/edit').default;
+    renderRouter({ 'recipe/[id]/edit': EditRoute }, { initialUrl: `/recipe/${first.id}/edit` });
+    expect(await screen.findByTestId('recipe-editor')).toBeTruthy();
+    expect(screen.getByTestId('edit-title').props.value).toBe(first.title);
+    expect(screen.getByText('Save changes')).toBeTruthy();
+  });
+
+  it('import screen shows link and text fields', async () => {
+    const ImportRoute = require('@/app/import').default;
+    renderRouter({ import: ImportRoute }, { initialUrl: '/import' });
+    expect(await screen.findByTestId('import-screen')).toBeTruthy();
+    expect(screen.getByTestId('import-url-input')).toBeTruthy();
+    expect(screen.getByTestId('import-text-input')).toBeTruthy();
   });
 
   it('Recipes tab: list-detail in expanded, navigation in compact', async () => {
     const RecipesTab = require('@/app/(tabs)/index').default;
-    const RecipeRoute = require('@/app/recipe/[id]').default;
+    const RecipeRoute = require('@/app/recipe/[id]/index').default;
     renderRouter({ index: RecipesTab, 'recipe/[id]': RecipeRoute }, { initialUrl: '/' });
     await screen.findByText(SEED_RECIPES[1].title);
     const { recipeStore } = require('@/storage/recipes');

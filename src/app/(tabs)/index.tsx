@@ -30,6 +30,7 @@ export default function RecipeListScreen() {
   const [recipes, setRecipes] = useState<Recipe[] | null>(null);
   const showRatings = useFeature('ratings').available;
   const showTags = useFeature('tags').available;
+  const canImport = useFeature('linkImport').available;
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<FilterMode>('all');
   /** Selected recipe for the detail pane (medium/expanded). Kept across fold/unfold. */
@@ -78,6 +79,13 @@ export default function RecipeListScreen() {
         placeholderTextColor={colors.placeholder}
         testID="search-input"
       />
+      {canImport ? (
+        <Link href="/import" asChild>
+          <Pressable style={styles.importLink} accessibilityRole="button" testID="import-recipe-button">
+            <Text style={styles.importLinkText}>Import from link</Text>
+          </Pressable>
+        </Link>
+      ) : null}
       <View style={styles.chips}>
         {(Object.keys(FILTERS) as FilterMode[]).map((m) => (
           <Pressable key={m} onPress={() => setMode(m)} style={[styles.chip, mode === m && styles.chipActive]}>
@@ -141,6 +149,8 @@ export default function RecipeListScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  importLink: { marginHorizontal: 12, marginTop: 10, minHeight: 44, justifyContent: 'center' },
+  importLinkText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
   search: {
     margin: 12,
     marginBottom: 0,

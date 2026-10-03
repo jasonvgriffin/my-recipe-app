@@ -159,7 +159,9 @@ const routes = () => ({
   '(tabs)/meal-plan': require('@/app/(tabs)/meal-plan').default,
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
   add: require('@/app/add').default,
-  'recipe/[id]': require('@/app/recipe/[id]').default,
+  'recipe/[id]': require('@/app/recipe/[id]/index').default,
+  'recipe/[id]/edit': require('@/app/recipe/[id]/edit').default,
+  import: require('@/app/import').default,
   'cook/[action]': require('@/app/cook/[action]').default,
   settings: require('@/app/settings').default,
 });
@@ -176,6 +178,7 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     featureGate.setConfig(premium(...ALL_FEATURE_IDS));
     renderRouter(routes(), { initialUrl: '/' });
     await screen.findByTestId('add-recipe-button');
+    expect(screen.queryByTestId('import-recipe-button')).toBeNull();
     await waitFor(() => expect(screen.queryByText('Meal plan')).toBeNull());
     expect(screen.queryByText('Shopping list')).toBeNull();
 
@@ -194,7 +197,22 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     expect(screen.getByText('Delete recipe')).toBeTruthy();
     expect(screen.queryByTestId('cook-button')).toBeNull();
     expect(screen.queryByTestId('plan-today-button')).toBeNull();
+    expect(screen.queryByTestId('share-recipe-button')).toBeNull();
+    expect(screen.getByTestId('edit-recipe-button')).toBeTruthy();
     expect(screen.queryByText(/⏱/)).toBeNull();
+
+    await act(async () => fireEvent.press(screen.getByTestId('edit-recipe-button')));
+    expect(await screen.findByTestId('recipe-editor')).toBeTruthy();
+    expect(screen.queryByTestId('take-photo-button')).toBeNull();
+    expect(screen.queryByTestId('choose-photo-button')).toBeNull();
+  });
+
+  it('a locked link-import route shows a neutral message (no payment UI)', async () => {
+    featureGate.setProvider(new NoEntitlements());
+    featureGate.setConfig(premium('linkImport'));
+    renderRouter(routes(), { initialUrl: '/import' });
+    expect(await screen.findByTestId('feature-locked-linkImport')).toBeTruthy();
+    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
   });
 
   it('a locked cook-with-me deep link shows a neutral message (no payment UI)', async () => {
