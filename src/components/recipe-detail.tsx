@@ -39,6 +39,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   // Optional cross-links (meal plan) only appear when that feature is enabled — recipes-first rule.
   // Gated entry points (src/entitlements) — recipe view/edit/delete itself is never gated.
   const showPlanToday = useFeatureVisible('mealPlan');
+  const showGroceryRun = useFeatureVisible('groceryRun');
   const timers = useFeature('timers').available;
   const tagsOn = useFeature('tags').available;
   const categoriesOn = useFeature('categories').available;
@@ -133,7 +134,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
 
   const history = [...(recipe.cookHistory ?? [])].reverse();
   // TODO(spec #15, #19): tap ⏱ to start a background step timer w/ notification; full cooking mode UI.
-  // TODO(spec #16, #18): unit toggle (convertIngredient), grocery-run for this recipe.
+  // TODO(spec #16): unit toggle (convertIngredient).
   return (
     <ScrollView contentContainerStyle={styles.container} testID="recipe-detail">
       {photos && recipe.photoUri ? (
@@ -218,6 +219,13 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
           <Pressable style={styles.action} onPress={() => planToday(recipe)} testID="plan-today-button">
             <Text style={styles.actionText}>Plan for today</Text>
           </Pressable>
+        ) : null}
+        {showGroceryRun ? (
+          <Link href={{ pathname: '/grocery-run', params: { recipeId: recipe.id } }} asChild>
+            <Pressable style={styles.action} accessibilityRole="button" testID="grocery-run-button">
+              <Text style={styles.actionText}>Grocery run</Text>
+            </Pressable>
+          </Link>
         ) : null}
         <Link href={{ pathname: '/recipe/[id]/edit', params: { id: recipe.id } }} asChild>
           <Pressable style={styles.action} accessibilityRole="button" testID="edit-recipe-button">

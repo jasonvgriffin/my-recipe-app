@@ -19,6 +19,8 @@ export default function RootLayout() {
         <Stack.Screen name="recipe/[id]/index" options={{ title: 'Recipe' }} />
         <Stack.Screen name="recipe/[id]/edit" options={{ title: 'Edit recipe' }} />
         <Stack.Screen name="cook/[action]" options={{ title: 'Cook with me' }} />
+        <Stack.Screen name="meal-plan/[date]" options={{ title: 'Meal plan' }} />
+        <Stack.Screen name="grocery-run" options={{ title: 'Grocery run' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
       </Stack>
     </ThemeProvider>

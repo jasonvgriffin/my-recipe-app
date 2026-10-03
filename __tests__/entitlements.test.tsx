@@ -163,6 +163,8 @@ const routes = () => ({
   'recipe/[id]/edit': require('@/app/recipe/[id]/edit').default,
   import: require('@/app/import').default,
   'cook/[action]': require('@/app/cook/[action]').default,
+  'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
+  'grocery-run': require('@/app/grocery-run').default,
   settings: require('@/app/settings').default,
 });
 
