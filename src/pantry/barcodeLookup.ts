@@ -6,8 +6,8 @@
  * → Open Food Facts API (free, no key) → not found / offline → caller asks the user for a name once and
  * calls `saveUserProduct`, which is stored household-wide so nobody has to type it again.
  *
- * Open Food Facts is used for the product NAME only (no brand, package size, image or nutrition). Never request or store
- * nutrition here — the pantry tracks names and quantities, not nutrition (Jason, Oct 3 2026).
+ * Open Food Facts is used for the product NAME and BRAND only (no package size, image or nutrition). Never request or store
+ * nutrition here — the pantry tracks names, quantities and optional details, never nutrition (Jason, Oct 3 2026).
  */
 import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import type { Collection } from '@/storage/kv';
@@ -15,11 +15,12 @@ import type { SyncMeta } from '@/types/sync';
 
 export const OFF_USER_AGENT = 'MyRecipeApp/1.0 (github.com/jasonvgriffin)';
 export const OFF_PRODUCT_URL = (barcode: string) =>
-  `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=code,product_name`;
+  `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=code,product_name,brands`;
 
 export interface BarcodeProduct {
   barcode: string;
   name: string;
+  brand?: string;
 }
 
 /** Household-shared barcode mapping record (synced table `barcode_items`). id = barcode-derived UUID-free key. */
@@ -60,11 +61,11 @@ export function normalizeBarcode(raw: string): string | undefined {
 }
 
 /**
- * Keep only the name mapping: drop extra data older builds cached on barcode mappings (brand, package size,
+ * Keep only the name/brand mapping: drop extra data older builds cached on barcode mappings (package size,
  * image, nutrition), so it is neither kept on device nor pushed to the household again.
  */
 export function withoutNutrition<T extends object>(item: T): T {
-  const legacy = ['nutritionPer100g', 'brand', 'quantity', 'imageUrl'];
+  const legacy = ['nutritionPer100g', 'quantity', 'imageUrl'];
   if (!legacy.some((k) => k in item)) return item;
   const rest = { ...item } as Record<string, unknown>;
   for (const k of legacy) delete rest[k];
@@ -79,7 +80,8 @@ export function parseOpenFoodFacts(barcode: string, json: unknown): BarcodeProdu
   if (body.status !== 1 || !p) return undefined;
   const name = typeof p.product_name === 'string' ? p.product_name.trim() : '';
   if (!name) return undefined;
-  return { barcode, name };
+  const brand = typeof p.brands === 'string' ? p.brands.split(',')[0].trim() : '';
+  return brand ? { barcode, name, brand } : { barcode, name };
 }
 
 export function createBarcodeLookup({
@@ -108,8 +110,8 @@ export function createBarcodeLookup({
     );
   }
   const strip = (i: BarcodeItem): BarcodeProduct => {
-    const { barcode, name } = i;
-    return { barcode, name };
+    const { barcode, name, brand } = i;
+    return brand ? { barcode, name, brand } : { barcode, name };
   };
 
   return {
@@ -137,10 +139,11 @@ export function createBarcodeLookup({
     async saveUserProduct(
       rawBarcode: string,
       name: string,
+      brand?: string,
     ): Promise<BarcodeProduct> {
       const barcode = normalizeBarcode(rawBarcode) ?? rawBarcode.replace(/\D/g, '');
       if (!name.trim()) throw new Error('Name is required.');
-      return strip(await store({ barcode, name: name.trim() }, 'user'));
+      return strip(await store({ barcode, name: name.trim(), ...(brand?.trim() ? { brand: brand.trim() } : {}) }, 'user'));
     },
   };
 }

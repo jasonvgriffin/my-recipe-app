@@ -204,16 +204,23 @@ export interface PantryItem extends SyncMeta {
   /** Optional — unknown quantity is left unset (never stored as 0 to mean "some"). */
   quantity?: number;
   unit?: string;
+  /** Optional free-form aisle / group, e.g. "Dairy". Distinct from recipe categories. */
+  category?: string;
+  /** Optional expiration date, YYYY-MM-DD. */
+  expiresAt?: string;
+  /** Optional brand (typed, or filled from Open Food Facts on a barcode scan). */
+  brand?: string;
   /** EAN/UPC of the product when added by barcode scan (spec #27) — lets a re-scan increment this item. */
   barcode?: string;
 }
 
 /**
- * The pantry tracks item name and quantity (+ optional unit) only (Jason, Oct 3 2026) — no category, expiry,
- * brand or nutrition. Drops fields older builds stored so they are not kept or synced again.
+ * Pantry items: name, quantity, unit, and optional category, expiration date and brand (Jason, Oct 3 2026).
+ * Never nutrition: drops nutrition fields older builds stored so they are not kept or synced again.
+ * Category / expiry / brand are kept (items saved while those were briefly removed simply lack them).
  */
 export function slimPantryItem<T extends object>(item: T): T {
-  const legacy = ['category', 'expiresAt', 'brand', 'nutrition', 'nutritionPer100g'];
+  const legacy = ['nutrition', 'nutritionPer100g'];
   if (!legacy.some((k) => k in item)) return item;
   const rest = { ...item } as Record<string, unknown>;
   for (const k of legacy) delete rest[k];

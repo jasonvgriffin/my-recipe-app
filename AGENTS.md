@@ -131,7 +131,7 @@ Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the And
 
 - **This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition.**
   No nutrition fields, calories, macros, carb counts, nutrition lookups, nutrition imports, or nutrition UI. The pantry
-  tracks item names and quantities only; barcode scans may use Open Food Facts for the product **name** only.
+  tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition); barcode scans may use Open Food Facts for the product **name and brand** only.
 - Recipes are **diabetic-friendly**. Always track `servings`.
 - **Allulose is the only sugar-free sweetener. Never use or suggest monk fruit** (or luo han guo / mogrosides)
   — not in seed data, examples, tests, AI prompts, or suggestions. `validateRecipeInput` enforces this; keep it.

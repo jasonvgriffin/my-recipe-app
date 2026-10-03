@@ -58,6 +58,7 @@ export default function BarcodeScanScreen() {
         const item = await pantryStore.addScanned({
           barcode: looked.product.barcode,
           name: looked.product.name,
+          brand: looked.product.brand,
         });
         setResult({ kind: 'added', name: item.name, quantity: item.quantity ?? 1 });
       } else if (looked.status === 'not_found' || looked.status === 'offline') {
@@ -85,6 +86,7 @@ export default function BarcodeScanScreen() {
       const item = await pantryStore.addScanned({
         barcode: product.barcode,
         name: product.name,
+        brand: product.brand,
       });
       setResult({ kind: 'added', name: item.name, quantity: item.quantity ?? 1 });
     } catch (e) {

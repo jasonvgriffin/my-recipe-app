@@ -10,13 +10,21 @@ import {
   View,
 } from 'react-native';
 
+import { Chip } from '@/components/chip';
 import { FeatureLocked } from '@/components/feature-gate';
 import { MAX_CONTENT_WIDTH, MaxWidthContainer, TwoPaneLayout } from '@/components/layout';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { formatQuantity } from '@/lib/ingredients';
-import { rankRecipesByPantry } from '@/lib/pantry';
+import {
+  PANTRY_CATEGORIES,
+  expiryState,
+  filterSortPantry,
+  pantryCategories,
+  rankRecipesByPantry,
+  type PantrySort,
+} from '@/lib/pantry';
 import { colors } from '@/lib/theme';
 import { pantryStore } from '@/storage/pantry';
 import { recipeStore } from '@/storage/recipes';
@@ -27,9 +35,12 @@ interface Draft {
   name: string;
   quantity: string;
   unit: string;
+  category: string;
+  expiresAt: string;
+  brand: string;
 }
 
-const EMPTY_DRAFT: Draft = { name: '', quantity: '', unit: '' };
+const EMPTY_DRAFT: Draft = { name: '', quantity: '', unit: '', category: '', expiresAt: '', brand: '' };
 
 function formatQty(quantity: number | undefined, unit: string | undefined): string {
   if (quantity === undefined) return unit ? `some ${unit}` : 'on hand';
@@ -52,6 +63,8 @@ export default function PantryScreen() {
   const [pane, setPane] = useState<'items' | 'ideas'>('items');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
+  const [sort, setSort] = useState<PantrySort>('name');
 
   const reload = useCallback(async () => {
     await recipeStore.seedIfNeeded();
@@ -102,6 +115,11 @@ export default function PantryScreen() {
         return;
       }
     }
+    const expiresAt = draft.expiresAt.trim();
+    if (expiresAt && !/^\d{4}-\d{2}-\d{2}$/.test(expiresAt)) {
+      setError('Expiry must be YYYY-MM-DD.');
+      return;
+    }
     setError('');
     try {
       await pantryStore.saveDetails({
@@ -109,6 +127,9 @@ export default function PantryScreen() {
         name,
         quantity,
         unit: draft.unit,
+        category: draft.category,
+        expiresAt,
+        brand: draft.brand,
       });
       setDraft(null);
       await reload();
@@ -124,6 +145,9 @@ export default function PantryScreen() {
   }
 
   const matches = rankRecipesByPantry(recipes, items).filter((match) => match.have > 0);
+  const usedCategories = pantryCategories(items);
+  const activeFilter = categoryFilter && usedCategories.includes(categoryFilter) ? categoryFilter : undefined;
+  const shownItems = filterSortPantry(items, { category: activeFilter, sort });
 
   const ideas = (
     <ScrollView contentContainerStyle={styles.ideas} testID="pantry-suggestions">
@@ -205,6 +229,41 @@ export default function PantryScreen() {
               autoCapitalize="none"
             />
           </View>
+          <TextInput
+            testID="pantry-brand-input"
+            style={styles.input}
+            value={draft.brand}
+            onChangeText={(brand) => setDraft({ ...draft, brand })}
+            placeholder="Brand (optional)"
+            placeholderTextColor={colors.placeholder}
+          />
+          <TextInput
+            testID="pantry-category-input"
+            style={styles.input}
+            value={draft.category}
+            onChangeText={(category) => setDraft({ ...draft, category })}
+            placeholder="Category (optional)"
+            placeholderTextColor={colors.placeholder}
+          />
+          <View style={styles.chips}>
+            {PANTRY_CATEGORIES.map((category) => (
+              <Chip
+                key={category}
+                label={category}
+                active={draft.category === category}
+                onPress={() => setDraft({ ...draft, category: draft.category === category ? '' : category })}
+              />
+            ))}
+          </View>
+          <TextInput
+            testID="pantry-expiry-input"
+            style={styles.input}
+            value={draft.expiresAt}
+            onChangeText={(expiresAt) => setDraft({ ...draft, expiresAt })}
+            placeholder="Expiry YYYY-MM-DD (optional)"
+            placeholderTextColor={colors.placeholder}
+            autoCapitalize="none"
+          />
           {error ? (
             <Text style={styles.error} testID="pantry-form-error">
               {error}
@@ -247,7 +306,28 @@ export default function PantryScreen() {
         </Pressable>
       )}
       {items.length === 0 ? <Text style={styles.muted}>Nothing in the pantry yet.</Text> : null}
-      {items.map((item) => {
+      {items.length > 0 ? (
+        <View style={styles.chips} testID="pantry-list-controls">
+          <Chip label="All" active={!activeFilter} onPress={() => setCategoryFilter(undefined)} testID="pantry-filter-all" />
+          {usedCategories.map((category) => (
+            <Chip
+              key={category}
+              label={category}
+              active={activeFilter === category}
+              onPress={() => setCategoryFilter(activeFilter === category ? undefined : category)}
+              testID={`pantry-filter-${category}`}
+            />
+          ))}
+          <Chip
+            label={sort === 'expiry' ? 'Sort: expiring first' : 'Sort: name'}
+            active={sort === 'expiry'}
+            onPress={() => setSort(sort === 'expiry' ? 'name' : 'expiry')}
+            testID="pantry-sort"
+          />
+        </View>
+      ) : null}
+      {shownItems.map((item) => {
+        const expiry = expiryState(item.expiresAt);
         return (
           <Pressable
             key={item.id}
@@ -261,13 +341,23 @@ export default function PantryScreen() {
                 name: item.name,
                 quantity: item.quantity === undefined ? '' : String(item.quantity),
                 unit: item.unit ?? '',
+                category: item.category ?? '',
+                expiresAt: item.expiresAt ?? '',
+                brand: item.brand ?? '',
               });
               setPane('items');
             }}>
             <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.muted}>
               {formatQty(item.quantity, item.unit)}
+              {item.brand ? ` · ${item.brand}` : ''}
+              {item.category ? ` · ${item.category}` : ''}
             </Text>
+            {item.expiresAt ? (
+              <Text style={expiry === 'expired' ? styles.error : styles.expiry}>
+                {expiry === 'expired' ? 'Expired' : expiry === 'soon' ? 'Expires soon' : 'Expires'} {item.expiresAt}
+              </Text>
+            ) : null}
           </Pressable>
         );
       })}
@@ -333,9 +423,11 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   flex: { flex: 1 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   card: { backgroundColor: colors.card, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border, minHeight: 44 },
   itemName: { color: colors.text, fontSize: 16, fontWeight: '600' },
   muted: { color: colors.muted, marginTop: 2 },
+  expiry: { color: colors.primary, marginTop: 2 },
   error: { color: colors.danger, marginTop: 2 },
   primaryBtn: {
     backgroundColor: colors.primary,
