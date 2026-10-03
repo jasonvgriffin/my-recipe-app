@@ -1,3 +1,4 @@
+import { UUID_RE } from '@/lib/ids';
 import { createPantryStore } from '@/storage/pantry';
 import { createSettingsStore } from '@/storage/settings';
 import { SEED_RECIPES } from '@/data/seed';
@@ -19,9 +20,12 @@ describe('recipe store', () => {
     const kv = memoryStore();
     const store = createRecipeStore(kv);
     await store.seedIfNeeded();
-    await store.remove(SEED_RECIPES[0].id);
+    const seeded = await store.list();
+    expect(seeded.map((r) => r.title).sort()).toEqual(SEED_RECIPES.map((r) => r.title).sort());
+    expect(seeded.every((r) => UUID_RE.test(r.id))).toBe(true); // fresh UUIDs per device (spec #25)
+    await store.remove(seeded[0].id);
     await store.seedIfNeeded(); // must not re-add deleted seed
-    expect((await store.list()).map((r) => r.id)).toEqual([SEED_RECIPES[1].id]);
+    expect((await store.list()).map((r) => r.id)).toEqual([seeded[1].id]);
   });
 
   it('saves, updates, gets, removes and lists tags', async () => {

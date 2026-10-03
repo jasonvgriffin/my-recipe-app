@@ -48,3 +48,11 @@ example
 
 # CI output
 dist-apk/
+
+# env (only .env.example is committed)
+.env
+.env.*
+!.env.example
+# supabase CLI local state
+supabase/.temp/
+supabase/.branches/

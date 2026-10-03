@@ -1,6 +1,6 @@
 import type { Ingredient, UnitSystem } from '@/types/recipe';
 
-import { convertAmount, findUnit, roundNice } from './units';
+import { convertAmount, findUnit, getUnit, roundNice } from './units';
 
 const UNICODE_FRACTIONS: Record<string, number> = {
   '¼': 0.25,
@@ -128,7 +128,16 @@ export function formatIngredient(ing: Ingredient): string {
   if (ing.quantity === undefined || !ing.name) return ing.text;
   const qty =
     formatQuantity(ing.quantity) + (ing.quantityMax !== undefined ? `–${formatQuantity(ing.quantityMax)}` : '');
-  return [qty, ing.unit, ing.name].filter(Boolean).join(' ') + (ing.note ? `, ${ing.note}` : '');
+  const unit = getUnit(ing.unit);
+  const plural = unit?.dimension === 'count' && (ing.quantityMax ?? ing.quantity) > 1;
+  const unitLabel = ing.unit
+    ? plural
+      ? /(ch|sh|s)$/.test(ing.unit)
+        ? `${ing.unit}es`
+        : `${ing.unit}s`
+      : ing.unit
+    : '';
+  return [qty, unitLabel, ing.name].filter(Boolean).join(' ') + (ing.note ? `, ${ing.note}` : '');
 }
 
 /** Key used to merge shopping-list lines and match the pantry. */

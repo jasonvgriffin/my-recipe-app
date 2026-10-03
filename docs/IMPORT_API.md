@@ -3,20 +3,20 @@
 **One function gets recipes into the app:** `importRecipe(input, options?, deps?)`.
 Every entry point must call it — never write imported recipes to storage directly:
 
-| Entry point | Status | Adapter |
-|---|---|---|
-| In-app "Import from link" (spec #1) | ⬜ UI TODO | `{ kind: 'url', url, source: { channel: 'app-link' } }` |
-| Paste / dictate text | ⬜ UI TODO | `{ kind: 'text', text, source: { channel: 'app-text' } }` |
-| Deep link `myrecipeapp://import?url=…` / `?text=…` | 🟡 parser done, route TODO | `parseImportDeepLink(link)` |
-| Android share sheet → app (SEND `text/plain`) | 🟡 adapter done, intent filter TODO | `shareTextToImportInput(sharedText)` |
-| **Future MCP server** ("Hey AI, send this recipe to my recipe app") | later phase | `{ kind: 'structured', recipe, source: { channel: 'mcp', label: 'Grok' } }` |
-| Future sync / JSON file import | later phase | `{ kind: 'structured', …, source: { channel: 'sync' \| 'file' } }` |
+| Entry point                                                         | Status                              | Adapter                                                                     |
+| ------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------- |
+| In-app "Import from link" (spec #1)                                 | ⬜ UI TODO                          | `{ kind: 'url', url, source: { channel: 'app-link' } }`                     |
+| Paste / dictate text                                                | ⬜ UI TODO                          | `{ kind: 'text', text, source: { channel: 'app-text' } }`                   |
+| Deep link `myrecipeapp://import?url=…` / `?text=…`                  | 🟡 parser done, route TODO          | `parseImportDeepLink(link)`                                                 |
+| Android share sheet → app (SEND `text/plain`)                       | 🟡 adapter done, intent filter TODO | `shareTextToImportInput(sharedText)`                                        |
+| **Future MCP server** ("Hey AI, send this recipe to my recipe app") | later phase                         | `{ kind: 'structured', recipe, source: { channel: 'mcp', label: 'Grok' } }` |
+| Future sync / JSON file import                                      | later phase                         | `{ kind: 'structured', …, source: { channel: 'sync' \| 'file' } }`          |
 
 The module has **no UI dependencies** (no React / react-native imports, enforced by ESLint) so it can be reused
 unchanged by a Node MCP server or sync worker; storage, network and clock are injected via `deps`.
 
 - App code: `importRecipe(input, options?, deps = appImportDeps)` from `@/import` (binds the on-device store + fetch).
-- Other hosts: `importRecipeWith(deps, input, options?)` from `@/import/import-recipe` (only a *type* import of
+- Other hosts: `importRecipeWith(deps, input, options?)` from `@/import/import-recipe` (only a _type_ import of
   the store interface; no AsyncStorage).
 
 ## Interface
@@ -25,38 +25,39 @@ unchanged by a Node MCP server or sync worker; storage, network and clock are in
 import { importRecipe } from '@/import';
 
 type RecipeImportInput =
-  | { kind: 'url'; url: string; source?: ImportSource }               // fetch + parse a web page
+  | { kind: 'url'; url: string; source?: ImportSource } // fetch + parse a web page
   | { kind: 'structured'; recipe: RecipeDraft; source?: ImportSource } // already structured (MCP, JSON)
-  | { kind: 'text'; text: string; source?: ImportSource };            // free text (share, dictation)
+  | { kind: 'text'; text: string; source?: ImportSource }; // free text (share, dictation)
 
 interface ImportSource {
-  url?: string;   // original page; kept on the recipe (spec #5) and used for dedupe
+  url?: string; // original page; kept on the recipe (spec #5) and used for dedupe
   channel?: 'app-link' | 'app-text' | 'share-intent' | 'deep-link' | 'mcp' | 'sync' | 'file';
   label?: string; // e.g. "Grok"
 }
 
-interface RecipeDraft {          // validated with zod (RecipeDraftSchema); unknown keys stripped
-  title: string;                 // required, 1–300 chars
+interface RecipeDraft {
+  // validated with zod (RecipeDraftSchema); unknown keys stripped
+  title: string; // required, 1–300 chars
   ingredients?: (string | { text: string; substitutionNote?: string })[]; // parsed into
-                                 // { quantity, quantityMax, unit, name, note } on save (spec #16/#18/#21)
+  // { quantity, quantityMax, unit, name, note } on save (spec #16/#18/#21)
   steps?: (string | { text: string; durationSeconds?: number })[]; // at least one ingredient OR step;
-                                 // timers auto-detected from text when durationSeconds absent (spec #15)
+  // timers auto-detected from text when durationSeconds absent (spec #15)
   description?: string;
-  tags?: string[];               // lower-cased + deduped
-  categories?: string[];         // category NAMES; created if missing (spec #3)
-  servings?: number;             // > 0; defaults to 1 with a warning
-  nutrition?: { calories?, carbsG?, netCarbsG?, proteinG?, fatG?, fiberG? }; // per serving (spec #17)
-  carbsPerServing?: number;      // shorthand for nutrition.netCarbsG; if neither given, net = carbs − fiber
-                                 // when both known, else left UNKNOWN (never 0) with a warning
-  rating?: number;               // 1–5 (spec #22)
+  tags?: string[]; // lower-cased + deduped
+  categories?: string[]; // category NAMES; created if missing (spec #3)
+  servings?: number; // > 0; defaults to 1 with a warning
+  nutrition?: { calories?; carbsG?; netCarbsG?; proteinG?; fatG?; fiberG? }; // per serving (spec #17)
+  carbsPerServing?: number; // shorthand for nutrition.netCarbsG; if neither given, net = carbs − fiber
+  // when both known, else left UNKNOWN (never 0) with a warning
+  rating?: number; // 1–5 (spec #22)
   notes?: string;
-  photoUrl?: string;             // http(s) or file://
-  sourceUrl?: string;            // http(s)
+  photoUrl?: string; // http(s) or file://
+  sourceUrl?: string; // http(s)
 }
 
 interface ImportOptions {
   onDuplicate?: 'skip' | 'update' | 'create'; // default 'skip'
-  dryRun?: boolean;                           // validate/normalize only, don't save
+  dryRun?: boolean; // validate/normalize only, don't save
 }
 
 type ImportResult =
@@ -64,10 +65,10 @@ type ImportResult =
   | { ok: false; code: ImportErrorCode; errors: string[] };
 
 type ImportErrorCode =
-  | 'invalid_input'        // input or structured draft failed validation
+  | 'invalid_input' // input or structured draft failed validation
   | 'forbidden_ingredient' // monk fruit / luo han guo / mogroside — allulose is the only sugar-free sweetener
-  | 'fetch_failed'         // URL couldn't be downloaded
-  | 'no_recipe_found'      // page/text had no recognizable recipe
+  | 'fetch_failed' // URL couldn't be downloaded
+  | 'no_recipe_found' // page/text had no recognizable recipe
   | 'not_implemented';
 ```
 
@@ -96,7 +97,7 @@ type ImportErrorCode =
 ```ts
 interface ImportDeps {
   store: Pick<RecipeStore, 'list' | 'save' | 'addCategory'>; // default: on-device AsyncStorage store
-  fetchHtml: (url: string) => Promise<string>;               // default: global fetch
+  fetchHtml: (url: string) => Promise<string>; // default: global fetch
   now: () => Date;
 }
 ```
@@ -112,7 +113,11 @@ if (r.ok) router.push({ pathname: '/recipe/[id]', params: { id: r.recipe.id } })
 else Alert.alert('Import failed', r.errors.join('\n'));
 
 // Future MCP tool `add_recipe` handler
-return importRecipeWith(serverDeps, { kind: 'structured', recipe: args, source: { channel: 'mcp', label: 'Grok' } }, { onDuplicate: 'update' });
+return importRecipeWith(
+  serverDeps,
+  { kind: 'structured', recipe: args, source: { channel: 'mcp', label: 'Grok' } },
+  { onDuplicate: 'update' },
+);
 
 // Deep link / share intent
 const input = parseImportDeepLink(url) ?? shareTextToImportInput(sharedText);

@@ -1,6 +1,6 @@
 import { SEED_RECIPES } from '@/data/seed';
 import { generateId } from '@/lib/recipe-utils';
-import { isCategory, migrateRecipe, type Category, type Recipe } from '@/types/recipe';
+import { isCategory, migrateRecipe, withSyncDefaults, type Category, type Recipe } from '@/types/recipe';
 
 import { createCollection, defaultStore, type KeyValueStore } from './kv';
 
@@ -14,15 +14,18 @@ const SEEDED_KEY = 'my-recipe-app/seeded/v1';
 /** Recipe + category repository backed by a key-value store (AsyncStorage by default). */
 export function createRecipeStore(store: KeyValueStore = defaultStore) {
   const recipes = createCollection<Recipe>(store, RECIPES_STORAGE_KEY, migrateRecipe);
-  const categories = createCollection<Category>(store, CATEGORIES_STORAGE_KEY, (v) => (isCategory(v) ? v : undefined));
+  const categories = createCollection<Category>(store, CATEGORIES_STORAGE_KEY, (v) =>
+    isCategory(v) ? withSyncDefaults(v) : undefined,
+  );
 
   return {
-    /** Insert sample recipes once, on first launch. */
-    async seedIfNeeded(seed: Recipe[] = SEED_RECIPES): Promise<void> {
+    /**
+     * Insert sample recipes once, on first launch. Each device gets fresh UUIDs so seeds never collide
+     * across households when synced (spec #25).
+     */
+    async seedIfNeeded(seed: Recipe[] = SEED_RECIPES, now: Date = new Date()): Promise<void> {
       if (await store.getItem(SEEDED_KEY)) return;
-      const existing = await recipes.all();
-      const ids = new Set(existing.map((r) => r.id));
-      await recipes.replaceAll([...existing, ...seed.filter((r) => !ids.has(r.id))]);
+      for (const r of seed) await recipes.save({ ...r, id: generateId() }, now);
       await store.setItem(SEEDED_KEY, '1');
     },
 
@@ -37,6 +40,8 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
     async remove(id: string): Promise<void> {
       await recipes.remove(id);
     },
+    /** For the sync engine. */
+    collections: { recipes, categories },
 
     /** Distinct tags across all recipes, sorted. */
     async listTags(): Promise<string[]> {
@@ -52,9 +57,8 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
       if (!trimmed) throw new Error('Category name is required.');
       const existing = (await categories.all()).find((c) => c.name.toLowerCase() === trimmed.toLowerCase());
       if (existing) return existing;
-      const category: Category = { id: generateId(), name: trimmed, createdAt: now.toISOString() };
-      await categories.save(category);
-      return category;
+      const ts = now.toISOString();
+      return categories.save({ id: generateId(), name: trimmed, createdAt: ts, updatedAt: ts }, now);
     },
     async renameCategory(id: string, name: string): Promise<void> {
       const c = await categories.get(id);
@@ -63,8 +67,9 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
     /** Deletes the category and unassigns it from every recipe. */
     async removeCategory(id: string): Promise<void> {
       await categories.remove(id);
-      const all = await recipes.all();
-      await recipes.replaceAll(all.map((r) => ({ ...r, categoryIds: r.categoryIds.filter((c) => c !== id) })));
+      for (const r of await recipes.all())
+        if (r.categoryIds.includes(id))
+          await recipes.save({ ...r, categoryIds: r.categoryIds.filter((c) => c !== id) });
     },
   };
 }

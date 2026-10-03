@@ -2,14 +2,17 @@
 
 AI-friendly, diabetic-friendly recipe app. Android first, iOS later from the same Expo codebase.
 
-**v1 = [docs/SPEC.md](SPEC.md)** (Jason's 22-item feature spec: link import, editing, categories, photos,
-source links, notes, search, filters, cooked tracking, meal plan calendar, shopping list, dark theme, share,
-step timers, unit conversion, nutrition, grocery run mode, cooking mode, tags, pantry, ratings).
+**Rule #1: RECIPES ARE THE CORE** — everything else is optional and hideable (see top of SPEC.md).
 
-**Release policy:** v1.0.0 = ALL SPEC items 1–22 complete. The first published APK is v1.0.0. Until then CI only
-uploads APK *artifacts* on each push/PR (to keep builds green); a GitHub Release is created only by pushing a
+**v1 = [docs/SPEC.md](SPEC.md)** (Jason's 27-item feature spec: link import, editing, categories, photos,
+source links, notes, search, filters, cooked tracking, meal plan calendar, shopping list, dark theme, share,
+step timers, unit conversion, nutrition, grocery run mode, cooking mode, tags, pantry, ratings, foldables,
+cook-with-me, household sharing, receipt scanning, barcode scanning).
+
+**Release policy:** v1.0.0 = ALL SPEC items 1–27 complete. The first published APK is v1.0.0. Until then CI only
+uploads APK _artifacts_ on each push/PR (to keep builds green); a GitHub Release is created only by pushing a
 `v*` tag (or a manual `publish` workflow run) — Eve/Jason decide when.
-The remote MCP server and sync backend are **not** part of v1; they remain Phase 3.
+Household sync on Supabase (#25) **is** in v1 (project live, migrations applied); the remote MCP server is Phase 3.
 
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
@@ -26,10 +29,17 @@ The remote MCP server and sync backend are **not** part of v1; they remain Phase
       nutrition per serving, ratings, tags, pantry, app settings; schema migration v2→v3
 - [x] Data layer for v1: categories, cooked/lastCookedAt, notes, sourceUrl, photoUri, meal plan entries,
       shopping lists, schema migration v1→v2, JSON-LD import parser
+- [x] Foldables (#23): `useWindowSizeClass`, `TwoPaneLayout`, nav rail, compact/expanded tests
+- [x] Cook-with-me module + deep links + persistence (#24, docs/COOK_API.md)
+- [x] Household-ready data (`SyncMeta`, UUIDs, tombstones), repository interface, LWW sync engine, Supabase
+      adapter, migrations applied to the live project + CI migration workflow (#25, docs/SYNC.md)
+- [x] Barcode lookup module (Open Food Facts + cache + user mapping) (#27)
+- [x] Settings → Optional features toggles; recipes-first acceptance test
 
 ## Phase 2 — v1 features per SPEC.md (cloud-agent PRs)
 
 Suggested PR order (each small, with tests; update the status table in SPEC.md):
+
 1. Edit recipe screen incl. substitute/add/delete ingredients, notes, title (#2, #6, #7)
 2. Categories UI: manage list, assign on edit, category filter chips (#3)
 3. Link import UI calling `importRecipe({ kind: 'url' })` + heuristics parser; deep link route + Android share
@@ -46,7 +56,11 @@ Suggested PR order (each small, with tests; update the status table in SPEC.md):
 13. Tag filter chips + tag management (#20)
 14. Pantry tab/screen + "what can I cook" suggestions + shopping skip (#21)
 15. Star rating input + sort/filter controls (#22)
-16. Polish: app icon + splash, empty states → release keystore → tag **v1.0.0** (first published APK)
+16. Household UI: Settings → Household (email code sign-in, create/join with invite code), sync triggers (#25)
+17. Pantry agent: barcode scanner UI (`expo-camera`) + receipt scanning (#26, #27), on top of #21
+18. Remaining two-pane screens (meal plan, shopping+pantry) with compact/expanded tests (#23)
+19. Polish: app icon + splash, empty states → release keystore → tag **v1.0.0** (first published APK)
+
 - [ ] Optional: move storage to `expo-sqlite` if recipe count / querying needs grow
 - [ ] Production signing keystore in GitHub secrets (needed before v1.0.0 so updates install over each other)
 

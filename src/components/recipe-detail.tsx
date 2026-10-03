@@ -1,7 +1,9 @@
+import { Link } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { toIsoDate } from '@/lib/dates';
+import { useSettings } from '@/hooks/use-settings';
 import { formatIngredient } from '@/lib/ingredients';
 import { setCooked } from '@/lib/recipe-utils';
 import { formatDuration } from '@/lib/timers';
@@ -25,6 +27,8 @@ export interface RecipeDetailProps {
  */
 export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined);
+  // Optional cross-links (meal plan) only appear when that feature is enabled — recipes-first rule.
+  const { features } = useSettings();
 
   // Parents should pass `key={id}` when switching recipes so state resets cleanly.
   const onChangeRef = useRef(onChange);
@@ -119,9 +123,16 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
             {recipe.cooked ? '✓ Cooked' : 'Mark cooked'}
           </Text>
         </Pressable>
-        <Pressable style={styles.action} onPress={() => planToday(recipe)}>
-          <Text style={styles.actionText}>Plan for today</Text>
-        </Pressable>
+        <Link href={{ pathname: '/cook/[action]', params: { action: recipe.id } }} asChild>
+          <Pressable style={styles.action} testID="cook-button">
+            <Text style={styles.actionText}>Cook</Text>
+          </Pressable>
+        </Link>
+        {features.mealPlan ? (
+          <Pressable style={styles.action} onPress={() => planToday(recipe)} testID="plan-today-button">
+            <Text style={styles.actionText}>Plan for today</Text>
+          </Pressable>
+        ) : null}
       </View>
       {recipe.lastCookedAt && (
         <Text style={styles.meta}>Last cooked {new Date(recipe.lastCookedAt).toLocaleDateString()}</Text>

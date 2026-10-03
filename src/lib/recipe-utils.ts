@@ -7,6 +7,7 @@ import {
   type Step,
 } from '@/types/recipe';
 
+import { uuid } from './ids';
 import { parseIngredient } from './ingredients';
 import { detectStepDuration } from './timers';
 
@@ -27,8 +28,9 @@ export function parseTags(text: string): string[] {
   return [...new Set(tags)];
 }
 
+/** Stable record id (UUID v4, sync-friendly — spec #25). */
 export function generateId(): string {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  return uuid();
 }
 
 /** Trim + parse quantity/unit/name if the ingredient hasn't been parsed yet. */

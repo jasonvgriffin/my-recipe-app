@@ -81,8 +81,9 @@ describe.each([
   it('RecipeDetail renders a recipe', async () => {
     const { recipeStore } = require('@/storage/recipes');
     await recipeStore.seedIfNeeded();
-    await render(<RecipeDetail id={SEED_RECIPES[0].id} />);
-    expect(await screen.findByText(SEED_RECIPES[0].title)).toBeTruthy();
+    const [first] = await recipeStore.list();
+    await render(<RecipeDetail id={first.id} />);
+    expect(await screen.findAllByText(first.title)).toHaveLength(1);
     expect(screen.getByText('Ingredients')).toBeTruthy();
   });
 
@@ -90,7 +91,10 @@ describe.each([
     const RecipesTab = require('@/app/(tabs)/index').default;
     const RecipeRoute = require('@/app/recipe/[id]').default;
     renderRouter({ index: RecipesTab, 'recipe/[id]': RecipeRoute }, { initialUrl: '/' });
-    const item = await screen.findByTestId(`recipe-item-${SEED_RECIPES[1].id}`);
+    await screen.findByText(SEED_RECIPES[1].title);
+    const { recipeStore } = require('@/storage/recipes');
+    const target = (await recipeStore.list()).find((r: { title: string }) => r.title === SEED_RECIPES[1].title);
+    const item = screen.getByTestId(`recipe-item-${target.id}`);
     if (width >= 600) {
       expect(screen.getByTestId('recipes-layout-dual')).toBeTruthy();
       expect(screen.getByText('Select a recipe to see it here.')).toBeTruthy();
@@ -100,7 +104,7 @@ describe.each([
     } else {
       expect(screen.getByTestId('recipes-layout-single')).toBeTruthy();
       await act(async () => fireEvent.press(item));
-      expect(screen).toHavePathname(`/recipe/${SEED_RECIPES[1].id}`);
+      expect(screen).toHavePathname(`/recipe/${target.id}`);
     }
   });
 
@@ -112,5 +116,17 @@ describe.each([
     const Screen = require(`@/app/${route}`).default;
     renderRouter({ index: Screen }, { initialUrl: '/' });
     expect((await screen.findAllByText(text)).length).toBeGreaterThan(0);
+  });
+
+  it('cook screen (deep link myrecipeapp://cook/{id}) shows the current step', async () => {
+    const { recipeStore } = require('@/storage/recipes');
+    await recipeStore.seedIfNeeded();
+    const r = (await recipeStore.list()).find((x: { title: string }) => x.title === SEED_RECIPES[0].title);
+    const CookScreen = require('@/app/cook/[action]').default;
+    renderRouter({ 'cook/[action]': CookScreen }, { initialUrl: `/cook/${r.id}` });
+    expect(await screen.findByText(r.steps[0].text)).toBeTruthy();
+    expect(screen.getByTestId(width >= 600 ? 'cook-layout-dual' : 'cook-layout-single')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByText('Next ›')));
+    expect(await screen.findByText(r.steps[1].text)).toBeTruthy();
   });
 });

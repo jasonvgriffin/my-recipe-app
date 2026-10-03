@@ -9,6 +9,9 @@ import { getUnit } from './units';
 export interface CompileOptions {
   /** Items on hand are skipped (spec #21). */
   pantry?: PantryItem[];
+  /** Week the items belong to ('' for an ad-hoc grocery run of one recipe). */
+  weekStart?: IsoDate;
+  now?: Date;
 }
 
 /**
@@ -45,8 +48,12 @@ export function compileItems(
       } else g.summable = false;
     }
   }
+  const ts = (options.now ?? new Date()).toISOString();
   return [...groups.entries()].map(([key, g]) => ({
     id: generateId(),
+    weekStart: options.weekStart ?? '',
+    createdAt: ts,
+    updatedAt: ts,
     text: g.summable ? formatIngredient(g.ing) : (g.ing.name ?? g.ing.text),
     name: key,
     checked: false,
@@ -69,13 +76,19 @@ export function buildShoppingList(
     .filter((e) => days.has(e.date) && byId.has(e.recipeId))
     .map((e) => ({ recipe: byId.get(e.recipeId)!, servings: e.servings }));
   const ts = now.toISOString();
-  return { id: `week-${weekStart}`, weekStart, items: compileItems(parts, options), createdAt: ts, updatedAt: ts };
+  return {
+    id: `week-${weekStart}`,
+    weekStart,
+    items: compileItems(parts, { ...options, weekStart, now }),
+    createdAt: ts,
+    updatedAt: ts,
+  };
 }
 
 export function toggleItem(list: ShoppingList, itemId: string, now: Date = new Date()): ShoppingList {
   return {
     ...list,
-    items: list.items.map((i) => (i.id === itemId ? { ...i, checked: !i.checked } : i)),
+    items: list.items.map((i) => (i.id === itemId ? { ...i, checked: !i.checked, updatedAt: now.toISOString() } : i)),
     updatedAt: now.toISOString(),
   };
 }

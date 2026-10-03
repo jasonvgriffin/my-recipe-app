@@ -2,15 +2,28 @@
 
 Guidance for Cursor cloud agents (and any other coding agent) working in this repo.
 
+## Rule #1: RECIPES ARE THE CORE
+
+Pantry, meal planning, shopping list, grocery run, receipt/barcode scanning and household sharing are optional
+nice-to-haves. The app opens to Recipes; no onboarding, sign-in or setup; no recipe flow requires or prompts
+optional features; cross-links are unobtrusive and absent when a feature is hidden (`useSettings().features`)
+or empty; empty optional features never nag; Settings → Optional features hides the optional tabs. Recipe
+features get priority in verification. `__tests__/recipes-first.test.tsx` (full recipe workflow with all
+optional features hidden) must stay green. Full text: top of `docs/SPEC.md`.
+
 ## What this is
 
 **My Recipe App** — an AI-friendly, diabetic-friendly recipe app for Jason Griffin.
 Android first; iOS later from the **same codebase**.
 
-- **[`docs/SPEC.md`](docs/SPEC.md) is the v1 feature spec** (14 items from Jason, with status and where the code lives).
+- **[`docs/SPEC.md`](docs/SPEC.md) is the v1 feature spec** (27 items from Jason, with status and where the code lives).
   Pick spec items from there; one item (or slice) per PR, and update its status row in the same PR.
+- [`docs/DESIGN.md`](docs/DESIGN.md) — design rules every PR follows (recipes-first, dark theme, foldables,
+  UI-free modules, voice/deep links, household-ready data).
 - [`docs/IMPORT_API.md`](docs/IMPORT_API.md) is the recipe import contract (see "Import pipeline" below).
-- [`docs/PLAN.md`](docs/PLAN.md) is the phased roadmap (the remote MCP server / sync backend is a later phase).
+- [`docs/COOK_API.md`](docs/COOK_API.md) — cook-with-me session contract; [`docs/SYNC.md`](docs/SYNC.md) —
+  household sync on Supabase.
+- [`docs/PLAN.md`](docs/PLAN.md) is the phased roadmap (the remote MCP server is a later phase).
 
 ## Stack
 
@@ -44,6 +57,7 @@ src/storage/                  repositories over a KeyValueStore (AsyncStorage by
 src/data/seed.ts    sample recipes inserted on first launch
 __tests__/          jest tests
 .github/workflows/android.yml   CI: APK artifact every push/PR; Release only on v* tag
+.github/workflows/supabase-migrations.yml  applies supabase/migrations on main (see docs/SYNC.md)
 ```
 
 ## Commands
@@ -63,6 +77,13 @@ Run **typecheck, lint and tests** before declaring any task done. They also run 
 Expo changes a lot between SDKs — do not trust memory. Check the versioned docs for the SDK in
 `package.json` (`https://docs.expo.dev/versions/v57.0.0/`) and https://docs.expo.dev/llms.txt.
 
+## Supabase (household sync backend)
+
+Project is live; URL/anon key reach CI builds via repo variable `EXPO_PUBLIC_SUPABASE_URL` + secret
+`EXPO_PUBLIC_SUPABASE_ANON_KEY` (not committed). Schema changes = new file in `supabase/migrations/`, smoke-tested
+locally, merged to `main` → the migrations workflow applies it. Never commit the DB password or service_role key;
+never edit an applied migration. Details: `docs/SYNC.md`.
+
 ## How CI builds the APK (and when releases happen)
 
 `.github/workflows/android.yml` runs on push to `main`, PRs to `main`, `v*` tags, and `workflow_dispatch`:
@@ -77,7 +98,7 @@ Expo changes a lot between SDKs — do not trust memory. Check the versioned doc
    the build stays green. Download it from the run page while signed in to GitHub (private repo).
 5. **Releases:** a GitHub Release with the APK is published **only** for a pushed tag `v*` (e.g. `v1.0.0`) or a
    manual run with `publish: true` + `tag`. The tag must match `app.json` `expo.version`; existing releases are
-   never overwritten. **No rolling/incremental releases.** **v1.0.0 = all SPEC items 1–22 complete, and is the
+   never overwritten. **No rolling/incremental releases.** **v1.0.0 = all SPEC items 1–27 complete, and is the
    first published APK.** Agents must not push `v*` tags or trigger a publish run — Eve/Jason do that.
 
 Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the Android SDK.
@@ -126,6 +147,7 @@ to my recipe app"). So:
 ## Future iOS path (needs Jason's OK — costs money)
 
 Same codebase; `ios.bundleIdentifier` is already set. Options:
+
 1. **EAS Build** (Expo account; free tier has limited queue, paid plans faster), or
 2. **GitHub Actions macOS runner** with `npx expo prebuild --platform ios` + `xcodebuild`/fastlane.
 

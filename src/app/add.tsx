@@ -103,6 +103,7 @@ export default function AddRecipeScreen() {
                 value={carbs}
                 onChangeText={setCarbs}
                 keyboardType="decimal-pad"
+                testID="carbs-input"
               />
             </Field>
           </View>

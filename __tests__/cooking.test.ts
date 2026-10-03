@@ -102,7 +102,7 @@ describe('shopping merge, grocery run, pantry (spec #12, #18, #21)', () => {
   });
 
   it('merges quantities, scales by planned servings and skips pantry items', () => {
-    const pantry: PantryItem[] = [{ id: 'p1', name: 'Salt', updatedAt: '' }];
+    const pantry: PantryItem[] = [{ id: 'p1', name: 'Salt', createdAt: '', updatedAt: '' }];
     const items = compileItems([{ recipe: r1, servings: 4 }, { recipe: r2 }], { pantry });
     const texts = items.map((i) => i.text).sort();
     expect(texts).toEqual(['2½ cup almond flour', '4 eggs', '5 tbsp allulose']);
@@ -110,9 +110,9 @@ describe('shopping merge, grocery run, pantry (spec #12, #18, #21)', () => {
 
   it('ranks recipes by ingredients on hand', () => {
     const pantry: PantryItem[] = [
-      { id: '1', name: 'almond flour', updatedAt: '' },
-      { id: '2', name: 'allulose', updatedAt: '' },
-      { id: '3', name: 'salt', updatedAt: '' },
+      { id: '1', name: 'almond flour', createdAt: '', updatedAt: '' },
+      { id: '2', name: 'allulose', createdAt: '', updatedAt: '' },
+      { id: '3', name: 'salt', createdAt: '', updatedAt: '' },
     ];
     const ranked = rankRecipesByPantry([r1, r2], pantry);
     expect(ranked[0]).toMatchObject({ recipe: { id: r2.id }, have: 3, total: 3, missing: [] });

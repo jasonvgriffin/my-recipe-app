@@ -1,0 +1,57 @@
+name: Supabase migrations
+
+# Applies supabase/migrations/*.sql to the hosted project with `supabase db push`.
+# The CLI records applied versions in supabase_migrations.schema_migrations, so
+# re-runs only apply new files. Runs on main when migrations change, or manually.
+#
+# Needs: secret SUPABASE_DB_PASSWORD, variables SUPABASE_PROJECT_REF, SUPABASE_REGION.
+# Never echo the password or the connection string.
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/migrations/**', '.github/workflows/supabase-migrations.yml']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only list pending migrations (supabase db push --dry-run)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: supabase-migrations
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Apply migrations
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          REGION: ${{ vars.SUPABASE_REGION || 'us-east-1' }}
+          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PGPASSWORD}" ] || [ -z "${REF}" ]; then
+            echo "SUPABASE_DB_PASSWORD secret / SUPABASE_PROJECT_REF variable not set"; exit 1
+          fi
+          ENC_PW=$(python3 -c 'import os,urllib.parse;print(urllib.parse.quote(os.environ["PGPASSWORD"],safe=""))')
+          echo "::add-mask::${ENC_PW}"
+          # Session-mode pooler (IPv4). Supabase uses aws-0 or aws-1 depending on project age.
+          for HOST in "aws-0-${REGION}.pooler.supabase.com" "aws-1-${REGION}.pooler.supabase.com"; do
+            URL="postgresql://postgres.${REF}:${ENC_PW}@${HOST}:5432/postgres?sslmode=require"
+            echo "Trying ${HOST}"
+            if supabase db push --db-url "${URL}" --include-all ${DRY_RUN} --yes; then
+              echo "Applied via ${HOST}"
+              supabase migration list --db-url "${URL}"
+              exit 0
+            fi
+          done
+          echo "Could not apply migrations via any pooler host"; exit 1

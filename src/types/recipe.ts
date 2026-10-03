@@ -8,6 +8,8 @@
  * v1 feature spec: docs/SPEC.md. Fields marked (spec #N) map to items in that spec.
  */
 
+import type { SyncMeta } from './sync';
+
 /** Current schema version. Bump when the stored shape changes and add a migration in `migrateRecipe`. */
 export const RECIPE_SCHEMA_VERSION = 3;
 
@@ -56,9 +58,7 @@ export interface NutritionPerServing {
   source?: 'manual' | 'imported' | 'computed';
 }
 
-export interface Recipe {
-  /** Stable unique id (string so it can be shared across devices / servers). */
-  id: string;
+export interface Recipe extends SyncMeta {
   schemaVersion: number;
   /** User-editable title (spec #7). */
   title: string;
@@ -88,9 +88,6 @@ export interface Recipe {
   rating?: number;
   /** Per-recipe unit display override (spec #16); falls back to the app setting. */
   unitSystem?: UnitSystem;
-  /** ISO-8601 timestamps. */
-  createdAt: string;
-  updatedAt: string;
 }
 
 /** Fields a user (or an AI assistant) supplies when creating a recipe. */
@@ -111,10 +108,8 @@ export function netCarbs(n: NutritionPerServing | undefined): number | undefined
 }
 
 /** User-defined recipe category, e.g. "Breakfast" or "Breads" (spec #3). */
-export interface Category {
-  id: string;
+export interface Category extends SyncMeta {
   name: string;
-  createdAt: string;
 }
 
 /** Jason's sweetener rule: allulose is the only sugar-free sweetener used. */
@@ -235,6 +230,7 @@ export function migrateRecipe(value: unknown): Recipe | undefined {
     r.nutrition = typeof r.carbsPerServing === 'number' ? { netCarbsG: r.carbsPerServing, source: 'manual' } : {};
   }
   delete r.carbsPerServing;
+  if (typeof r.updatedAt !== 'string' && typeof r.createdAt === 'string') r.updatedAt = r.createdAt;
   r.schemaVersion = RECIPE_SCHEMA_VERSION;
   return isRecipe(r) ? r : undefined;
 }
@@ -242,23 +238,30 @@ export function migrateRecipe(value: unknown): Recipe | undefined {
 export function isCategory(value: unknown): value is Category {
   if (typeof value !== 'object' || value === null) return false;
   const c = value as Record<string, unknown>;
-  return typeof c.id === 'string' && typeof c.name === 'string' && typeof c.createdAt === 'string';
+  return typeof c.id === 'string' && typeof c.name === 'string';
 }
 
 /** Item on hand in the pantry (spec #21). */
-export interface PantryItem {
-  id: string;
+export interface PantryItem extends SyncMeta {
   /** Normalized ingredient name used for matching, e.g. "almond flour". */
   name: string;
   quantity?: number;
   unit?: string;
-  updatedAt: string;
+  /** EAN/UPC of the product when added by barcode scan (spec #27). */
+  barcode?: string;
+  brand?: string;
 }
 
 export function isPantryItem(v: unknown): v is PantryItem {
   if (typeof v !== 'object' || v === null) return false;
   const p = v as Record<string, unknown>;
   return typeof p.id === 'string' && typeof p.name === 'string';
+}
+
+/** Fill sync fields missing from pre-v3 local data (createdAt/updatedAt). */
+export function withSyncDefaults<T extends { id: string }>(v: T & Partial<SyncMeta>): T & SyncMeta {
+  const createdAt = v.createdAt ?? v.updatedAt ?? new Date(0).toISOString();
+  return { ...v, createdAt, updatedAt: v.updatedAt ?? createdAt };
 }
 
 /** App-wide settings. */
@@ -269,10 +272,22 @@ export interface AppSettings {
   cookingModeKeepAwake: boolean;
   /** Days that count as "cooked recently" (spec #9). */
   cookedRecentlyDays: number;
+  /**
+   * Optional supporting features (RECIPES ARE THE CORE — docs/SPEC.md). Hiding them removes their tabs and
+   * every cross-link from recipe screens, turning the app into a pure recipe box.
+   */
+  features: OptionalFeatures;
+}
+
+export interface OptionalFeatures {
+  mealPlan: boolean;
+  shopping: boolean;
+  pantry: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   unitSystem: 'original',
   cookingModeKeepAwake: true,
   cookedRecentlyDays: 14,
+  features: { mealPlan: true, shopping: true, pantry: true },
 };
