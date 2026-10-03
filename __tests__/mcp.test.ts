@@ -190,6 +190,15 @@ describe('MCP server: tools', () => {
     );
     expect(JSON.stringify(toolDefinitions())).not.toMatch(/nutri|calori|macro|protein/i);
     expect(toolDefinitions().every((t) => (t.inputSchema as { type?: string }).type === 'object')).toBe(true);
+    // Strict assistant tool validators reject untyped properties; every top-level property declares a type.
+    for (const t of toolDefinitions()) {
+      const props = ((t.inputSchema as { properties?: Record<string, Record<string, unknown>> }).properties ?? {});
+      for (const [k, v] of Object.entries(props)) expect([t.name, k, 'type' in v || 'anyOf' in v || 'enum' in v]).toEqual([t.name, k, true]);
+      expect(t.annotations.readOnlyHint).toBe(t.name.startsWith('get_') || t.name.startsWith('list_') || t.name === 'search_recipes');
+    }
+    const s = await setup();
+    const listed = await s.rpc((await s.token()).access_token, 'tools/list');
+    expect(listed.body.result.tools.find((t: { name: string }) => t.name === 'add_recipe')).toMatchObject({ title: 'Add recipe' });
   });
 
   it('adds, finds, reads and edits recipes through importRecipe rules', async () => {
