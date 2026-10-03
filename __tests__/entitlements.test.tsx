@@ -168,6 +168,14 @@ const routes = () => ({
   settings: require('@/app/settings').default,
 });
 
+// Requiring every screen transforms most of the app. On a cold CI cache that alone can exceed Jest's 5 s
+// per-test timeout, so load the screens once up front (with their own timeout) instead of inside the first test.
+beforeAll(() => {
+  routes();
+}, 60_000);
+// Full-router integration tests: the first render still pulls in navigation code, which is slow on shared CI runners.
+jest.setTimeout(20_000);
+
 describe('UI entry points follow the gate (separate from Settings toggles)', () => {
   beforeEach(async () => {
     await require('@react-native-async-storage/async-storage').clear();

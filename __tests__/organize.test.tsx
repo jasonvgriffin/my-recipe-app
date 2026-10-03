@@ -31,6 +31,14 @@ const routes = () => ({
   settings: require('@/app/settings').default,
 });
 
+// Requiring every screen transforms most of the app. On a cold CI cache that alone can exceed Jest's 5 s
+// per-test timeout, so load the screens once up front (with their own timeout) instead of inside the first test.
+beforeAll(() => {
+  routes();
+}, 60_000);
+// Full-router integration tests: the first render still pulls in navigation code, which is slow on shared CI runners.
+jest.setTimeout(20_000);
+
 const premium = (...ids: FeatureId[]) =>
   Object.fromEntries(ids.map((id) => [id, { tier: 'premium' as const }])) as Parameters<
     typeof featureGate.setConfig
