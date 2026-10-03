@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
 import { OptionalFeature } from '@/components/optional-feature';
@@ -35,6 +35,7 @@ export default function ShoppingScreen() {
 
 function ShoppingBody() {
   const showGrocery = useFeatureVisible('groceryRun');
+  const showPantry = useFeatureVisible('pantry');
   const [weekStart, setWeekStart] = useState<IsoDate>(() => toIsoDate(startOfWeek(new Date())));
   const [list, setList] = useState<ShoppingList | undefined>();
   const [mealCount, setMealCount] = useState(0);
@@ -114,12 +115,27 @@ function ShoppingBody() {
     />
   );
 
+  const primary = <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.list}>{listPane}</MaxWidthContainer>;
+
+  if (!showPantry) {
+    // No pantry pane at any width when the pantry is hidden — no empty pane, no prompt.
+    return (
+      <View style={styles.fill} testID="shopping-layout-single">
+        {primary}
+      </View>
+    );
+  }
+
   return (
     <TwoPaneLayout
       testID="shopping-layout"
-      primary={<MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.list}>{listPane}</MaxWidthContainer>}
+      primary={primary}
       secondary={<PantryOnHand />}
       placeholder={<View />}
     />
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+});

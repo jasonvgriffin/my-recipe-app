@@ -3,6 +3,7 @@ import { canUse } from '@/entitlements';
 import { generateId } from '@/lib/recipe-utils';
 import { createCollection, defaultStore } from '@/storage/kv';
 import { pantryStore } from '@/storage/pantry';
+import { settingsStore } from '@/storage/settings';
 
 import { createBarcodeLookup, type BarcodeItem } from './barcodeLookup';
 import { createPantryMatcher } from './match';
@@ -35,10 +36,11 @@ export const barcodeLookup = createBarcodeLookup({
 
 /**
  * On-hand check used by the shopping list and grocery run.
- * Returns false when the pantry feature is gated off, so a locked pantry never changes what you buy.
+ * Returns false when the pantry feature is gated off or hidden in Settings, so a locked or hidden
+ * pantry never changes what you buy.
  */
 export const pantryMatcher = createPantryMatcher({
-  list: () => pantryStore.list(),
+  list: async () => ((await settingsStore.get()).features.pantry ? pantryStore.list() : []),
   canUsePantry: () => canUse('pantry'),
 });
 

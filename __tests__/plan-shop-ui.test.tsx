@@ -153,6 +153,21 @@ describe.each([
     expect(await primary.findByText(/green beans/i)).toBeTruthy();
     expect(primary.queryByText(/olive oil/i)).toBeNull();
   });
+
+  it('skips nothing and shows no pantry pane when the pantry is hidden in Settings', async () => {
+    await settingsStore.update({ features: { pantry: false } });
+    const recipe = await chicken();
+    const week = toIsoDate(startOfWeek(new Date()));
+    await mealPlanStore.addEntry(week, recipe.id, 'dinner');
+    await pantryStore.upsert('olive oil');
+    renderRouter({ index: Shopping() }, { initialUrl: '/' });
+    await act(async () => fireEvent.press(await screen.findByTestId('build-list')));
+    expect(await screen.findByText(/green beans/i)).toBeTruthy();
+    expect(screen.getByText(/olive oil/i)).toBeTruthy();
+    expect(screen.getByTestId('shopping-layout-single')).toBeTruthy();
+    expect(screen.queryByTestId('pantry-on-hand')).toBeNull();
+    expect(screen.queryByText('Pantry is hidden.')).toBeNull();
+  });
 });
 
 describe('grocery run (spec #18)', () => {
