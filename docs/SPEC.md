@@ -131,3 +131,5 @@ follow the Recipes-are-the-core rule above.
   full-width outlined **Scan Item** button (same style as **Grocery run**) that opens the existing shopping-list barcode
   scanner (`src/app/shopping/scan.tsx`), the word “or” centered below it, then the `[Add an item][Add]` row. When barcode
   scanning is locked or hidden, the Scan Item button and the “or” are both left out (#12, #27).
+- **Meal Plan hint** (`src/components/meal-calendar.tsx`): muted “Tap a day to add meal plan” text on the same row as
+  the green **Today** link (to its left, above the month name) (#11).

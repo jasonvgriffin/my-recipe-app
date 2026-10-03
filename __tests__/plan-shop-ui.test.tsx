@@ -92,6 +92,16 @@ describe.each([
     }
   });
 
+  it('shows the “Tap a day to add meal plan” hint on the Today row, above the month name', async () => {
+    renderRouter({ index: MealPlan() }, { initialUrl: '/' });
+    const hint = await screen.findByTestId('meal-calendar-hint');
+    expect(hint).toHaveTextContent('Tap a day to add meal plan');
+    const tree = JSON.stringify(screen.toJSON());
+    const order = ['meal-calendar-hint', 'jump-today', 'calendar-label'].map((id) => tree.indexOf(`"testID":"${id}"`));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+
   it('shows the month view only (no week view) and pages by month', async () => {
     const recipe = await chicken();
     const today = toIsoDate(new Date());

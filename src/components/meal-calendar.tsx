@@ -36,7 +36,9 @@ export function MealCalendar({
   return (
     <View style={styles.wrap} testID="meal-calendar">
       <View style={styles.modes}>
-        <View style={styles.modeSpacer} />
+        <Text style={styles.hint} numberOfLines={2} testID="meal-calendar-hint">
+          Tap a day to add meal plan
+        </Text>
         <Pressable accessibilityRole="button" onPress={onToday} style={styles.todayBtn} testID="jump-today">
           <Text style={styles.todayText}>Today</Text>
         </Pressable>
@@ -99,7 +101,7 @@ export function MealCalendar({
 const styles = StyleSheet.create({
   wrap: { padding: 12, paddingBottom: 8 },
   modes: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  modeSpacer: { flex: 1 },
+  hint: { flex: 1, color: colors.muted, fontSize: 13 },
   todayBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   todayText: { color: colors.primary, fontWeight: '700' },
   nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
