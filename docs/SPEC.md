@@ -151,3 +151,23 @@ follow the Recipes-are-the-core rule above.
 - **Share Recipes** (Recipes tab) and **Share Recipe** (+ menu) now open Existing Recipes in PDF-pick mode
   (`/recipes?select=pdf`): pick one or more, tap “Share PDF”. Household sharing is unchanged and still reachable from
   More → Household (and Settings → Household).
+
+## v1.0.4 UI changes (Jason, Oct 3 2026)
+
+- **Smaller center + button** (`src/app/(tabs)/_layout.tsx`): 33% smaller — the raised circle in the bottom bar is
+  44dp (was 66dp; ring 3dp, was 4dp), the rail circle 39dp (was 58dp), the + glyph 23dp (was 34dp). Same center point
+  in the bar as before (scaled about its center), same color, shadow scaled down.
+- **Recipes tab = the recipe list** (`src/app/(tabs)/index.tsx` → `src/components/recipe-list.tsx`): the five-link
+  Recipes home page is removed; the tab opens straight to the list with the search bar at the top (filters, “Import
+  from link”, “Select recipes for PDF”, “+ Add recipe” as before). Its other actions live in the center + menu: **Add
+  Recipe**, **Share Recipes** (PDF picker, gate `pdfExport`; was labeled “Share Recipe”), **What Can I Make?**
+  (needs `pantry`: gate + Settings toggle), plus **Search Recipes**. `/recipes` stays as a stack route for those
+  deep links (`?focus=search`, `?select=pdf`).
+- **Section page title** (`src/components/app-header.tsx`): the banner shows only “My Recipe App” (centered) and the
+  settings gear; the section name (Recipes, Meal Plan, Shopping List, Pantry, More, Settings, Household) moved out of
+  the banner into the content area just below it as a big, bold, centered page title (25sp, `SectionTitle` /
+  `SectionLayout`, applied through the navigators' `screenLayout`). Screen content (e.g. the Meal Plan hint row) sits
+  under it. Household no longer repeats its own small “Household” heading.
+- **“Grocery run” → “Shopping List”** (user-facing only; code ids such as `groceryRun`, `/grocery-run`,
+  `grocery-run-button` unchanged): the Shopping List screen button, the recipe-detail button, the screen title
+  (“Shopping List · checked/total”), the hidden/locked messages and the Settings help text.

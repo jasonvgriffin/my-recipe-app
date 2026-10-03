@@ -44,23 +44,19 @@ beforeEach(async () => {
 describe('recipes-first', () => {
   it('opens to Recipes with no onboarding / sign-in', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    expect(await screen.findByTestId('add-recipe-button')).toBeTruthy();
+    // v1.0.4: the Recipes tab IS the recipe list (search bar at the top); no five-link home page, no sample recipes.
+    expect(await screen.findByTestId('search-input')).toBeTruthy();
     expect(screen).toHavePathname('/');
     expect(screen.queryByText(/sign in/i)).toBeNull();
-    // v1.0.1: five clear buttons and no sample recipes.
-    for (const id of ['home-search', 'home-existing', 'home-share', 'add-recipe-button', 'home-pantry-match'])
-      expect(screen.getByTestId(id)).toBeTruthy();
-    // v1.0.2: titles only, no gray subtitle under the buttons.
-    expect(screen.queryByText('Browse, filter and open your recipes')).toBeNull();
-    expect(screen.queryByText('Type one in or import from a link')).toBeNull();
-    await act(async () => fireEvent.press(screen.getByTestId('home-existing')));
-    expect(await screen.findByText(/No recipes yet/)).toBeTruthy();
+    expect(screen.getByText(/No recipes yet/)).toBeTruthy();
+    for (const id of ['recipes-home', 'home-search', 'home-existing', 'home-share', 'home-pantry-match'])
+      expect(screen.queryByTestId(id)).toBeNull();
+    expect(screen.getByTestId('list-add-recipe-button')).toBeTruthy();
   });
 
-  it('pantry match explains gently when the pantry is hidden', async () => {
+  it('pantry match explains gently when the pantry is hidden (deep link)', async () => {
     await settingsStore.update({ features: { mealPlan: false, shopping: false, pantry: false } });
-    renderRouter(routes(), { initialUrl: '/' });
-    await act(async () => fireEvent.press(await screen.findByTestId('home-pantry-match')));
+    renderRouter(routes(), { initialUrl: '/pantry-match' });
     expect(await screen.findByTestId('pantry-match-off')).toBeTruthy();
     expect(screen.queryByText(/buy|upgrade|subscribe/i)).toBeNull();
   });
@@ -68,7 +64,7 @@ describe('recipes-first', () => {
   it('full recipe workflow with all optional features hidden', async () => {
     await settingsStore.update({ features: { mealPlan: false, shopping: false, pantry: false } });
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
+    await screen.findByTestId('search-input');
     await waitFor(() => expect(screen.queryByText('Meal Plan')).toBeNull());
     expect(screen.queryByText('Shopping')).toBeNull();
     expect(screen.queryByText('Pantry')).toBeNull();
@@ -80,16 +76,15 @@ describe('recipes-first', () => {
     await act(async () => fireEvent.press(screen.getByTestId('add-menu-backdrop')));
     await waitFor(() => expect(screen.queryByTestId('add-menu-sheet')).toBeNull());
 
-    // Add a recipe
-    await act(async () => fireEvent.press(screen.getByTestId('add-recipe-button')));
+    // Add a recipe (the list's “+ Add recipe” button)
+    await act(async () => fireEvent.press(screen.getByTestId('list-add-recipe-button')));
     await screen.findByText('Save recipe');
     fireEvent.changeText(screen.getByPlaceholderText('e.g. Cauliflower Mac & Cheese'), 'Zucchini Lasagna');
     fireEvent.changeText(screen.getByPlaceholderText(/1 head cauliflower/), '2 zucchini\n1 cup ricotta');
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Layer\nBake 30 minutes');
     await act(async () => fireEvent.press(screen.getByText('Save recipe')));
 
-    // Back on the Recipes tab → Existing Recipes → open it → detail has recipe actions but no meal-plan cross-link
-    await act(async () => fireEvent.press(await screen.findByTestId('home-existing')));
+    // Back on the Recipes tab (the list) → open it → detail has recipe actions but no meal-plan cross-link
     const item = await screen.findByText('Zucchini Lasagna');
     await act(async () => fireEvent.press(item));
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();

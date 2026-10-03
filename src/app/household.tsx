@@ -164,7 +164,7 @@ export default function HouseholdScreen() {
       contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={refresh}>
-      <Text style={styles.section}>Household</Text>
+      {/* v1.0.4: the “Household” page title comes from SectionLayout (no duplicate heading here). */}
       <Text style={styles.help}>
         Share recipes, the pantry, meal plan and shopping list with people you live with. Optional — recipes work
         without an account.

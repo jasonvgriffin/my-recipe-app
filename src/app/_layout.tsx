@@ -2,11 +2,14 @@ import { Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
-import { AppHeaderTitle } from '@/components/app-header';
+import { AppHeaderTitle, SectionLayout } from '@/components/app-header';
 import { useHouseholdSync } from '@/hooks/use-household-sync';
 import { AppThemeProvider, useColorSchemeResolved, useColors, useNavigationTheme } from '@/hooks/use-theme';
 import { configureStepTimerNotifications } from '@/notifications/step-timers';
 import { recipeStore } from '@/storage/recipes';
+
+/** v1.0.4: section page title below the banner for the stack screens that show the app header. */
+const STACK_SECTIONS: Record<string, string> = { settings: 'Settings', household: 'Household' };
 
 function HouseholdSyncHost() {
   useHouseholdSync();
@@ -36,6 +39,9 @@ function ThemedRoot() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <HouseholdSyncHost />
       <Stack
+        screenLayout={({ route, children }) => (
+          <SectionLayout section={STACK_SECTIONS[route.name]}>{children}</SectionLayout>
+        )}
         screenOptions={{
           headerStyle: { backgroundColor: colors.card },
           headerTintColor: colors.text,
@@ -48,13 +54,13 @@ function ThemedRoot() {
         <Stack.Screen name="recipe/[id]/edit" options={{ title: 'Edit recipe' }} />
         <Stack.Screen name="cook/[action]" options={{ title: 'Cook with me' }} />
         <Stack.Screen name="meal-plan/[date]" options={{ title: 'Meal plan' }} />
-        <Stack.Screen name="grocery-run" options={{ title: 'Grocery run' }} />
+        <Stack.Screen name="grocery-run" options={{ title: 'Shopping List' }} />
         <Stack.Screen
           name="settings"
           options={{
             title: 'Settings',
             headerTitleAlign: 'center',
-            headerTitle: () => <AppHeaderTitle section="Settings" />,
+            headerTitle: () => <AppHeaderTitle />,
           }}
         />
         <Stack.Screen
@@ -62,7 +68,7 @@ function ThemedRoot() {
           options={{
             title: 'Household',
             headerTitleAlign: 'center',
-            headerTitle: () => <AppHeaderTitle section="Household" />,
+            headerTitle: () => <AppHeaderTitle />,
           }}
         />
         <Stack.Screen name="auth" options={{ title: 'Signing in' }} />

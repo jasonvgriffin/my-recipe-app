@@ -32,7 +32,7 @@ function param(value: string | string[] | undefined): string | undefined {
  */
 export default function GroceryRunScreen() {
   return (
-    <OptionalFeature id="groceryRun" hiddenLabel="Grocery run is hidden.">
+    <OptionalFeature id="groceryRun" hiddenLabel="Shopping List is hidden.">
       <GroceryRunBody />
     </OptionalFeature>
   );
@@ -116,8 +116,13 @@ function GroceryRunBody() {
 
   const items = list?.items ?? [];
   const progress = shoppingProgress(items);
+  // v1.0.4 (Jason): user-facing name is “Shopping List” (formerly “Grocery run”; code ids unchanged).
   const title =
-    recipeId != null ? 'Grocery run' : progress.total > 0 ? `Grocery run · ${progress.checked}/${progress.total}` : 'Grocery run';
+    recipeId != null
+      ? 'Shopping List'
+      : progress.total > 0
+        ? `Shopping List · ${progress.checked}/${progress.total}`
+        : 'Shopping List';
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

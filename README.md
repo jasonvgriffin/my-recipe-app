@@ -11,7 +11,7 @@ Full v1 feature spec: [docs/SPEC.md](docs/SPEC.md).
 - Dark, light or system theme with accent colors (Settings → Appearance); bottom tabs (side rail on unfolded foldables/tablets), list + detail side-by-side on wide screens
 - Recipe list with keyword search and filters (cooked / cooked recently / not cooked)
 - Cooked toggle with last-cooked date; "Plan for today"; tappable source link; notes
-- Recipes tab with five buttons: Search, Existing Recipes, Share Recipes, Add Recipe, What can I make with my existing pantry?
+- Recipes tab opens straight to your recipe list with a search bar at the top; Add Recipe, Share Recipes (PDF) and What can I make? live in the center + menu
 - Meal plan month view; shopping list compiled from a week's plan with check-off and barcode scan
 - Add recipe: title, ingredients, steps, tags, servings
 - Recipe detail (servings, ingredients, steps) and delete

@@ -3,7 +3,7 @@
  * screen, the "My Recipe App" header, and Settings (AI assistants / MCP URL, version). Optional features hidden in
  * Settings (or locked by the gate) disappear from the bar and the + menu; the + button and More always stay.
  */
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import * as Clipboard from 'expo-clipboard';
 import { renderRouter } from 'expo-router/testing-library';
 
@@ -66,7 +66,7 @@ describe('add menu items (pure)', () => {
       'Add to Shopping List',
       'Add Pantry Item',
       'Meal Plan',
-      'Share Recipe',
+      'Share Recipes',
       'What Can I Make?',
     ]);
   });
@@ -86,22 +86,22 @@ describe('add menu items (pure)', () => {
 describe('bottom bar, header and + sheet', () => {
   it('shows Recipes · Meal Plan · + · Shopping · More and the app header', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
+    await screen.findByTestId('search-input');
     for (const label of ['Meal Plan', 'Shopping', 'More']) expect(screen.getByText(label)).toBeTruthy();
     expect(screen.getAllByText('Recipes').length).toBeGreaterThan(0);
     expect(screen.getByTestId('tab-add-button')).toBeTruthy();
     expect(screen.getByText('My Recipe App')).toBeTruthy();
-    expect(screen.getByTestId('app-header-section')).toHaveTextContent('Recipes');
+    expect(screen.getByTestId('section-title')).toHaveTextContent('Recipes');
     expect(screen.getByTestId('settings-button')).toBeTruthy();
     expect(screen.queryByText('Pantry')).toBeNull(); // under More now
 
     await act(async () => fireEvent.press(screen.getByText('Shopping')));
-    await waitFor(() => expect(screen.getByTestId('app-header-section')).toHaveTextContent('Shopping List'));
+    await waitFor(() => expect(screen.getByTestId('section-title')).toHaveTextContent('Shopping List'));
   });
 
   it('+ opens a 3-column sheet of every action; tapping outside closes it', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
+    await screen.findByTestId('search-input');
     await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
     expect(screen.getByTestId('add-menu-sheet')).toBeTruthy();
     for (const id of ALL_IDS) expect(screen.getByTestId(`add-menu-${id}`)).toBeTruthy();
@@ -121,7 +121,7 @@ describe('bottom bar, header and + sheet', () => {
     ];
     for (const [id, path] of cases) {
       renderRouter(routes(), { initialUrl: '/' });
-      await screen.findByTestId('add-recipe-button');
+      await screen.findByTestId('search-input');
       await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
       await act(async () => fireEvent.press(screen.getByTestId(`add-menu-${id}`)));
       await waitFor(() => expect(screen).toHavePathname(path));
@@ -133,7 +133,7 @@ describe('bottom bar, header and + sheet', () => {
   it('features hidden in Settings leave the bar and the + menu; + and More stay', async () => {
     await settingsStore.update({ features: { mealPlan: false, shopping: true, pantry: false } });
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
+    await screen.findByTestId('search-input');
     await waitFor(() => expect(screen.queryByText('Meal Plan')).toBeNull());
     expect(screen.getByText('Shopping')).toBeTruthy();
     expect(screen.getByText('More')).toBeTruthy();
@@ -152,29 +152,84 @@ describe('bottom bar, header and + sheet', () => {
   it('the + button also works in the expanded navigation rail', async () => {
     mockWidth = 900;
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
+    await screen.findByTestId('search-input');
     await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
     expect(screen.getByTestId('add-menu-add-recipe')).toBeTruthy();
   });
 });
 
-describe('Recipes home (v1.0.2)', () => {
-  it('shows the five options as plain green titles (no subtitles)', async () => {
-    const { buildColors } = require('@/lib/theme');
-    const { StyleSheet } = require('react-native');
-    await settingsStore.update({ appearance: { themeMode: 'dark', accent: 'green' } });
-    const colors = buildColors('dark', 'green');
+describe('Recipes tab (v1.0.4: the recipe list, no five-link home page)', () => {
+  it('opens straight to the list with the search bar at the top, under the app header', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
-    for (const label of [
-      'Search',
-      'Existing Recipes',
-      'Share Recipes',
-      'Add Recipe',
-      'What can I make with my existing pantry?',
-    ])
-      expect(StyleSheet.flatten(screen.getByText(label).props.style).color).toBe(colors.primary);
-    expect(screen.queryByText('Browse, filter and open your recipes')).toBeNull();
+    expect(await screen.findByTestId('search-input')).toBeTruthy();
+    expect(screen).toHavePathname('/');
+    expect(screen.getByText('My Recipe App')).toBeTruthy();
+    expect(screen.getByTestId('section-title')).toHaveTextContent('Recipes');
+    for (const id of ['recipes-home', 'home-search', 'home-existing', 'home-share', 'home-pantry-match'])
+      expect(screen.queryByTestId(id)).toBeNull();
+    expect(screen.queryByText('Existing Recipes')).toBeNull();
+  });
+
+  it('every action from the old home page is in the + menu', async () => {
+    renderRouter(routes(), { initialUrl: '/' });
+    await screen.findByTestId('search-input');
+    await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
+    expect(within(screen.getByTestId('add-menu-add-recipe')).getByText('Add Recipe')).toBeTruthy();
+    expect(within(screen.getByTestId('add-menu-share-recipe')).getByText('Share Recipes')).toBeTruthy();
+    expect(within(screen.getByTestId('add-menu-what-can-i-make')).getByText('What Can I Make?')).toBeTruthy();
+    expect(within(screen.getByTestId('add-menu-search-recipes')).getByText('Search Recipes')).toBeTruthy();
+  });
+
+  it('the smaller center + (v1.0.4: 44dp raised circle, ~67% of 66dp)', async () => {
+    const { StyleSheet } = require('react-native');
+    renderRouter(routes(), { initialUrl: '/' });
+    await screen.findByTestId('search-input');
+    const style = StyleSheet.flatten(screen.getByTestId('tab-add-button').props.style);
+    expect(style).toMatchObject({ width: 44, height: 44, borderRadius: 22 });
+  });
+});
+
+describe('section title below the banner (v1.0.4)', () => {
+  it('banner shows only “My Recipe App” (+ gear); the section is a big centered page title below it', async () => {
+    const { StyleSheet } = require('react-native');
+    renderRouter(routes(), { initialUrl: '/' });
+    await screen.findByTestId('search-input');
+    const banner = screen.getByTestId('app-header');
+    expect(banner).toHaveTextContent('My Recipe App');
+    expect(within(banner).queryByText('Recipes')).toBeNull();
+    expect(within(banner).queryByTestId('section-title')).toBeNull();
+    expect(screen.getByTestId('settings-button')).toBeTruthy();
+    const title = screen.getByTestId('section-title');
+    expect(title).toHaveTextContent('Recipes');
+    const style = StyleSheet.flatten(title.props.style);
+    expect(style.fontSize).toBeGreaterThanOrEqual(24);
+    expect(style.fontSize).toBeLessThanOrEqual(26);
+    expect(style).toMatchObject({ textAlign: 'center', fontWeight: '800' });
+    // The search bar is in the content under the title.
+    expect(within(screen.getByTestId('section-layout')).getByTestId('search-input')).toBeTruthy();
+  });
+
+  it('Meal Plan: the hint row sits under the title, nothing in the banner', async () => {
+    renderRouter(routes(), { initialUrl: '/meal-plan' });
+    const hint = await screen.findByTestId('meal-calendar-hint');
+    const layout = screen.getByTestId('section-layout');
+    expect(screen.getByTestId('section-title')).toHaveTextContent('Meal Plan');
+    expect(within(layout).getByTestId('meal-calendar-hint')).toBe(hint);
+    expect(within(screen.getByTestId('section-title')).queryByTestId('meal-calendar-hint')).toBeNull();
+    expect(within(screen.getByTestId('app-header')).queryByText('Meal Plan')).toBeNull();
+  });
+
+  it.each([
+    ['/shopping', 'Shopping List'],
+    ['/more', 'More'],
+    ['/pantry', 'Pantry'],
+    ['/settings', 'Settings'],
+    ['/household', 'Household'],
+  ])('%s shows the “%s” page title', async (url, section) => {
+    renderRouter(routes(), { initialUrl: url });
+    expect(await screen.findByTestId('section-title')).toHaveTextContent(section);
+    expect(screen.getByTestId('app-header')).toHaveTextContent('My Recipe App');
+    expect(within(screen.getByTestId('app-header')).queryByText(section)).toBeNull();
   });
 });
 
@@ -183,7 +238,7 @@ describe('More screen', () => {
     renderRouter(routes(), { initialUrl: '/more' });
     expect(await screen.findByTestId('more-pantry')).toBeTruthy();
     expect(screen.getByTestId('more-household')).toBeTruthy();
-    expect(screen.getByTestId('app-header-section')).toHaveTextContent('More');
+    expect(screen.getByTestId('section-title')).toHaveTextContent('More');
     await act(async () => fireEvent.press(screen.getByTestId('more-settings')));
     expect(await screen.findByTestId('settings-screen')).toBeTruthy();
   });
@@ -199,7 +254,7 @@ describe('More screen', () => {
     renderRouter(routes(), { initialUrl: '/more' });
     await act(async () => fireEvent.press(await screen.findByTestId('more-pantry')));
     await waitFor(() => expect(screen).toHavePathname('/pantry'));
-    expect(screen.getByTestId('app-header-section')).toHaveTextContent('Pantry');
+    expect(screen.getByTestId('section-title')).toHaveTextContent('Pantry');
   });
 });
 

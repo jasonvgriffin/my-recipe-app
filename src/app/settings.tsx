@@ -23,7 +23,7 @@ const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; h
     key: 'shopping',
     gate: 'shoppingList',
     label: 'Shopping list',
-    help: 'Lists built from your meal plan, grocery run mode.',
+    help: 'Lists built from your meal plan, Shopping List mode.',
   },
   { key: 'pantry', gate: 'pantry', label: 'Pantry', help: 'Track what you have, with barcode scanning.' },
 ];

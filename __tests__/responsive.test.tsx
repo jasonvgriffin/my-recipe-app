@@ -111,12 +111,12 @@ describe.each([
     expect(screen.getByTestId('import-text-input')).toBeTruthy();
   });
 
-  it('Recipes tab: five buttons (width-capped)', async () => {
+  it('Recipes tab: the recipe list with the search bar (v1.0.4, no five-link home)', async () => {
     const RecipesTab = require('@/app/(tabs)/index').default;
     renderRouter({ index: RecipesTab }, { initialUrl: '/' });
-    expect(await screen.findByTestId('recipes-home')).toBeTruthy();
-    for (const label of ['Search', 'Existing Recipes', 'Share Recipes', 'Add Recipe', 'What can I make with my existing pantry?'])
-      expect(screen.getByText(label)).toBeTruthy();
+    expect(await screen.findByTestId('search-input')).toBeTruthy();
+    expect(screen.getByTestId('recipes-layout-primary')).toBeTruthy();
+    expect(screen.queryByTestId('recipes-home')).toBeNull();
   });
 
   it('Existing Recipes: list-detail in expanded, navigation in compact', async () => {

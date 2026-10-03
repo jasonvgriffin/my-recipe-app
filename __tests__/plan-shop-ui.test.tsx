@@ -222,6 +222,20 @@ describe('grocery run (spec #18)', () => {
 });
 
 describe('gates (spec #11, #12, #18)', () => {
+  it('v1.0.4: the grocery-run button reads “Shopping List” on the Shopping screen and recipe detail', async () => {
+    const recipe = await chicken();
+    const shop = renderRouter({ index: Shopping() }, { initialUrl: '/' });
+    const button = await screen.findByTestId('grocery-run-button');
+    expect(within(button).getByText('Shopping List')).toBeTruthy();
+    expect(screen.queryByText(/grocery run/i)).toBeNull();
+    shop.unmount();
+
+    renderRouter({ 'recipe/[id]': Recipe() }, { initialUrl: `/recipe/${recipe.id}` });
+    const detailButton = await screen.findByTestId('grocery-run-button');
+    expect(within(detailButton).getByText('Shopping List')).toBeTruthy();
+    expect(screen.queryByText(/grocery run/i)).toBeNull();
+  });
+
   it('a locked meal plan and a locked grocery run stay quiet', async () => {
     featureGate.setProvider(new NoEntitlements());
     featureGate.setConfig({

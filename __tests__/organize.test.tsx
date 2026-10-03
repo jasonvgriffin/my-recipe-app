@@ -298,8 +298,8 @@ describe('settings show/hide and locked organize features', () => {
     await waitFor(() => expect(screen.queryByText('Meal Plan')).toBeNull());
     expect(screen.queryByText('Shopping')).toBeNull();
     expect(screen.getByTestId('tab-add-button')).toBeTruthy();
-    expect(screen.getByTestId('add-recipe-button')).toBeTruthy();
-    await act(async () => fireEvent.press(screen.getByTestId('home-existing')));
+    // v1.0.4: the Recipes tab is the recipe list itself.
+    expect(screen.getByTestId('search-input')).toBeTruthy();
     expect(await screen.findByText('Cooked recently (14d)')).toBeTruthy();
   });
 

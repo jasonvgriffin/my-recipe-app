@@ -194,13 +194,14 @@ describe('UI', () => {
     expect(Print.printToFileAsync.mock.calls[0][0].html).toContain('Chicken Soup');
   });
 
-  it('Recipes tab “Share Recipes” → pick several → Share PDF makes one PDF', async () => {
+  it('+ menu “Share Recipes” → pick several → Share PDF makes one PDF', async () => {
     const a = await recipeStore.save(soup({ title: 'Alpha Soup' }));
     await recipeStore.save(soup({ title: 'Beta Stew' }));
     const c = await recipeStore.save(soup({ title: 'Gamma Eggs' }));
     renderRouter(routes(), { initialUrl: '/' });
-    const share = await screen.findByTestId('home-share');
-    await act(async () => fireEvent.press(share));
+    await screen.findByTestId('search-input');
+    await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
+    await act(async () => fireEvent.press(screen.getByTestId('add-menu-share-recipe')));
     await waitFor(() => expect(screen).toHavePathname('/recipes'));
     expect(await screen.findByTestId('pdf-select-bar')).toBeTruthy();
     expect(screen.getByTestId('pdf-share-button')).toBeDisabled();
@@ -230,9 +231,9 @@ describe('UI', () => {
     expect(screen.getByTestId('list-add-recipe-button')).toBeTruthy();
   });
 
-  it('+ menu “Share Recipe” opens the PDF picker; household sharing stays under More', async () => {
+  it('+ menu “Share Recipes” opens the PDF picker; household sharing stays under More', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
+    await screen.findByTestId('search-input');
     await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
     await act(async () => fireEvent.press(screen.getByTestId('add-menu-share-recipe')));
     await waitFor(() => expect(screen).toHavePathname('/recipes'));
@@ -252,8 +253,10 @@ describe('UI', () => {
     expect(screen.queryByTestId('export-pdf-button')).toBeNull();
     screen.unmount();
     renderRouter(routes(), { initialUrl: '/' });
-    await screen.findByTestId('add-recipe-button');
-    expect(screen.queryByTestId('home-share')).toBeNull();
+    await screen.findByTestId('search-input');
+    await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
+    expect(screen.queryByTestId('add-menu-share-recipe')).toBeNull();
+    expect(screen.getByTestId('add-menu-add-recipe')).toBeTruthy();
     screen.unmount();
     renderRouter(routes(), { initialUrl: '/recipes?select=pdf' });
     expect(await screen.findByTestId(`recipe-item-${r.id}`)).toBeTruthy();

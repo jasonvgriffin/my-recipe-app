@@ -25,7 +25,7 @@ jest.mock('react-native-safe-area-context', () => {
   return { ...actual, SafeAreaProvider, initialWindowMetrics: { insets, frame } };
 });
 
-jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.3' } } }));
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.4' } } }));
 
 const { SafeAreaProvider } = jest.requireMock('react-native-safe-area-context');
 
@@ -80,12 +80,13 @@ describe('screens', () => {
     renderRouter(routes(), { initialUrl: '/settings' });
     const scroll = await screen.findByTestId('settings-screen');
     expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(16 + NAV_BAR);
-    expect(await screen.findByTestId('app-version')).toHaveTextContent('Version 1.0.3');
+    expect(await screen.findByTestId('app-version')).toHaveTextContent('Version 1.0.4');
   });
 
   it('Recipes tab (inside the bottom bar): no extra inset', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    const scroll = await screen.findByTestId('recipes-home');
-    expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(16);
+    // v1.0.4: the Recipes tab is the recipe list; its “+ Add recipe” button sits 24dp above the bar (no nav-bar inset).
+    const fab = await screen.findByTestId('list-add-recipe-button');
+    expect(StyleSheet.flatten(fab.props.style).bottom).toBe(24);
   });
 });
