@@ -20,6 +20,12 @@ const routes = () => ({
   settings: require('@/app/settings').default,
 });
 
+// Requiring every screen transforms most of the app. On a cold CI cache that alone can exceed Jest's 5 s
+// per-test timeout, so load the screens once up front (with their own timeout) instead of inside the first test.
+beforeAll(() => {
+  routes();
+}, 60_000);
+
 beforeEach(async () => {
   await require('@react-native-async-storage/async-storage').clear();
 });

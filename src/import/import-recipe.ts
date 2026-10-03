@@ -127,6 +127,7 @@ export async function importRecipeWith(
       createdAt: existing.createdAt,
       cooked: existing.cooked,
       lastCookedAt: existing.lastCookedAt,
+      cookHistory: existing.cookHistory ?? [],
       notes: recipe.notes ?? existing.notes,
       photoUri: recipe.photoUri ?? existing.photoUri,
       categoryIds: [...new Set([...existing.categoryIds, ...recipe.categoryIds])],

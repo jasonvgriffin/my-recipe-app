@@ -62,7 +62,13 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
   });
 
   it('keeps household and author (SyncMeta) when a shared recipe is edited', () => {
-    const recipe: Recipe = { ...sample(), householdId: 'house-1', createdBy: 'user-a' };
+    const recipe: Recipe = {
+      ...sample(),
+      householdId: 'house-1',
+      createdBy: 'user-a',
+      cooked: true,
+      cookHistory: ['2026-09-01T12:00:00.000Z'],
+    };
     const state = recipeToEditorState(recipe);
     state.title = 'Edited by someone else';
     const built = editorStateToInput(state, recipe);
@@ -70,6 +76,7 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
     const saved = applyRecipeEdit(recipe, built.input, new Date('2026-10-03T00:00:00Z'));
     expect(saved.householdId).toBe('house-1');
     expect(saved.createdBy).toBe('user-a');
+    expect(saved.cookHistory).toEqual(recipe.cookHistory);
     expect(saved.title).toBe('Edited by someone else');
   });
 

@@ -11,7 +11,7 @@
 import type { SyncMeta } from './sync';
 
 /** Current schema version. Bump when the stored shape changes and add a migration in `migrateRecipe`. */
-export const RECIPE_SCHEMA_VERSION = 3;
+export const RECIPE_SCHEMA_VERSION = 4;
 
 export type UnitSystem = 'metric' | 'imperial';
 
@@ -84,6 +84,8 @@ export interface Recipe extends SyncMeta {
   cooked: boolean;
   /** ISO-8601 timestamp of the most recent time it was cooked (spec #9, #10). */
   lastCookedAt?: string;
+  /** Every time it was marked cooked, oldest first (spec #10). */
+  cookHistory: string[];
   /** 1–5 stars; undefined = not rated (spec #22). */
   rating?: number;
   /** Per-recipe unit display override (spec #16); falls back to the app setting. */
@@ -210,7 +212,9 @@ export function isRecipe(value: unknown): value is Recipe {
     typeof r.createdAt === 'string' &&
     typeof r.updatedAt === 'string' &&
     Array.isArray(r.categoryIds) &&
-    typeof r.cooked === 'boolean'
+    typeof r.cooked === 'boolean' &&
+    Array.isArray(r.cookHistory) &&
+    r.cookHistory.every((t) => typeof t === 'string')
   );
 }
 
@@ -230,6 +234,9 @@ export function migrateRecipe(value: unknown): Recipe | undefined {
     r.nutrition = typeof r.carbsPerServing === 'number' ? { netCarbsG: r.carbsPerServing, source: 'manual' } : {};
   }
   delete r.carbsPerServing;
+  // v3 -> v4: cook history. Keep any valid timestamps; otherwise seed from lastCookedAt.
+  if (Array.isArray(r.cookHistory)) r.cookHistory = r.cookHistory.filter((t) => typeof t === 'string');
+  else r.cookHistory = typeof r.lastCookedAt === 'string' ? [r.lastCookedAt] : [];
   if (typeof r.updatedAt !== 'string' && typeof r.createdAt === 'string') r.updatedAt = r.createdAt;
   r.schemaVersion = RECIPE_SCHEMA_VERSION;
   return isRecipe(r) ? r : undefined;

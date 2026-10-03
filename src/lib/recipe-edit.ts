@@ -133,6 +133,7 @@ export function applyRecipeEdit(original: Recipe, input: RecipeInput, now: Date 
     createdAt: original.createdAt,
     cooked: original.cooked,
     lastCookedAt: original.lastCookedAt,
+    cookHistory: original.cookHistory ?? [],
     updatedAt: now.toISOString(),
   };
 }

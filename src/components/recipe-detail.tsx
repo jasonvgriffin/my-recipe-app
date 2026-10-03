@@ -2,18 +2,20 @@ import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { toIsoDate } from '@/lib/dates';
+import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
+import { StarRating } from '@/components/star-rating';
+import { TagEditor } from '@/components/tag-editor';
 import { ShareRecipePanel } from '@/components/share-recipe-panel';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
+import { formatCookedOn, toIsoDate } from '@/lib/dates';
 import { formatIngredient } from '@/lib/ingredients';
-import { setCooked } from '@/lib/recipe-utils';
+import { addRecipeTags, removeRecipeTag, setCooked, setRating, toggleRecipeCategory } from '@/lib/recipe-utils';
 import { formatDuration } from '@/lib/timers';
-
 import { colors } from '@/lib/theme';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
-import { isLowCarb, netCarbs, type Recipe } from '@/types/recipe';
+import { isLowCarb, netCarbs, type Category, type Recipe } from '@/types/recipe';
 
 export interface RecipeDetailProps {
   id: string;
@@ -21,22 +23,31 @@ export interface RecipeDetailProps {
   onDeleted?: () => void;
   /** Called whenever the recipe loads or changes (route: set header title; two-pane: refresh list). */
   onChange?: (recipe: Recipe) => void;
+  /**
+   * Categories to assign (spec #3). Pass them from a focused screen so the list refreshes on return.
+   * When omitted, the detail loads them once.
+   */
+  categories?: Category[];
 }
 
 /**
  * Recipe detail body, used by the /recipe/[id] route (compact) AND the Recipes tab's secondary pane
  * (medium/expanded, spec #23). Keep it free of navigation side effects — use the callbacks.
  */
-export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
+export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesProp }: RecipeDetailProps) {
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined);
   // Optional cross-links (meal plan) only appear when that feature is enabled — recipes-first rule.
   // Gated entry points (src/entitlements) — recipe view/edit/delete itself is never gated.
   const showPlanToday = useFeatureVisible('mealPlan');
   const timers = useFeature('timers').available;
-  const tags = useFeature('tags').available;
+  const tagsOn = useFeature('tags').available;
+  const categoriesOn = useFeature('categories').available;
+  const ratingsOn = useFeature('ratings').available;
   const photos = useFeature('photos').available;
   const share = useFeature('share').available;
   const [shareOpen, setShareOpen] = useState(false);
+  const [loadedCategories, setLoadedCategories] = useState<Category[]>([]);
+  const categories = categoriesProp ?? loadedCategories;
 
   // Parents should pass `key={id}` when switching recipes so state resets cleanly.
   const onChangeRef = useRef(onChange);
@@ -57,6 +68,17 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
       };
     }, [id]),
   );
+
+  useEffect(() => {
+    if (categoriesProp || !categoriesOn) return;
+    let active = true;
+    recipeStore.listCategories().then((c) => {
+      if (active) setLoadedCategories(c);
+    });
+    return () => {
+      active = false;
+    };
+  }, [categoriesOn, categoriesProp, id]);
 
   if (recipe === undefined) {
     return (
@@ -90,11 +112,18 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
 
   const net = netCarbs(recipe.nutrition);
 
-  async function toggleCooked(r: Recipe) {
-    const next = setCooked(r, !r.cooked);
+  async function persist(next: Recipe) {
     await recipeStore.save(next);
     setRecipe(next);
     onChange?.(next);
+  }
+
+  async function toggleCooked(r: Recipe) {
+    await persist(setCooked(r, !r.cooked));
+  }
+
+  async function logCook(r: Recipe) {
+    await persist(setCooked(r, true));
   }
 
   async function planToday(r: Recipe) {
@@ -102,8 +131,9 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
     Alert.alert('Added to meal plan', `“${r.title}” is planned for today.`);
   }
 
+  const history = [...(recipe.cookHistory ?? [])].reverse();
   // TODO(spec #15, #19): tap ⏱ to start a background step timer w/ notification; full cooking mode UI.
-  // TODO(spec #16, #22, #18): unit toggle (convertIngredient), star rating (setRating), grocery-run for this recipe.
+  // TODO(spec #16, #18): unit toggle (convertIngredient), grocery-run for this recipe.
   return (
     <ScrollView contentContainerStyle={styles.container} testID="recipe-detail">
       {photos && recipe.photoUri ? (
@@ -125,17 +155,54 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
         />
       </View>
       {isLowCarb(recipe) && <Text style={styles.badge}>Low-carb</Text>}
-      {tags && recipe.tags.length > 0 && (
-        <View style={styles.tagRow}>
-          {recipe.tags.map((t) => (
-            <Text key={t} style={styles.tag}>
-              #{t}
-            </Text>
-          ))}
+      {ratingsOn ? (
+        <View style={styles.block}>
+          <Text style={styles.section}>Rating</Text>
+          <StarRating
+            value={recipe.rating}
+            testID="detail-rating"
+            onChange={(rating) => {
+              void persist(setRating(recipe, rating));
+            }}
+          />
+          {recipe.rating ? null : <Text style={styles.meta}>Not rated</Text>}
         </View>
-      )}
+      ) : null}
+      {categoriesOn && categories.length > 0 ? (
+        <View style={styles.block}>
+          <Text style={styles.section}>Categories</Text>
+          <CategoryChips
+            categories={categories}
+            selectedIds={recipe.categoryIds}
+            onToggle={(categoryId) => {
+              void persist(toggleRecipeCategory(recipe, categoryId));
+            }}
+            testIDPrefix="assign-category"
+          />
+        </View>
+      ) : null}
+      {tagsOn ? (
+        <View style={styles.block}>
+          <Text style={styles.section}>Tags</Text>
+          <TagEditor
+            tags={recipe.tags}
+            onAdd={(text) => {
+              const next = addRecipeTags(recipe, text);
+              if (next !== recipe) void persist(next);
+            }}
+            onRemove={(tag) => {
+              const next = removeRecipeTag(recipe, tag);
+              if (next !== recipe) void persist(next);
+            }}
+          />
+        </View>
+      ) : null}
       <View style={styles.actions}>
-        <Pressable style={[styles.action, recipe.cooked && styles.actionOn]} onPress={() => toggleCooked(recipe)}>
+        <Pressable
+          style={[styles.action, recipe.cooked && styles.actionOn]}
+          onPress={() => toggleCooked(recipe)}
+          testID="cooked-toggle"
+          accessibilityRole="button">
           <Text style={[styles.actionText, recipe.cooked && styles.actionTextOn]}>
             {recipe.cooked ? '✓ Cooked' : 'Mark cooked'}
           </Text>
@@ -168,9 +235,32 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
         ) : null}
       </View>
       {shareOpen && share ? <ShareRecipePanel recipe={recipe} onClose={() => setShareOpen(false)} /> : null}
-      {recipe.lastCookedAt && (
-        <Text style={styles.meta}>Last cooked {new Date(recipe.lastCookedAt).toLocaleDateString()}</Text>
-      )}
+      {recipe.lastCookedAt ? (
+        <Text style={styles.meta} testID="last-cooked">
+          Last cooked {formatCookedOn(recipe.lastCookedAt)}
+        </Text>
+      ) : null}
+      {recipe.cooked ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => logCook(recipe)}
+          style={styles.logCook}
+          testID="log-cook-button">
+          <Text style={styles.actionText}>Cooked again</Text>
+        </Pressable>
+      ) : null}
+      {history.length > 0 ? (
+        <View testID="cook-history" style={styles.block}>
+          <Text style={styles.meta}>
+            Cooked {history.length} {history.length === 1 ? 'time' : 'times'}
+          </Text>
+          {history.map((ts, i) => (
+            <Text key={`${ts}-${i}`} style={styles.historyItem}>
+              {formatCookedOn(ts)}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       {recipe.sourceUrl ? (
         <Pressable
           accessibilityRole="link"
@@ -253,15 +343,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     fontWeight: '600',
   },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
-  tag: {
-    backgroundColor: colors.tagBg,
-    color: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
+  block: { marginTop: 4 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   action: {
     minWidth: 108,
@@ -274,6 +356,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  logCook: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyItem: { color: colors.text, fontSize: 15, marginTop: 2 },
   actionOn: { backgroundColor: colors.primary },
   actionText: { color: colors.primary, fontWeight: '600' },
   actionTextOn: { color: colors.primaryText },
