@@ -63,15 +63,14 @@ function routes() {
 }
 
 describe('import screen (spec #1)', () => {
-  it('shows a draft from a pasted link, then saves it', async () => {
+  it('Import link saves a pasted link straight away (no Save / Save-and-edit prompt)', async () => {
     mount('/import');
     fireEvent.changeText(await screen.findByTestId('import-url-input'), 'https://example.com/eggs');
     await act(async () => fireEvent.press(screen.getByTestId('import-url-button')));
-    expect(await screen.findByTestId('import-draft')).toBeTruthy();
-    expect(screen.getByText('Imported eggs')).toBeTruthy();
-    expect(screen.getByText(/ingredients · .* steps/)).toBeTruthy();
-    await act(async () => fireEvent.press(screen.getByTestId('import-save')));
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
+    expect(screen.queryByTestId('import-save')).toBeNull();
+    expect(screen.queryByTestId('import-save-edit')).toBeNull();
+    expect(screen.queryByText('Save and edit')).toBeNull();
     const saved = (await recipeStore.list()).find((r) => r.title === 'Imported eggs');
     expect(saved?.sourceUrl).toBe('https://example.com/eggs');
     expect(saved?.photoUri).toBeUndefined();
@@ -105,11 +104,24 @@ describe('import screen (spec #1)', () => {
     expect(await recipeStore.list()).toHaveLength(0);
   });
 
+  it('pasted text still shows a draft before saving', async () => {
+    mount('/import');
+    fireEvent.changeText(
+      await screen.findByTestId('import-text-input'),
+      'Scrambled eggs\nIngredients:\n- 2 eggs\nSteps:\n1. Whisk\n2. Cook',
+    );
+    await act(async () => fireEvent.press(screen.getByTestId('import-text-button')));
+    expect(await screen.findByTestId('import-draft')).toBeTruthy();
+    expect(await recipeStore.list()).toHaveLength(0);
+    await act(async () => fireEvent.press(screen.getByTestId('import-save')));
+    expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
+    expect(await recipeStore.list()).toHaveLength(1);
+  });
+
   it('opens an existing recipe when the link was already imported', async () => {
     mount('/import');
     fireEvent.changeText(await screen.findByTestId('import-url-input'), 'https://example.com/eggs');
     await act(async () => fireEvent.press(screen.getByTestId('import-url-button')));
-    await act(async () => fireEvent.press(await screen.findByTestId('import-save')));
     await screen.findByTestId('recipe-detail');
 
     mount('/import');

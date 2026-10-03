@@ -11,7 +11,7 @@
 
 | #  | Feature | Implemented in |
 |----|---------|----------------|
-| 1  | Link import (URL / share sheet / pasted text) | `src/import/` (`importRecipe` in `import-recipe.ts`, `url.ts`, `html.ts`, `normalize.ts`, `parsers/json-ld.ts`, `parsers/heuristics.ts`, `parsers/text.ts`, `types.ts` zod schema, `deep-link.ts` `parseImportDeepLink` / `shareTextToImportInput`, `app-deps.ts`), `src/app/import.tsx`, `src/app/+native-intent.ts`, `src/lib/import-messages.ts`. Contract: `docs/IMPORT_API.md` |
+| 1  | Link import (URL / share sheet / pasted text) | `src/import/` (`importRecipe` in `import-recipe.ts`, `url.ts`, `html.ts`, `normalize.ts`, `parsers/json-ld.ts`, `parsers/heuristics.ts`, `parsers/text.ts`, `types.ts` zod schema, `deep-link.ts` `parseImportDeepLink` / `shareTextToImportInput`, `app-deps.ts`), `src/app/import.tsx` (“Import link” saves directly since v1.0.1; text/share/deep link show a draft), `src/app/+native-intent.ts`, `src/lib/import-messages.ts`. Contract: `docs/IMPORT_API.md` |
 | 2  | In-app editing of everything | `src/app/recipe/[id]/edit.tsx`, `src/components/recipe-editor.tsx`, `src/lib/recipe-edit.ts` (`applyRecipeEdit`), `src/app/add.tsx` |
 | 3  | Custom categories | `src/storage/recipes.ts` (`addCategory` / `renameCategory` / `removeCategory`), `src/app/organize.tsx`, `src/components/category-chips.tsx`, `Category` / `categoryIds` in `src/types/recipe.ts` |
 | 4  | Optional photo per recipe | `src/lib/photos.ts` (pick / persist / download / delete), `src/lib/photo-path.ts` (pure path helpers), the photo section of `recipe-editor.tsx` |
