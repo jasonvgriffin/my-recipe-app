@@ -82,8 +82,18 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
    server-side `ImportDeps`, so validation, the allulose-only rule and URL dedupe are identical to the app.
    - Tools: `add_recipe`, `update_recipe`, `search_recipes`, `get_recipe`, `list_tags`
      (inputs/outputs derived from the shared `Recipe` schema; consider a shared `@my-recipe-app/schema` package or zod).
-   - Streamable HTTP transport, **HTTPS only**, auth via **API key** (simple) or **OAuth** (for Grok/ChatGPT/Claude
-     connectors that require it). Server-side validation enforces the allulose-only rule.
+   - Streamable HTTP transport, **HTTPS only**. Server-side validation enforces the allulose-only rule.
+   - **Auth (decided by Jason, Oct 3 2026): OAuth**, tied to the same Supabase email-code (OTP / magic link)
+     account that household sharing (#25) uses. Grok, ChatGPT and Claude connectors expect OAuth. An API key
+     remains noted as the simpler alternative, but OAuth is the chosen path.
+   - **Account + sync required for MCP:** an AI can't reach recipes that live only on the phone, so MCP users
+     need the same email-code account with their recipes synced to Supabase. Solo/offline app use still needs
+     no account (recipes-first rule unchanged).
+   - **Paywall-ready:** MCP gets its own `FeatureId` switch (e.g. `mcpAccess`) in the existing gating layer
+     (`src/entitlements`), checked server-side per request, so it can be made premium later.
+   - **Per-user rate limits** on the MCP server (per account/token, with sensible burst + daily caps and
+     429 responses) so nobody can hammer it for free.
+   - MCP server work itself is a later phase; don't start it without Jason's OK.
    - Hosting options: Cloudflare Workers + D1, Fly.io/Render + Postgres, Supabase (Postgres + Edge Functions).
 4. **Sync backend**
    - The app keeps working offline (local store is the source of truth on device).
@@ -110,7 +120,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
    GitHub to download), or publish via Google Play (one-time $25 developer fee, needs a real release keystore)?
 2. **Release signing:** OK to generate a production keystore and store it only in GitHub secrets?
 3. **Backend / hosting** for sync + MCP: Cloudflare, Supabase, Fly.io, or something else? Any budget?
-4. **MCP auth:** API key only (simplest, personal use) vs OAuth (needed by some assistant connectors)?
+4. ~~**MCP auth:** API key only vs OAuth?~~ **Resolved (Oct 3 2026): OAuth** tied to the household-sharing email-code account; own paywall switch; per-user rate limits (see Phase 3).
 5. **Storage engine:** stay on AsyncStorage for now, or switch to `expo-sqlite` early?
 6. **Nutrition lookup source** for computed nutrition later (spec #17): USDA FoodData Central (free),
    Cronometer export, or other (may need keys/money)?

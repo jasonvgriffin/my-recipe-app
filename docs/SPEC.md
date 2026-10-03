@@ -43,7 +43,7 @@ Source: Jason Griffin, 2026-10-02/03 (items 15–27 added later). **v1 = this sp
 > No incremental/rolling APK releases before that — CI builds an APK artifact on every push/PR only to
 > prove the build stays green. Releases are published only from a `v*` tag (or a manual `publish` run).
 
-The remote MCP server stays a later phase (see [PLAN.md](PLAN.md)); household sync (#25) is in v1.
+The remote MCP server stays a later phase (see [PLAN.md](PLAN.md)); household sync (#25) is in v1. When built, MCP uses OAuth on the same email-code account as #25 (recipes synced to Supabase), has its own paywall switch in `src/entitlements`, and per-user rate limits. MCP work needs Jason's OK before starting.
 Design rules every PR must follow: [DESIGN.md](DESIGN.md). Standing product rules: diabetic-friendly, low-carb, **allulose is the only
 sugar-free sweetener — never monk fruit**.
 
