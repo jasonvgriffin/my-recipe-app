@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -17,6 +17,8 @@ export default function AddRecipeScreen() {
   const tagsAvailable = useFeature('tags').available;
   const [servings, setServings] = useState('4');
   const [carbs, setCarbs] = useState('');
+  const [notes, setNotes] = useState('');
+  const canImport = useFeature('linkImport').available;
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -28,6 +30,7 @@ export default function AddRecipeScreen() {
       tags: tagsAvailable ? parseTags(tags) : [],
       servings: Number(servings),
       nutrition: { netCarbsG: carbs.trim() === '' ? undefined : Number(carbs), source: 'manual' },
+      notes: notes.trim() || undefined,
     };
     const result = validateRecipeInput(input);
     setErrors(result.errors);
@@ -46,6 +49,13 @@ export default function AddRecipeScreen() {
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        {canImport ? (
+          <Link href="/import" asChild>
+            <Pressable style={styles.importLink} accessibilityRole="button" testID="add-import-link">
+              <Text style={styles.importLinkText}>Import from a link instead</Text>
+            </Pressable>
+          </Link>
+        ) : null}
         <Field label="Title">
           <TextInput
             placeholderTextColor={colors.placeholder}
@@ -75,7 +85,18 @@ export default function AddRecipeScreen() {
             placeholder={'Preheat oven to 400°F\nRoast 25 minutes'}
           />
         </Field>
-        {/* TODO(spec #1,#3,#4,#6,#17,#22): link import, category picker, photo, notes, full nutrition, rating. */}
+        {/* TODO(spec #3,#17,#22): category picker, full nutrition, rating. */}
+        <Field label="Notes (optional)">
+          <TextInput
+            placeholderTextColor={colors.placeholder}
+            style={[styles.input, styles.multiline]}
+            value={notes}
+            onChangeText={setNotes}
+            multiline
+            placeholder="Personal notes"
+            testID="notes-input"
+          />
+        </Field>
         {tagsAvailable ? (
           <Field label="Tags (comma separated)">
             <TextInput
@@ -162,4 +183,6 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.6 },
   buttonText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
+  importLink: { minHeight: 44, justifyContent: 'center', marginBottom: 12 },
+  importLinkText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
 });
