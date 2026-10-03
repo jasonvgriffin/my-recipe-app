@@ -1,7 +1,9 @@
 import {
+  importPathFromIncomingUrl,
   importRecipe,
   normalizeSourceUrl,
   parseImportDeepLink,
+  sharedPayloadToText,
   shareTextToImportInput,
   type ImportDeps,
 } from '@/import';
@@ -136,6 +138,42 @@ describe('importRecipe — url (link import, spec #1/#5)', () => {
     expect(await d.store.list()).toHaveLength(1);
   });
 
+  it('falls back to microdata when the page has no usable JSON-LD', async () => {
+    const html = `<html><body>
+      <div itemscope itemtype="https://schema.org/Recipe">
+        <h1 itemprop="name">Skillet Eggs &amp; Greens</h1>
+        <span itemprop="recipeYield">2 servings</span>
+        <span itemprop="recipeIngredient">4 eggs</span>
+        <span itemprop="recipeIngredient">1 tbsp butter</span>
+        <div itemprop="recipeInstructions">
+          <div itemscope itemtype="https://schema.org/HowToStep"><span itemprop="text">Melt the butter.</span></div>
+          <div itemscope itemtype="https://schema.org/HowToStep"><span itemprop="text">Cook 4 minutes.</span></div>
+        </div>
+        <img itemprop="image" src="/eggs.jpg" />
+      </div>
+    </body></html>`;
+    const result = await importRecipe({ kind: 'url', url: 'https://example.com/eggs' }, { dryRun: true }, deps(undefined, html));
+    expect(result).toMatchObject({
+      ok: true,
+      recipe: {
+        title: 'Skillet Eggs & Greens',
+        servings: 2,
+        ingredients: [{ text: '4 eggs' }, { text: '1 tbsp butter' }],
+        steps: [{ text: 'Melt the butter.' }, { text: 'Cook 4 minutes.' }],
+        photoUri: 'https://example.com/eggs.jpg',
+        sourceUrl: 'https://example.com/eggs',
+      },
+    });
+  });
+
+  it('keeps JSON-LD when it is usable, even if the page also has a different heading', async () => {
+    const html = `${PAGE}<h1>Not the recipe</h1><h2>Ingredients</h2><ul><li>999 eggs</li></ul><h2>Steps</h2><ul><li>Ignore</li></ul>`;
+    const result = await importRecipe({ kind: 'url', url: PAGE_URL }, { dryRun: true }, deps(undefined, html));
+    if (!result.ok) throw new Error(result.errors.join());
+    expect(result.recipe.title).toBe('Keto Bread & Butter');
+    expect(result.recipe.ingredients.map((i) => i.text)).toEqual(['2 cups almond flour', '2 tbsp allulose']);
+  });
+
   it('reports fetch failures and pages without a recipe', async () => {
     const failing: ImportDeps = { ...deps(), fetchHtml: async () => Promise.reject(new Error('offline')) };
     expect(await importRecipe({ kind: 'url', url: 'https://x.com/r' }, {}, failing)).toMatchObject({
@@ -187,6 +225,17 @@ describe('entry-point adapters', () => {
     expect(parseImportDeepLink('myrecipeapp://other')).toBeUndefined();
     expect(shareTextToImportInput(' https://example.com/r ')).toMatchObject({ kind: 'url' });
     expect(shareTextToImportInput('My recipe\nIngredients:\n- eggs')).toMatchObject({ kind: 'text' });
+    expect(shareTextToImportInput('Keto bread\nhttps://example.com/bread')).toMatchObject({
+      kind: 'url',
+      url: 'https://example.com/bread',
+      source: { channel: 'share-intent', label: 'Keto bread' },
+    });
+    expect(sharedPayloadToText([{ shareType: 'url', value: ' https://example.com/r ' }])).toBe('https://example.com/r');
+    expect(sharedPayloadToText([{ shareType: 'image', value: 'file://x' }])).toBeUndefined();
+    expect(importPathFromIncomingUrl('myrecipeapp://expo-sharing')).toBe('/import?incoming=1');
+    expect(importPathFromIncomingUrl('myrecipeapp://import?url=https%3A%2F%2Fexample.com')).toBe(
+      'myrecipeapp://import?url=https%3A%2F%2Fexample.com',
+    );
   });
 
   it('extractJsonLdRecipe ignores bad JSON', () => {

@@ -13,6 +13,7 @@ import {
   type ImportOptions,
   type ImportResult,
   type ImportSource,
+  type RecipeDraft,
   type RecipeImportInput,
 } from './types';
 
@@ -60,7 +61,10 @@ export async function importRecipeWith(
     } catch (e) {
       return fail('fetch_failed', `Could not download ${input.url}: ${String(e)}`);
     }
-    rawDraft = extractJsonLdRecipe(html, input.url) ?? extractRecipeHeuristically(html, input.url);
+    // JSON-LD first. Microdata / plugin / heading heuristics run only when JSON-LD
+    // is missing or has no ingredients and no steps (spec #1).
+    const fromJsonLd = extractJsonLdRecipe(html, input.url);
+    rawDraft = draftLooksLikeRecipe(fromJsonLd) ? fromJsonLd : (extractRecipeHeuristically(html, input.url) ?? fromJsonLd);
     if (!rawDraft) return fail('no_recipe_found', 'No recipe found on that page.');
   } else if (input.kind === 'text') {
     rawDraft = parseRecipeText(input.text);
@@ -123,6 +127,7 @@ export async function importRecipeWith(
       createdAt: existing.createdAt,
       cooked: existing.cooked,
       lastCookedAt: existing.lastCookedAt,
+      cookHistory: existing.cookHistory ?? [],
       notes: recipe.notes ?? existing.notes,
       photoUri: recipe.photoUri ?? existing.photoUri,
       categoryIds: [...new Set([...existing.categoryIds, ...recipe.categoryIds])],
@@ -131,6 +136,15 @@ export async function importRecipeWith(
   }
   if (!options.dryRun) await deps.store.save(recipe);
   return { ok: true, status, recipe, warnings };
+}
+
+/** A JSON-LD node is "usable" when it has a title and at least one ingredient or step. */
+function draftLooksLikeRecipe(draft: Partial<RecipeDraft> | undefined): boolean {
+  if (!draft || typeof draft.title !== 'string' || !draft.title.trim()) return false;
+  const textOf = (item: string | { text: string }) => (typeof item === 'string' ? item : item.text).trim();
+  const ingredients = (draft.ingredients ?? []).some((item) => textOf(item));
+  const steps = (draft.steps ?? []).some((item) => textOf(item));
+  return ingredients || steps;
 }
 
 function formatIssue(issue: { path: PropertyKey[]; message: string }): string {
