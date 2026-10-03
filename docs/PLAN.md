@@ -10,7 +10,7 @@ step timers, unit conversion, ~~nutrition~~ (removed), grocery run mode, cooking
 cook-with-me, household sharing, receipt scanning, barcode scanning).
 
 **Standing rule (Jason, Oct 3 2026):** This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition. Spec #17 (nutrition) was removed;
-the pantry tracks item names and quantities only, and barcode scans use Open Food Facts for the product name only.
+the pantry tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition), and barcode scans use Open Food Facts for the product name and brand only.
 
 **Release policy:** v1.0.0 = ALL SPEC items 1–27 complete (#17 removed). The first published APK is v1.0.0. Until then CI only
 uploads APK _artifacts_ on each push/PR (to keep builds green); a GitHub Release is created only by pushing a
