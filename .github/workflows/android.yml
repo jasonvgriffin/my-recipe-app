@@ -4,7 +4,9 @@ name: Android APK
 # A GitHub Release with the APK is published ONLY for:
 #   - a pushed tag matching v* (e.g. v1.0.0), or
 #   - a manual run (workflow_dispatch) with `publish: true` and a `tag` (e.g. v1.0.0).
-# There are no rolling / incremental releases. The first published APK is v1.0.0 (all SPEC items 1-22 done).
+# There are no rolling / incremental releases. The first published APK is v1.0.0 (all SPEC items 1-27 done).
+# The APK is signed with the release keystore from repo secrets (ANDROID_KEYSTORE_*; see AGENTS.md).
+# Without those secrets it falls back to the debug keystore, and a publish run fails.
 
 on:
   push:
@@ -103,10 +105,52 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build release APK (signed with debug keystore)
-        # TODO before v1.0.0: sign with a real release keystore from GitHub secrets (see AGENTS.md).
+      - name: Decode release keystore
+        # Release signing (see AGENTS.md "Signing & secrets"). plugins/with-release-signing.js makes Gradle sign
+        # assembleRelease with ANDROID_KEYSTORE_PATH when it is set. Without the secrets (e.g. fork PRs) the APK
+        # falls back to the debug keystore; publishing a release without them fails.
+        id: keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          PUBLISH: ${{ steps.release.outputs.publish }}
+        run: |
+          if [[ -z "$ANDROID_KEYSTORE_BASE64" ]]; then
+            if [[ "$PUBLISH" == "true" ]]; then
+              echo "::error::Release builds must be signed: ANDROID_KEYSTORE_BASE64 secret is missing."; exit 1
+            fi
+            echo "::warning::No release keystore secret; this APK is signed with the debug keystore."
+            echo "path=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          path="$RUNNER_TEMP/release.keystore"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$path"
+          chmod 600 "$path"
+          echo "path=$path" >> "$GITHUB_OUTPUT"
+
+      - name: Build release APK
         working-directory: android
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ steps.keystore.outputs.path }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=${{ env.RN_ARCHS }}
+
+      - name: Verify APK signature
+        env:
+          SIGNED_WITH_RELEASE_KEY: ${{ steps.keystore.outputs.path != '' }}
+        run: |
+          apk=$(ls android/app/build/outputs/apk/release/*.apk | head -n1)
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n1)/apksigner"
+          certs=$("$apksigner" verify --print-certs "$apk")
+          echo "$certs"
+          if [[ "$SIGNED_WITH_RELEASE_KEY" == "true" ]] && grep -q "CN=Android Debug" <<<"$certs"; then
+            echo "::error::Expected the release keystore but the APK is debug-signed."; exit 1
+          fi
+
+      - name: Remove decoded keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.keystore"
 
       - name: Collect APK
         run: |
