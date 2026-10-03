@@ -66,7 +66,7 @@ describe('add menu items (pure)', () => {
       'Scan Barcode',
       'Add to Shopping List',
       'Add Pantry Item',
-      'Plan a Meal',
+      'Meal Plan',
       'Share Recipe',
       'What Can I Make?',
     ]);

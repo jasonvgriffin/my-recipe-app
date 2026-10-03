@@ -39,7 +39,7 @@ export const ADD_MENU_ITEMS: readonly AddMenuItem[] = [
   },
   { id: 'add-shopping', label: 'Add to Shopping List', icon: 'cart-outline', needs: ['shoppingList'] },
   { id: 'add-pantry', label: 'Add Pantry Item', icon: 'basket-outline', needs: ['pantry'] },
-  { id: 'plan-meal', label: 'Plan a Meal', icon: 'calendar-outline', needs: ['mealPlan'] },
+  { id: 'plan-meal', label: 'Meal Plan', icon: 'calendar-outline', needs: ['mealPlan'] },
   { id: 'share-recipe', label: 'Share Recipe', icon: 'share-social-outline', needs: ['householdSync'] },
   { id: 'what-can-i-make', label: 'What Can I Make?', icon: 'restaurant-outline', needs: ['pantry'] },
 ];
@@ -53,7 +53,7 @@ export function visibleAddMenuItems(visible: (id: FeatureId) => boolean): AddMen
 
 /**
  * Route for an item (expo-router path). Scan goes to the pantry scanner when the pantry is visible, else to the
- * shopping-list scanner. Plan a Meal opens today's day plan.
+ * shopping-list scanner. Meal Plan (formerly “Plan a Meal”) opens today's day plan.
  */
 export function addMenuHref(id: AddMenuItemId, ctx: { today: string; pantryVisible: boolean }): string {
   switch (id) {

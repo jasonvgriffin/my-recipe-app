@@ -133,3 +133,5 @@ follow the Recipes-are-the-core rule above.
   scanning is locked or hidden, the Scan Item button and the “or” are both left out (#12, #27).
 - **Meal Plan hint** (`src/components/meal-calendar.tsx`): muted “Tap a day to add meal plan” text on the same row as
   the green **Today** link (to its left, above the month name) (#11).
+- **+ add sheet:** the “Plan a Meal” item is now labeled **Meal Plan** (same action: opens today’s day plan;
+  `src/lib/add-menu.ts`).
