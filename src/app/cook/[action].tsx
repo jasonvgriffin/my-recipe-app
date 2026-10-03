@@ -2,8 +2,10 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { FeatureGate, FeatureLocked } from '@/components/feature-gate';
 import { MaxWidthContainer, TwoPaneLayout } from '@/components/layout';
 import { cookSession, parseCookDeepLink, runCookCommand, type CookResult, type CurrentStep } from '@/cooking';
+import { featureGate } from '@/entitlements';
 import { colors } from '@/lib/theme';
 import { formatDuration } from '@/lib/timers';
 
@@ -13,7 +15,18 @@ import { formatDuration } from '@/lib/timers';
  * TODO(spec #19): full-screen cooking mode (keep-awake via expo-keep-awake, larger type, swipe between steps,
  * inline timers with notifications) — build it on this route + cookSession, not a separate state store.
  */
+/** Gate: in-app Cook button (`via=app`) needs cookingMode; external/assistant deep links need cookWithMe. */
 export default function CookScreen() {
+  const { via } = useLocalSearchParams<{ via?: string }>();
+  const feature = via === 'app' ? 'cookingMode' : 'cookWithMe';
+  return (
+    <FeatureGate id={feature} fallback={<FeatureLocked id={feature} />}>
+      <CookSessionView via={via === 'app' ? 'app' : 'deep_link'} />
+    </FeatureGate>
+  );
+}
+
+function CookSessionView({ via }: { via: 'app' | 'deep_link' }) {
   const { action } = useLocalSearchParams<{ action: string }>();
   const [result, setResult] = useState<CookResult | undefined>();
 
@@ -23,13 +36,13 @@ export default function CookScreen() {
     const cmd = parseCookDeepLink(`myrecipeapp://cook/${encodeURIComponent(String(action))}`);
     if (!cmd) return;
     let active = true;
-    runCookCommand(cookSession, cmd).then((r) => {
+    runCookCommand(cookSession, cmd, { via }).then((r) => {
       if (active) setResult(r);
     });
     return () => {
       active = false;
     };
-  }, [action]);
+  }, [action, via]);
 
   const step: CurrentStep | undefined = result?.ok && 'step' in result ? result.step : undefined;
 
@@ -60,7 +73,9 @@ export default function CookScreen() {
               <View style={styles.buttons}>
                 <Btn label="‹ Back" onPress={() => run(cookSession.previous())} disabled={step.isFirst} />
                 <Btn label="Repeat" onPress={() => run(cookSession.repeat())} />
-                {step.durationSeconds ? <Btn label="Timer" onPress={() => run(cookSession.startStepTimer())} /> : null}
+                {step.durationSeconds && featureGate.canUse('timers') ? (
+                  <Btn label="Timer" onPress={() => run(cookSession.startStepTimer())} />
+                ) : null}
                 <Btn label={step.isLast ? 'Finish' : 'Next ›'} onPress={() => run(cookSession.next())} primary />
               </View>
             </ScrollView>

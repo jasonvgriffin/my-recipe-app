@@ -1,3 +1,4 @@
+import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import { createRecipe } from '@/lib/recipe-utils';
 import type { RecipeStore } from '@/storage/recipes';
 import { findForbiddenIngredients, type Recipe, PREFERRED_SWEETENER } from '@/types/recipe';
@@ -16,6 +17,8 @@ import {
 } from './types';
 
 export interface ImportDeps {
+  /** Feature gate (paywall-ready). Defaults to the app-wide gate. url/text imports need `linkImport`. */
+  canUse?: CanUse;
   store: Pick<RecipeStore, 'list' | 'save' | 'addCategory'>;
   /** Download a page's HTML. Injected so tests (and a future server) can stub it. */
   fetchHtml: (url: string) => Promise<string>;
@@ -42,6 +45,9 @@ export async function importRecipeWith(
   const parsedInput = RecipeImportInputSchema.safeParse(input);
   if (!parsedInput.success) return fail('invalid_input', ...parsedInput.error.issues.map(formatIssue));
   const source: ImportSource | undefined = parsedInput.data.source;
+  if ((input.kind === 'url' || input.kind === 'text') && !(deps.canUse ?? defaultCanUse)('linkImport')) {
+    return fail('feature_locked', 'Importing from a link or text is not available.');
+  }
 
   // 1. Turn the input into an unvalidated draft.
   let rawDraft: unknown;

@@ -1,3 +1,4 @@
+import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import type { KeyValueStore } from '@/storage/kv';
 import type { SyncTable } from '@/types/sync';
 
@@ -30,6 +31,8 @@ export interface SyncEngineDeps {
   householdId: string;
   userId: string;
   now?: () => Date;
+  /** Feature gate (paywall-ready). Without `householdSync` the engine is a no-op (local data untouched). */
+  canUse?: CanUse;
 }
 
 /**
@@ -48,6 +51,7 @@ export function createSyncEngine({
   householdId,
   userId,
   now = () => new Date(),
+  canUse = defaultCanUse,
 }: SyncEngineDeps) {
   async function loadCursors(): Promise<Cursors> {
     try {
@@ -59,6 +63,10 @@ export function createSyncEngine({
   }
 
   async function syncOnce(): Promise<SyncResult> {
+    if (!canUse('householdSync')) {
+      const zero = Object.fromEntries(SYNC_TABLES.map((t) => [t, 0])) as SyncResult['pushed'];
+      return { pushed: zero, pulled: { ...zero }, skipped: 'feature_locked' };
+    }
     const cursors = await loadCursors();
     const result: SyncResult = {
       pushed: {} as SyncResult['pushed'],

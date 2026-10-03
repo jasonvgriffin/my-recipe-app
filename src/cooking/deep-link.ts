@@ -1,3 +1,4 @@
+import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import { parseUrl } from '@/import/url';
 
 import type { CookResult, CookSession } from './session';
@@ -29,7 +30,21 @@ export function parseCookDeepLink(link: string): CookCommand | undefined {
 }
 
 /** Execute a parsed command against the session (used by the deep-link route and, later, the MCP server). */
-export function runCookCommand(session: CookSession, cmd: CookCommand): Promise<CookResult> {
+export function runCookCommand(
+  session: CookSession,
+  cmd: CookCommand,
+  /** 'app' = in-app Cook button (cooking mode #19); 'deep_link' = assistant / external link (cook-with-me #24). */
+  opts: { via?: 'app' | 'deep_link'; canUse?: CanUse } = {},
+): Promise<CookResult> {
+  const gate = opts.canUse ?? defaultCanUse;
+  const feature = opts.via === 'app' ? 'cookingMode' : 'cookWithMe';
+  if (!gate(feature)) {
+    return Promise.resolve({
+      ok: false,
+      code: 'feature_locked',
+      message: feature === 'cookWithMe' ? 'Cook-with-me is not available.' : 'Cooking mode is not available.',
+    });
+  }
   switch (cmd.action) {
     case 'start':
       return session.startSession(cmd.recipeId, cmd.stepIndex);

@@ -12,6 +12,14 @@ verification priority. Acceptance: full recipe workflow with all optional featur
 These rules apply to every screen and PR. They come from Jason's v1 spec (docs/SPEC.md) — notably
 #13 dark theme, #23 foldables, #24 cook-with-me, #25 household sharing, #27 barcode lookup.
 
+## 0b. Paywall-ready feature gating
+
+Every optional feature has a `FeatureId` in `src/entitlements/features.ts` and every entry point checks it:
+UI via `useFeature` / `useFeatureVisible` / `<FeatureGate>`, modules via `canUse` (inject `canUse` in deps
+for tests). Gate ≠ Settings toggle (need both). Core recipe CRUD/view/search is never gated. v1 config is all
+free with `LocalFreeEntitlements`; no billing SDK or payment UI. Test: `__tests__/entitlements.test.tsx`.
+Full rule: top of docs/SPEC.md.
+
 ## 1. Dark theme (spec #13)
 
 - Dark by default and throughout. Use `colors` / `navigationTheme` from `src/lib/theme.ts`; never hard-code
@@ -63,6 +71,7 @@ Screens stay thin. Shared logic goes in pure, tested modules that a future MCP s
 - `src/import/` — the ONLY way recipes enter the app (docs/IMPORT_API.md)
 - `src/cooking/` — cook-with-me session state (docs/COOK_API.md)
 - `src/sync/` + `src/storage/` — repositories and household sync (docs/SYNC.md)
+- `src/entitlements/` — feature gate (`canUse`, registry, providers)
 - `src/pantry/` — barcode lookup (Open Food Facts + local/household cache); receipt parsing goes here too
   ESLint forbids React / react-native / expo imports inside those modules.
 

@@ -11,6 +11,15 @@ or empty; empty optional features never nag; Settings → Optional features hide
 features get priority in verification. `__tests__/recipes-first.test.tsx` (full recipe workflow with all
 optional features hidden) must stay green. Full text: top of `docs/SPEC.md`.
 
+## Rule #2: PAYWALL-READY FEATURE GATING
+
+Every optional feature is registered in `src/entitlements/` (`FeatureId`, config `{ tier, enabled }` — all
+free in v1, `EntitlementProvider` — v1 `LocalFreeEntitlements`). Route every entry point (tab, button, deep
+link, sync, module call) through the gate: `useFeature` / `useFeatureVisible` / `<FeatureGate>` in UI,
+`canUse(id)` in UI-free modules. The gate is separate from Settings show/hide toggles. Never gate core recipe
+CRUD/view/search. No billing SDK, no payment UI. Keep `__tests__/entitlements.test.tsx` green and add a case
+for each new gated feature. Full text: top of `docs/SPEC.md`.
+
 ## What this is
 
 **My Recipe App** — an AI-friendly, diabetic-friendly recipe app for Jason Griffin.

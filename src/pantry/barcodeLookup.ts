@@ -6,6 +6,7 @@
  * → Open Food Facts API (free, no key) → not found / offline → caller asks the user for a name once and
  * calls `saveUserProduct`, which is stored household-wide so nobody has to type it again.
  */
+import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import type { Collection } from '@/storage/kv';
 import type { SyncMeta } from '@/types/sync';
 
@@ -43,7 +44,8 @@ export type BarcodeLookupResult =
   | { status: 'found'; source: 'cache' | 'openfoodfacts'; product: BarcodeProduct }
   | { status: 'not_found'; barcode: string } // ask the user for a name → saveUserProduct
   | { status: 'offline'; barcode: string; error: string } // same UX; retry later is optional
-  | { status: 'invalid'; barcode: string; error: string };
+  | { status: 'invalid'; barcode: string; error: string }
+  | { status: 'locked'; barcode: string; error: string }; // barcodeScan gated off (src/entitlements)
 
 export interface BarcodeDeps {
   /** Household-shared mapping store. */
@@ -51,6 +53,8 @@ export interface BarcodeDeps {
   fetchJson: (url: string, headers: Record<string, string>) => Promise<{ status: number; json: unknown }>;
   newId: () => string;
   now?: () => Date;
+  /** Feature gate (paywall-ready). Defaults to the app-wide gate. */
+  canUse?: CanUse;
 }
 
 /** Normalize and validate EAN-13 / EAN-8 / UPC-A (12) / UPC-E (8) codes (check digit verified for 8/12/13). */
@@ -115,7 +119,13 @@ export function parseOpenFoodFacts(barcode: string, json: unknown): BarcodeProdu
   };
 }
 
-export function createBarcodeLookup({ items, fetchJson, newId, now = () => new Date() }: BarcodeDeps) {
+export function createBarcodeLookup({
+  items,
+  fetchJson,
+  newId,
+  now = () => new Date(),
+  canUse = defaultCanUse,
+}: BarcodeDeps) {
   async function findLocal(barcode: string) {
     return (await items.all()).find((i) => i.barcode === barcode);
   }
@@ -141,6 +151,8 @@ export function createBarcodeLookup({ items, fetchJson, newId, now = () => new D
 
   return {
     async lookup(rawBarcode: string): Promise<BarcodeLookupResult> {
+      if (!canUse('barcodeScan'))
+        return { status: 'locked', barcode: rawBarcode, error: 'Barcode scanning is not available.' };
       const barcode = normalizeBarcode(rawBarcode);
       if (!barcode) return { status: 'invalid', barcode: rawBarcode, error: 'Not a valid EAN/UPC barcode.' };
       const cached = await findLocal(barcode);

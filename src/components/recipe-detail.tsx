@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { toIsoDate } from '@/lib/dates';
-import { useSettings } from '@/hooks/use-settings';
+import { FeatureGate } from '@/components/feature-gate';
+import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { formatIngredient } from '@/lib/ingredients';
 import { setCooked } from '@/lib/recipe-utils';
 import { formatDuration } from '@/lib/timers';
@@ -28,7 +29,10 @@ export interface RecipeDetailProps {
 export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined);
   // Optional cross-links (meal plan) only appear when that feature is enabled — recipes-first rule.
-  const { features } = useSettings();
+  // Gated entry points (src/entitlements) — recipe view/edit/delete itself is never gated.
+  const showPlanToday = useFeatureVisible('mealPlan');
+  const timers = useFeature('timers').available;
+  const tags = useFeature('tags').available;
 
   // Parents should pass `key={id}` when switching recipes so state resets cleanly.
   const onChangeRef = useRef(onChange);
@@ -108,7 +112,7 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
         />
       </View>
       {isLowCarb(recipe) && <Text style={styles.badge}>Low-carb</Text>}
-      {recipe.tags.length > 0 && (
+      {tags && recipe.tags.length > 0 && (
         <View style={styles.tagRow}>
           {recipe.tags.map((t) => (
             <Text key={t} style={styles.tag}>
@@ -123,12 +127,14 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
             {recipe.cooked ? '✓ Cooked' : 'Mark cooked'}
           </Text>
         </Pressable>
-        <Link href={{ pathname: '/cook/[action]', params: { action: recipe.id } }} asChild>
-          <Pressable style={styles.action} testID="cook-button">
-            <Text style={styles.actionText}>Cook</Text>
-          </Pressable>
-        </Link>
-        {features.mealPlan ? (
+        <FeatureGate id="cookingMode">
+          <Link href={{ pathname: '/cook/[action]', params: { action: recipe.id, via: 'app' } }} asChild>
+            <Pressable style={styles.action} testID="cook-button">
+              <Text style={styles.actionText}>Cook</Text>
+            </Pressable>
+          </Link>
+        </FeatureGate>
+        {showPlanToday ? (
           <Pressable style={styles.action} onPress={() => planToday(recipe)} testID="plan-today-button">
             <Text style={styles.actionText}>Plan for today</Text>
           </Pressable>
@@ -152,7 +158,9 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
       {recipe.steps.map((st, idx) => (
         <Text key={idx} style={styles.item}>
           {idx + 1}. {st.text}
-          {st.durationSeconds ? <Text style={styles.timer}> ⏱ {formatDuration(st.durationSeconds)}</Text> : null}
+          {timers && st.durationSeconds ? (
+            <Text style={styles.timer}> ⏱ {formatDuration(st.durationSeconds)}</Text>
+          ) : null}
         </Text>
       ))}
       {recipe.notes ? (

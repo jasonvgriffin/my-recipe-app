@@ -1,7 +1,7 @@
 import { Link, Tabs } from 'expo-router';
 import { Pressable, Text, type ColorValue } from 'react-native';
 
-import { useSettings } from '@/hooks/use-settings';
+import { useFeatureVisible } from '@/hooks/use-feature';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { colors } from '@/lib/theme';
 
@@ -17,8 +17,10 @@ function TabIcon({ glyph, color }: { glyph: string; color: ColorValue }) {
 export default function TabsLayout() {
   // Expanded width (unfolded foldable / tablet): navigation moves to a side rail (spec #23).
   const { useNavigationRail } = useWindowSizeClass();
-  const { features } = useSettings();
-  const anyOptionalTab = features.mealPlan || features.shopping;
+  // Optional tabs need BOTH the feature gate (paywall-ready, src/entitlements) and the user's Settings toggle.
+  const showMealPlan = useFeatureVisible('mealPlan');
+  const showShopping = useFeatureVisible('shoppingList');
+  const anyOptionalTab = showMealPlan || showShopping;
   return (
     <Tabs
       screenOptions={{
@@ -56,7 +58,7 @@ export default function TabsLayout() {
         name="meal-plan"
         options={{
           title: 'Meal plan',
-          href: features.mealPlan ? undefined : null,
+          href: showMealPlan ? undefined : null,
           tabBarIcon: ({ color }) => <TabIcon glyph="📅" color={color} />,
         }}
       />
@@ -64,7 +66,7 @@ export default function TabsLayout() {
         name="shopping"
         options={{
           title: 'Shopping list',
-          href: features.shopping ? undefined : null,
+          href: showShopping ? undefined : null,
           tabBarIcon: ({ color }) => <TabIcon glyph="🛒" color={color} />,
         }}
       />

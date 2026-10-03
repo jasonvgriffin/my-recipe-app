@@ -6,6 +6,7 @@
  *
  * UI-free (no React / react-native). State is persisted in a KeyValueStore so it survives app restarts.
  */
+import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import type { KeyValueStore } from '@/storage/kv';
 import type { Ingredient, Recipe } from '@/types/recipe';
 
@@ -47,7 +48,7 @@ export interface CurrentStep {
   timer?: StepTimer & { remainingSeconds: number };
 }
 
-export type CookErrorCode = 'no_session' | 'recipe_not_found' | 'no_steps' | 'no_timer_for_step';
+export type CookErrorCode = 'no_session' | 'recipe_not_found' | 'no_steps' | 'no_timer_for_step' | 'feature_locked';
 
 export type CookResult =
   | {
@@ -62,6 +63,8 @@ export interface CookDeps {
   getRecipe: (id: string) => Promise<Recipe | undefined>;
   kv: KeyValueStore;
   now?: () => Date;
+  /** Feature gate (paywall-ready). Defaults to the app-wide gate. */
+  canUse?: CanUse;
 }
 
 const STOP_WORDS = new Set(['and', 'the', 'for', 'with', 'taste', 'fresh', 'large', 'small', 'dried']);
@@ -79,7 +82,12 @@ export function ingredientsForStep(stepText: string, ingredients: Ingredient[]):
     .map(formatIngredient);
 }
 
-export function createCookSession({ getRecipe, kv, now = () => new Date() }: CookDeps) {
+export function createCookSession({ getRecipe, kv, now = () => new Date(), canUse = defaultCanUse }: CookDeps) {
+  /** The session powers both cooking mode (#19) and cook-with-me (#24); either one unlocks it. */
+  const sessionLocked = (): CookResult | undefined =>
+    canUse('cookingMode') || canUse('cookWithMe')
+      ? undefined
+      : { ok: false, code: 'feature_locked', message: 'Cooking mode is not available.' };
   async function load(): Promise<CookSessionState | undefined> {
     try {
       const raw = await kv.getItem(COOK_SESSION_STORAGE_KEY);
@@ -117,6 +125,8 @@ export function createCookSession({ getRecipe, kv, now = () => new Date() }: Coo
   /** Load session + recipe, clamping the index if the recipe was edited meanwhile. */
   async function active(): Promise<{ state: CookSessionState; recipe: Recipe } | CookResult> {
     const state = await load();
+    const locked = sessionLocked();
+    if (locked) return locked;
     if (!state) return { ok: false, code: 'no_session', message: 'No cooking session. Start one with a recipe first.' };
     const recipe = await getRecipe(state.recipeId);
     if (!recipe)
@@ -142,6 +152,8 @@ export function createCookSession({ getRecipe, kv, now = () => new Date() }: Coo
   return {
     /** Start (or restart) cooking a recipe at step 1 (or `stepIndex`). Replaces any existing session. */
     async startSession(recipeId: string, stepIndex = 0): Promise<CookResult> {
+      const locked = sessionLocked();
+      if (locked) return locked;
       const recipe = await getRecipe(recipeId);
       if (!recipe) return { ok: false, code: 'recipe_not_found', message: `No recipe with id ${recipeId}.` };
       if (recipe.steps.length === 0) return { ok: false, code: 'no_steps', message: `“${recipe.title}” has no steps.` };
@@ -183,6 +195,7 @@ export function createCookSession({ getRecipe, kv, now = () => new Date() }: Coo
      * state; the UI layer schedules the local notification (expo-notifications) for `endsAt`.
      */
     async startStepTimer(durationSeconds?: number): Promise<CookResult> {
+      if (!canUse('timers')) return { ok: false, code: 'feature_locked', message: 'Step timers are not available.' };
       const a = await active();
       if (isErr(a)) return a;
       const secs = durationSeconds ?? a.recipe.steps[a.state.stepIndex].durationSeconds;

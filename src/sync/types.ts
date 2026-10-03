@@ -17,4 +17,6 @@ export type SyncCollections = Record<SyncTable, Collection<StoredRecord>>;
 export interface SyncResult {
   pushed: Record<SyncTable, number>;
   pulled: Record<SyncTable, number>;
+  /** Set when nothing ran because the householdSync feature is gated off. */
+  skipped?: 'feature_locked';
 }

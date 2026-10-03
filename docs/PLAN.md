@@ -35,6 +35,8 @@ Household sync on Supabase (#25) **is** in v1 (project live, migrations applied)
       adapter, migrations applied to the live project + CI migration workflow (#25, docs/SYNC.md)
 - [x] Barcode lookup module (Open Food Facts + cache + user mapping) (#27)
 - [x] Settings → Optional features toggles; recipes-first acceptance test
+- [x] Paywall-ready gating: `src/entitlements` (registry, config all free, `LocalFreeEntitlements`), `useFeature`,
+      `<FeatureGate>`, `canUse` in import/cooking/sync/pantry; tests
 
 ## Phase 2 — v1 features per SPEC.md (cloud-agent PRs)
 
@@ -99,6 +101,10 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
 - QA pass for iOS-specific UI (safe areas, keyboard, share extension).
 
 ## Open decisions for Jason
+
+- **Monetization (later):** which features go premium, and the billing path (Google Play Billing via
+  RevenueCat, or Supabase-backed entitlements). Code is ready: flip `tier` in
+  `src/entitlements/features.ts` and plug in an `EntitlementProvider`.
 
 1. **Distribution on Android:** sideload the v1.0.0 GitHub Release APK (private repo → must be signed in to
    GitHub to download), or publish via Google Play (one-time $25 developer fee, needs a real release keystore)?

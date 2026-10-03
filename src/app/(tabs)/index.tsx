@@ -4,6 +4,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, Vi
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
 import { RecipeDetail } from '@/components/recipe-detail';
+import { useFeature } from '@/hooks/use-feature';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { filterRecipes, type RecipeFilter } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
@@ -27,6 +28,8 @@ const FILTER_LABELS: Record<FilterMode, string> = {
 
 export default function RecipeListScreen() {
   const [recipes, setRecipes] = useState<Recipe[] | null>(null);
+  const showRatings = useFeature('ratings').available;
+  const showTags = useFeature('tags').available;
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<FilterMode>('all');
   /** Selected recipe for the detail pane (medium/expanded). Kept across fold/unfold. */
@@ -97,9 +100,11 @@ export default function RecipeListScreen() {
               {netCarbs(item.nutrition) ?? '?'} g net carbs/serving · {item.servings} servings
               {isLowCarb(item) ? ' · low-carb' : ''}
               {item.cooked ? ' · cooked' : ''}
-              {item.rating ? ` · ${'★'.repeat(item.rating)}` : ''}
+              {showRatings && item.rating ? ` · ${'★'.repeat(item.rating)}` : ''}
             </Text>
-            {item.tags.length > 0 && <Text style={styles.tags}>{item.tags.map((t) => `#${t}`).join('  ')}</Text>}
+            {showTags && item.tags.length > 0 && (
+              <Text style={styles.tags}>{item.tags.map((t) => `#${t}`).join('  ')}</Text>
+            )}
           </Pressable>
         )}
       />

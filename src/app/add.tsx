@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { useFeature } from '@/hooks/use-feature';
 import { createRecipe, parseLines, parseTags } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
 import { recipeStore } from '@/storage/recipes';
@@ -13,6 +14,7 @@ export default function AddRecipeScreen() {
   const [ingredients, setIngredients] = useState('');
   const [steps, setSteps] = useState('');
   const [tags, setTags] = useState('low-carb, diabetic-friendly');
+  const tagsAvailable = useFeature('tags').available;
   const [servings, setServings] = useState('4');
   const [carbs, setCarbs] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
@@ -23,7 +25,7 @@ export default function AddRecipeScreen() {
       title,
       ingredients: parseLines(ingredients).map((text) => ({ text })),
       steps: parseLines(steps).map((text) => ({ text })),
-      tags: parseTags(tags),
+      tags: tagsAvailable ? parseTags(tags) : [],
       servings: Number(servings),
       nutrition: { netCarbsG: carbs.trim() === '' ? undefined : Number(carbs), source: 'manual' },
     };
@@ -74,15 +76,17 @@ export default function AddRecipeScreen() {
           />
         </Field>
         {/* TODO(spec #1,#3,#4,#6,#17,#22): link import, category picker, photo, notes, full nutrition, rating. */}
-        <Field label="Tags (comma separated)">
-          <TextInput
-            placeholderTextColor={colors.placeholder}
-            style={styles.input}
-            value={tags}
-            onChangeText={setTags}
-            autoCapitalize="none"
-          />
-        </Field>
+        {tagsAvailable ? (
+          <Field label="Tags (comma separated)">
+            <TextInput
+              placeholderTextColor={colors.placeholder}
+              style={styles.input}
+              value={tags}
+              onChangeText={setTags}
+              autoCapitalize="none"
+            />
+          </Field>
+        ) : null}
         <View style={styles.row}>
           <View style={styles.flex}>
             <Field label="Servings">

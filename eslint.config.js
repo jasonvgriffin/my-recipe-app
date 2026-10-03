@@ -10,7 +10,7 @@ module.exports = defineConfig([
   {
     // The import pipeline, cook-with-me session and sync engine must stay UI-free and storage-agnostic so a future MCP server / sync worker
     // can reuse it. Only index.ts / app-deps.ts bind the on-device store. See docs/IMPORT_API.md.
-    files: ['src/import/**/*.ts', 'src/cooking/**/*.ts', 'src/sync/**/*.ts', 'src/pantry/**/*.ts'],
+    files: ['src/import/**/*.ts', 'src/cooking/**/*.ts', 'src/sync/**/*.ts', 'src/pantry/**/*.ts', 'src/entitlements/**/*.ts'],
     ignores: ['src/import/index.ts', 'src/import/app-deps.ts', 'src/cooking/index.ts', 'src/sync/index.ts', 'src/sync/supabase.ts', 'src/pantry/index.ts'],
     rules: {
       'no-restricted-imports': [

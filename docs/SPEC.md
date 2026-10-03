@@ -17,6 +17,26 @@
 > - **Acceptance criterion:** the full recipe workflow (browse, search, add, open, cook, rate, delete) works with
 >   all optional features hidden — `__tests__/recipes-first.test.tsx`.
 
+> ## 🔒 PAYWALL-READY FEATURE GATING (rule for every agent)
+>
+> Any optional feature must be paywallable later without refactoring (likely candidates: pantry incl.
+> receipt/barcode scanning, household sharing — but the design supports ANY feature). **v1: everything is
+> free; no billing SDK, no payment UI.**
+>
+> - `src/entitlements/`: `FeatureId` registry of every optional feature, config map
+>   `FeatureId → { tier: 'free' | 'premium', enabled }` (all free in v1), `EntitlementProvider` interface
+>   (v1 `LocalFreeEntitlements` grants everything; later Play/App Store billing, RevenueCat or Supabase).
+> - UI uses `useFeature(id) → { available, reason }`, `useFeatureVisible(id)` and `<FeatureGate id fallback>`;
+>   UI-free modules (import, cooking, sync, pantry) call `canUse(id)` (injectable via their deps).
+> - **Every** optional feature's entry points (tabs, buttons, deep links, sync, module calls) go through the
+>   gate. The gate is separate from the user's Settings show/hide toggles — an entry point renders only when
+>   the gate allows it AND the user hasn't hidden it.
+> - **Core recipe CRUD / view / search is never gated** (recipes-first). Locked features disappear quietly;
+>   deep links to them show a neutral message.
+> - New optional feature = new `FeatureId` + registry/config row + gated entry points + a test.
+> - **Acceptance:** flipping features to premium with no entitlement hides/locks their entry points and the
+>   recipe workflow still works — `__tests__/entitlements.test.tsx`.
+
 Source: Jason Griffin, 2026-10-02/03 (items 15–27 added later). **v1 = this spec.**
 
 > **Release rule: v1.0.0 = ALL features 1–27 complete.** The first published APK is **v1.0.0**.
