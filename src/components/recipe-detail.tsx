@@ -4,7 +4,9 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, T
 
 import { toIsoDate } from '@/lib/dates';
 import { FeatureGate } from '@/components/feature-gate';
+import { SharedBy } from '@/components/shared-by';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
+import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { formatIngredient } from '@/lib/ingredients';
 import { setCooked } from '@/lib/recipe-utils';
 import { formatDuration } from '@/lib/timers';
@@ -50,6 +52,12 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
       active = false;
     };
   }, [id]);
+  useOnDataChange(() => {
+    void recipeStore.get(id).then((r) => {
+      setRecipe(r ?? null);
+      if (r) onChangeRef.current?.(r);
+    });
+  });
 
   if (recipe === undefined) {
     return (
@@ -102,6 +110,7 @@ export function RecipeDetail({ id, onDeleted, onChange }: RecipeDetailProps) {
   return (
     <ScrollView contentContainerStyle={styles.container} testID="recipe-detail">
       <Text style={styles.title}>{recipe.title}</Text>
+      <SharedBy createdBy={recipe.createdBy} />
       {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}
       <View style={styles.stats}>
         <Stat label="Servings" value={String(recipe.servings)} />

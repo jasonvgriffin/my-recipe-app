@@ -127,4 +127,80 @@ describe('household sync (spec #25)', () => {
       getSupabaseConfig({ EXPO_PUBLIC_SUPABASE_URL: 'https://x.supabase.co/', EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon' }),
     ).toEqual({ url: 'https://x.supabase.co', anonKey: 'anon' });
   });
+
+  it('round-trips every synced record with household_id and author', async () => {
+    const remote = fakeRemote();
+    const alice = device();
+    const bob = device();
+    setIdentity({ userId: 'alice', householdId: HH });
+    const when = at('2026-10-03T08:00:00.000Z');
+
+    const recipe = await alice.recipes.save({ ...SEED_RECIPES[0] }, when);
+    const category = await alice.recipes.addCategory('Dinner', when);
+    const pantry = await alice.pantry.upsert('allulose', 1, 'cup', when);
+    const plan = await alice.plan.addEntry('2026-10-05', recipe.id, 'dinner', when);
+    await alice.plan.saveShoppingList(
+      {
+        id: 'week',
+        weekStart: '2026-10-05',
+        createdAt: when.toISOString(),
+        updatedAt: when.toISOString(),
+        items: [
+          {
+            id: 'shop-1',
+            weekStart: '2026-10-05',
+            text: '1 cup allulose',
+            name: 'allulose',
+            checked: false,
+            recipeIds: [recipe.id],
+            createdAt: when.toISOString(),
+            updatedAt: when.toISOString(),
+          },
+        ],
+      },
+      when,
+    );
+    await alice.collections.barcode_items.save(
+      {
+        id: 'barcode-1',
+        barcode: '0123456789055',
+        name: 'Allulose',
+        source: 'user',
+        createdAt: when.toISOString(),
+        updatedAt: when.toISOString(),
+      } as never,
+      when,
+    );
+
+    const engineA = createSyncEngine({ ...alice, remote, householdId: HH, userId: 'alice', now: () => when });
+    const engineB = createSyncEngine({ ...bob, remote, householdId: HH, userId: 'bob', now: () => when });
+    await engineA.syncOnce();
+    await engineB.syncOnce();
+
+    const authored: { table: SyncTable; id: string; extra?: Record<string, unknown> }[] = [
+      { table: 'recipes', id: recipe.id, extra: { title: recipe.title } },
+      { table: 'categories', id: category.id, extra: { name: 'Dinner' } },
+      { table: 'pantry_items', id: pantry.id, extra: { name: 'allulose' } },
+      { table: 'meal_plan_entries', id: plan.id, extra: { recipe_id: recipe.id } },
+      { table: 'shopping_items', id: 'shop-1', extra: { week_start: '2026-10-05', checked: false } },
+      { table: 'barcode_items', id: 'barcode-1', extra: { barcode: '0123456789055', name: 'Allulose' } },
+    ];
+    for (const { table, id, extra } of authored) {
+      const row = remote.rows.get(table)!.get(id);
+      expect(row).toMatchObject({ household_id: HH, created_by: 'alice', deleted_at: null, ...extra });
+      expect(row?.data).not.toHaveProperty('householdId');
+      expect(row?.data).not.toHaveProperty('createdBy');
+      expect(fromRow(row!)).toMatchObject({ householdId: HH, createdBy: 'alice' });
+    }
+
+    expect((await bob.recipes.get(recipe.id))?.createdBy).toBe('alice');
+    expect((await bob.recipes.listCategories()).map((c) => c.name)).toEqual(['Dinner']);
+    expect((await bob.pantry.list()).map((p) => p.name)).toEqual(['allulose']);
+    expect((await bob.plan.entriesForDates(['2026-10-05'])).map((e) => e.recipeId)).toEqual([recipe.id]);
+    expect((await bob.plan.getShoppingList('2026-10-05'))?.items.map((i) => i.text)).toEqual(['1 cup allulose']);
+    const alias = (await bob.collections.barcode_items.all()).find((i) => i.id === 'barcode-1') as
+      | { name?: string; createdBy?: string; householdId?: string }
+      | undefined;
+    expect(alias).toMatchObject({ name: 'Allulose', createdBy: 'alice', householdId: HH });
+  });
 });

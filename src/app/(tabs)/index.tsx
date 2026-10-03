@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, Vi
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
 import { RecipeDetail } from '@/components/recipe-detail';
 import { useFeature } from '@/hooks/use-feature';
+import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { filterRecipes, type RecipeFilter } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
@@ -37,6 +38,9 @@ export default function RecipeListScreen() {
   const { isTwoPane } = useWindowSizeClass();
 
   const reload = useCallback(async () => setRecipes(await recipeStore.list()), []);
+  useOnDataChange(() => {
+    void reload();
+  });
 
   function openRecipe(id: string) {
     if (isTwoPane) setSelectedId(id);

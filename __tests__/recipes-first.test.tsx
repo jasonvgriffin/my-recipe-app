@@ -15,7 +15,9 @@ const routes = () => ({
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
   add: require('@/app/add').default,
   'recipe/[id]': require('@/app/recipe/[id]').default,
+  'cook/[action]': require('@/app/cook/[action]').default,
   settings: require('@/app/settings').default,
+  household: require('@/app/household').default,
 });
 
 beforeEach(async () => {

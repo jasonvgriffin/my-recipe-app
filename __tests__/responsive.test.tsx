@@ -118,6 +118,15 @@ describe.each([
     expect((await screen.findAllByText(text)).length).toBeGreaterThan(0);
   });
 
+  it('Household settings screen shows account and members panes', async () => {
+    const Household = require('@/app/household').default;
+    renderRouter({ index: Household }, { initialUrl: '/' });
+    expect(await screen.findByTestId(width >= 600 ? 'household-layout-dual' : 'household-layout-single')).toBeTruthy();
+    expect(screen.getByTestId('household-screen')).toBeTruthy();
+    expect(screen.getByText(/Invite code and members/)).toBeTruthy();
+    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
+  });
+
   it('cook screen (deep link myrecipeapp://cook/{id}) shows the current step', async () => {
     const { recipeStore } = require('@/storage/recipes');
     await recipeStore.seedIfNeeded();

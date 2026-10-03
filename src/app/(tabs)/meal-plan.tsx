@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { fromIsoDate, startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
 import { colors } from '@/lib/theme';
 import { mealPlanStore } from '@/storage/meal-plan';
@@ -36,6 +37,13 @@ export default function MealPlanScreen() {
       };
     }, [days]),
   );
+  useOnDataChange(() => {
+    void (async () => {
+      const [e, r] = await Promise.all([mealPlanStore.entriesForDates(days), recipeStore.list()]);
+      setEntries(e);
+      setRecipes(new Map(r.map((x) => [x.id, x])));
+    })();
+  });
 
   function shiftWeek(delta: number) {
     const d = fromIsoDate(weekStart);

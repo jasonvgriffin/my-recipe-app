@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { getIdentity } from './identity';
+import { notifyDataChange } from './writes';
 
 /** Minimal key-value interface so storage can be swapped (tests, SQLite, sync backend). */
 export interface KeyValueStore {
@@ -92,11 +93,13 @@ export function createCollection<T extends StoredRecord>(
       if (idx >= 0) items[idx] = stamped;
       else items.push(stamped);
       await replaceAll(items);
+      notifyDataChange();
       return stamped;
     },
     async remove(id, now = new Date()) {
       const ts = now.toISOString();
       await replaceAll((await allRaw()).map((x) => (x.id === id ? { ...x, deletedAt: ts, updatedAt: ts } : x)));
+      notifyDataChange();
     },
     async changesSince(sinceIso) {
       const items = await allRaw();
@@ -116,7 +119,10 @@ export function createCollection<T extends StoredRecord>(
           applied++;
         }
       }
-      if (applied) await replaceAll(items);
+      if (applied) {
+        await replaceAll(items);
+        notifyDataChange();
+      }
       return applied;
     },
     async purgeTombstones(beforeIso) {

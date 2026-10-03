@@ -162,6 +162,7 @@ const routes = () => ({
   'recipe/[id]': require('@/app/recipe/[id]').default,
   'cook/[action]': require('@/app/cook/[action]').default,
   settings: require('@/app/settings').default,
+  household: require('@/app/household').default,
 });
 
 describe('UI entry points follow the gate (separate from Settings toggles)', () => {

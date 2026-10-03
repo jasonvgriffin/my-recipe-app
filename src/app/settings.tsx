@@ -1,11 +1,15 @@
-import { ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Link } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { FeatureGate } from '@/components/feature-gate';
 import { featureGate, type FeatureId } from '@/entitlements';
 import { useFeature } from '@/hooks/use-feature';
+import { useHousehold } from '@/hooks/use-household';
 import { useSettings } from '@/hooks/use-settings';
 import { colors } from '@/lib/theme';
 import { settingsStore } from '@/storage/settings';
+import { syncStatusLabel } from '@/sync/status';
 import type { OptionalFeatures } from '@/types/recipe';
 
 const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; help: string }[] = [
@@ -21,8 +25,28 @@ const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; h
 
 /**
  * Settings. Recipes are the core: everything here is optional. Turning all features off makes the app a
- * pure recipe box. TODO(spec #25): "Household sharing" section (opt-in sign-in), TODO(spec #16): units.
+ * pure recipe box. TODO(spec #16): units.
  */
+function HouseholdSettingsLink() {
+  const { account, sync } = useHousehold();
+  const subtitle = !account.user
+    ? 'Share recipes with your household. Optional — recipes work without an account.'
+    : account.household
+      ? `${account.household.name} · ${syncStatusLabel(sync)}`
+      : 'Signed in, not in a household yet.';
+  return (
+    <Link href="/household" asChild>
+      <Pressable accessibilityRole="button" testID="household-settings-link" style={styles.row}>
+        <View style={styles.flex}>
+          <Text style={styles.label}>Household</Text>
+          <Text style={styles.help}>{subtitle}</Text>
+        </View>
+        <Text style={styles.label}>›</Text>
+      </Pressable>
+    </Link>
+  );
+}
+
 export default function SettingsScreen() {
   const settings = useSettings();
   // Subscribe to gate changes; toggles for gated-off (e.g. future premium) features are not shown.
@@ -48,6 +72,9 @@ export default function SettingsScreen() {
             />
           </View>
         ))}
+        <FeatureGate id="householdSync">
+          <HouseholdSettingsLink />
+        </FeatureGate>
       </ScrollView>
     </MaxWidthContainer>
   );

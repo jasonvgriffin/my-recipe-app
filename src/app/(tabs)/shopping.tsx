@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
 import { buildShoppingList, toggleItem } from '@/lib/shopping';
 import { colors } from '@/lib/theme';
@@ -24,6 +25,9 @@ export default function ShoppingScreen() {
       mealPlanStore.getShoppingList(weekStart).then(setList);
     }, [weekStart]),
   );
+  useOnDataChange(() => {
+    void mealPlanStore.getShoppingList(weekStart).then(setList);
+  });
 
   async function compile() {
     const days = weekDates(weekStart);
