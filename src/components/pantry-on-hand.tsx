@@ -1,9 +1,10 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { useFeatureVisible } from '@/hooks/use-feature';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 import { pantryStore } from '@/storage/pantry';
 import type { PantryItem } from '@/types/recipe';
 
@@ -13,6 +14,8 @@ import type { PantryItem } from '@/types/recipe';
  * Hidden pantry stays quiet — no prompt to open it.
  */
 export function PantryOnHand() {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
   const visible = useFeatureVisible('pantry');
   const [items, setItems] = useState<PantryItem[]>([]);
 
@@ -31,14 +34,14 @@ export function PantryOnHand() {
 
   if (!visible) {
     return (
-      <ScrollView contentContainerStyle={styles.box} testID="pantry-pane-hidden">
+      <ScrollView contentContainerStyle={[styles.box, { paddingBottom: 16 + bottomInset }]} testID="pantry-pane-hidden">
         <Text style={styles.muted}>Pantry is hidden.</Text>
       </ScrollView>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.box} testID="pantry-on-hand">
+    <ScrollView contentContainerStyle={[styles.box, { paddingBottom: 16 + bottomInset }]} testID="pantry-on-hand">
       <Text style={styles.heading}>On hand</Text>
       <Text style={styles.muted}>These are left off the shopping list.</Text>
       {items.length === 0 ? <Text style={styles.muted}>Nothing on hand.</Text> : null}
@@ -52,9 +55,9 @@ export function PantryOnHand() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   box: { padding: 16, gap: 8 },
   heading: { color: colors.text, fontSize: 18, fontWeight: '700' },
   muted: { color: colors.muted },
   item: { color: colors.text, fontSize: 16, paddingVertical: 6 },
-});
+}));

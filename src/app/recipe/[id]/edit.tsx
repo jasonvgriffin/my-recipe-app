@@ -1,15 +1,17 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { RecipeEditor } from '@/components/recipe-editor';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
 import type { Recipe } from '@/types/recipe';
 
 /** Edit every recipe field, including ingredients and steps (spec #2, #6, #7). */
 export default function EditRecipeScreen() {
+  const styles = useStyles();
+  const colors = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined);
 
@@ -41,7 +43,7 @@ export default function EditRecipeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   missing: { color: colors.muted, fontSize: 16 },
-});
+}));

@@ -1,7 +1,8 @@
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { formatShortDate } from '@/lib/dates';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import type { IsoDate, ShoppingList } from '@/types/meal-plan';
 
 export interface ShoppingListViewProps {
@@ -18,7 +19,10 @@ export interface ShoppingListViewProps {
   onAddManual: () => void;
   onClearChecked: () => void;
   onGroceryRun: () => void;
-  /** Barcode scan entry point (shown when barcodeScan is visible); the scanner adds the product name. */
+  /**
+   * Barcode scan entry point (shown when barcodeScan is visible): a full-width outlined “Scan Item” button
+   * with “or” below it, above the manual add row. The scanner adds the product name.
+   */
   onScan?: () => void;
   /** Product name just added by a scan, confirmed at the top. */
   added?: string;
@@ -42,6 +46,9 @@ export function ShoppingListView({
   onScan,
   added,
 }: ShoppingListViewProps) {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const checked = list?.items.some((i) => i.checked) ?? false;
   return (
     <View style={styles.fill}>
@@ -84,7 +91,23 @@ export function ShoppingListView({
           Added {added}
         </Text>
       ) : null}
-      <View style={styles.manualRow}>
+      {onScan ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Scan Item"
+            accessibilityHint="Scan a barcode to add the product to this list"
+            onPress={onScan}
+            style={styles.secondary}
+            testID="shopping-scan-button">
+            <Text style={styles.secondaryText}>Scan Item</Text>
+          </Pressable>
+          <Text style={styles.or} testID="shopping-scan-or">
+            or
+          </Text>
+        </>
+      ) : null}
+      <View style={[styles.manualRow, onScan ? styles.manualRowAfterOr : null]}>
         <TextInput
           value={manualText}
           onChangeText={onManualText}
@@ -97,23 +120,13 @@ export function ShoppingListView({
         <Pressable accessibilityRole="button" onPress={onAddManual} style={styles.addBtn} testID="add-manual">
           <Text style={styles.addBtnText}>Add</Text>
         </Pressable>
-        {onScan ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Scan barcode"
-            onPress={onScan}
-            style={styles.addBtn}
-            testID="shopping-scan-button">
-            <Text style={styles.addBtnText}>Scan</Text>
-          </Pressable>
-        ) : null}
       </View>
       {checked ? (
         <Pressable accessibilityRole="button" onPress={onClearChecked} style={styles.clear} testID="clear-checked">
           <Text style={styles.clearText}>Clear checked</Text>
         </Pressable>
       ) : null}
-      <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 12 + bottomInset }]} keyboardShouldPersistTaps="handled">
         {(list?.items.length ?? 0) === 0 ? (
           <Text style={styles.empty}>
             {list ? 'No ingredients — plan some recipes for this week first.' : 'No list yet for this week.'}
@@ -139,7 +152,7 @@ export function ShoppingListView({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   added: { color: colors.primary, fontWeight: '700', fontSize: 16, marginHorizontal: 12, marginTop: 8 },
   fill: { flex: 1, padding: 12 },
   nav: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
@@ -167,7 +180,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   secondaryText: { color: colors.primary, fontWeight: '700' },
+  or: { color: colors.muted, textAlign: 'center', marginTop: 8 },
   manualRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  manualRowAfterOr: { marginTop: 4 },
   input: {
     flex: 1,
     minHeight: 44,
@@ -209,4 +224,4 @@ const styles = StyleSheet.create({
   itemText: { color: colors.text, fontSize: 16 },
   checked: { color: colors.muted, textDecorationLine: 'line-through' },
   manual: { color: colors.muted, fontSize: 12, marginTop: 2 },
-});
+}));

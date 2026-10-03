@@ -15,7 +15,7 @@ import {
   setItemChecked,
   shoppingProgress,
 } from '@/lib/shopping';
-import { colors } from '@/lib/theme';
+import { useColors } from '@/hooks/use-theme';
 import { pantryMatcher } from '@/pantry';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
@@ -39,6 +39,7 @@ export default function GroceryRunScreen() {
 }
 
 function GroceryRunBody() {
+  const colors = useColors();
   useKeepAwake('grocery-run', { suppressDeactivateWarnings: true });
   const params = useLocalSearchParams<{ weekStart?: string; recipeId?: string }>();
   const recipeId = param(params.recipeId);

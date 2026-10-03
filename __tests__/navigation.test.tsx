@@ -58,15 +58,14 @@ beforeEach(async () => {
 const ALL_IDS = ADD_MENU_ITEMS.map((i) => i.id);
 
 describe('add menu items (pure)', () => {
-  it('lists all nine actions in order when everything is visible', () => {
+  it('lists all eight actions in order when everything is visible', () => {
     expect(visibleAddMenuItems(() => true).map((i) => i.label)).toEqual([
       'Add Recipe',
       'Import Link',
       'Search Recipes',
-      'Scan Barcode',
       'Add to Shopping List',
       'Add Pantry Item',
-      'Plan a Meal',
+      'Meal Plan',
       'Share Recipe',
       'What Can I Make?',
     ]);
@@ -76,18 +75,11 @@ describe('add menu items (pure)', () => {
     expect(visibleAddMenuItems(() => false).map((i) => i.id)).toEqual(['add-recipe', 'search-recipes']);
   });
 
-  it('barcode scanning needs the scan feature and pantry or shopping list', () => {
-    const only =
-      (...ids: FeatureId[]) =>
-      (id: FeatureId) =>
-        ids.includes(id);
-    const has = (vis: (id: FeatureId) => boolean) => visibleAddMenuItems(vis).some((i) => i.id === 'scan-barcode');
-    expect(has(only('barcodeScan'))).toBe(false);
-    expect(has(only('barcodeScan', 'shoppingList'))).toBe(true);
-    expect(has(only('pantry', 'shoppingList'))).toBe(false);
-    expect(addMenuHref('scan-barcode', { today: '2026-10-03', pantryVisible: true })).toBe('/pantry/scan');
-    expect(addMenuHref('scan-barcode', { today: '2026-10-03', pantryVisible: false })).toBe('/shopping/scan');
-    expect(addMenuHref('plan-meal', { today: '2026-10-03', pantryVisible: false })).toBe('/meal-plan/2026-10-03');
+  it('has no separate Scan Barcode item (scanning lives on the Shopping and Pantry screens)', () => {
+    expect(ADD_MENU_ITEMS.some((i) => /scan/i.test(i.id) || /scan/i.test(i.label))).toBe(false);
+    expect(visibleAddMenuItems(() => true)).toHaveLength(8);
+    expect(addMenuHref('plan-meal', { today: '2026-10-03' })).toBe('/meal-plan/2026-10-03');
+    expect(addMenuHref('share-recipe', { today: '2026-10-03' })).toBe('/recipes?select=pdf'); // v1.0.3: PDF
   });
 });
 
@@ -149,8 +141,11 @@ describe('bottom bar, header and + sheet', () => {
     for (const id of ['plan-meal', 'add-pantry', 'what-can-i-make'])
       expect(screen.queryByTestId(`add-menu-${id}`)).toBeNull();
     expect(screen.getByTestId('add-menu-add-shopping')).toBeTruthy();
-    // Pantry hidden → Scan Barcode goes to the shopping-list scanner.
-    await act(async () => fireEvent.press(screen.getByTestId('add-menu-scan-barcode')));
+    expect(screen.queryByTestId('add-menu-scan-barcode')).toBeNull();
+    // Scanning is reached through Add to Shopping List → the list's Scan Item button.
+    await act(async () => fireEvent.press(screen.getByTestId('add-menu-add-shopping')));
+    await waitFor(() => expect(screen).toHavePathname('/shopping'));
+    await act(async () => fireEvent.press(await screen.findByTestId('shopping-scan-button')));
     await waitFor(() => expect(screen).toHavePathname('/shopping/scan'));
   });
 
@@ -165,8 +160,10 @@ describe('bottom bar, header and + sheet', () => {
 
 describe('Recipes home (v1.0.2)', () => {
   it('shows the five options as plain green titles (no subtitles)', async () => {
-    const { colors } = require('@/lib/theme');
+    const { buildColors } = require('@/lib/theme');
     const { StyleSheet } = require('react-native');
+    await settingsStore.update({ appearance: { themeMode: 'dark', accent: 'green' } });
+    const colors = buildColors('dark', 'green');
     renderRouter(routes(), { initialUrl: '/' });
     await screen.findByTestId('add-recipe-button');
     for (const label of [

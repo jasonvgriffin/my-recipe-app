@@ -1,18 +1,10 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
 import { FeatureLocked } from '@/components/feature-gate';
-import { MAX_CONTENT_WIDTH, MaxWidthContainer } from '@/components/layout';
+import { MAX_CONTENT_WIDTH, MaxWidthContainer, useBottomInset } from '@/components/layout';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { formatQuantity } from '@/lib/ingredients';
@@ -23,7 +15,7 @@ import {
   pantryCategories,
   type PantrySort,
 } from '@/lib/pantry';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { pantryStore } from '@/storage/pantry';
 import type { PantryItem } from '@/types/recipe';
 
@@ -51,6 +43,9 @@ function formatQty(quantity: number | undefined, unit: string | undefined): stri
  * A barcode scan returns here with `?added=<name>` and the item is confirmed at the top.
  */
 export default function PantryScreen() {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const gate = useFeature('pantry');
   const visible = useFeatureVisible('pantry');
   const showBarcode = useFeatureVisible('barcodeScan');
@@ -141,7 +136,7 @@ export default function PantryScreen() {
   const shownItems = filterSortPantry(items, { category: activeFilter, sort });
 
   const list = (
-    <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled" testID="pantry-list">
+    <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 32 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="pantry-list">
       {typeof added === 'string' && added ? (
         <Text style={styles.added} testID="pantry-added-banner">
           Added {added}
@@ -331,7 +326,7 @@ export default function PantryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.background },
   list: { padding: 16, gap: 10, paddingBottom: 32 },
@@ -386,4 +381,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   dangerBtnText: { color: colors.background, fontWeight: '700' },
-});
+}));

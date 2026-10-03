@@ -14,12 +14,12 @@ import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
 
 import { FeatureGate, FeatureLocked } from '@/components/feature-gate';
-import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout, useBottomInset } from '@/components/layout';
 import { SyncStatusBanner } from '@/components/sync-status';
 import { householdActions, restoreHouseholdSession, syncHouseholdNow } from '@/household/runtime';
 import { useHousehold } from '@/hooks/use-household';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import type { HouseholdMember } from '@/sync/account';
 
 function confirmAction(title: string, message: string, confirm: string): Promise<boolean> {
@@ -42,6 +42,9 @@ function memberLabel(member: HouseholdMember, selfId?: string): string {
  * Gated by `householdSync`. Compact is one scrolling column; medium/expanded puts members beside the account.
  */
 export default function HouseholdScreen() {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const { account, sync } = useHousehold();
   // Set by the `/auth` magic-link route after it finishes (success or error).
   const authParams = useLocalSearchParams<{ auth?: string; message?: string }>();
@@ -158,7 +161,7 @@ export default function HouseholdScreen() {
   const accountPane = (
     <ScrollView
       testID="household-scroll"
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={refresh}>
       <Text style={styles.section}>Household</Text>
@@ -404,7 +407,7 @@ export default function HouseholdScreen() {
   const membersPane = (
     <ScrollView
       testID="household-members-scroll"
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]}
       refreshControl={refresh}
       keyboardShouldPersistTaps="handled">
       {membersPaneContent()}
@@ -430,6 +433,7 @@ export default function HouseholdScreen() {
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -451,6 +455,7 @@ function Button({
   testID: string;
   kind?: 'primary' | 'ghost' | 'danger';
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="button"
@@ -465,7 +470,7 @@ function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   screen: { flex: 1, backgroundColor: colors.background },
   container: { padding: 16, paddingBottom: 48, gap: 10 },
   section: { color: colors.text, fontSize: 18, fontWeight: '700' },
@@ -515,4 +520,4 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   remove: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   removeText: { color: colors.danger, fontWeight: '600' },
-});
+}));

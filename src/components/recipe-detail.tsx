@@ -1,7 +1,8 @@
 import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
 import { ServingsUnits } from '@/components/servings-units';
@@ -12,11 +13,12 @@ import { TagEditor } from '@/components/tag-editor';
 import { cookSession } from '@/cooking';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
+import { usePdfExport } from '@/hooks/use-pdf-export';
 import { useSettings } from '@/hooks/use-settings';
 import { formatCookedOn, toIsoDate } from '@/lib/dates';
 import { presentIngredient } from '@/lib/ingredients';
 import { addRecipeTags, removeRecipeTag, setCooked, setRating, toggleRecipeCategory } from '@/lib/recipe-utils';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { formatDuration } from '@/lib/timers';
 import { effectiveUnitSystem } from '@/lib/units';
 import { startBackgroundStepTimer } from '@/notifications/step-timers';
@@ -42,6 +44,9 @@ export interface RecipeDetailProps {
  * (medium/expanded, spec #23). Keep it free of navigation side effects — use the callbacks.
  */
 export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesProp }: RecipeDetailProps) {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined);
   // Optional cross-links (meal plan) only appear when that feature is enabled — recipes-first rule.
   // Gated entry points (src/entitlements) — recipe view/edit/delete itself is never gated.
@@ -53,6 +58,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   const ratingsOn = useFeature('ratings').available;
   const photos = useFeature('photos').available;
   const share = useFeature('share').available;
+  const pdf = usePdfExport();
   const unitsEnabled = useFeature('unitConversion').available;
   const settings = useSettings();
   const [scaled, setScaled] = useState<{ id: string; value: number } | undefined>();
@@ -193,7 +199,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} testID="recipe-detail">
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} testID="recipe-detail">
       {photos && recipe.photoUri ? (
         <Image
           source={{ uri: recipe.photoUri }}
@@ -292,7 +298,27 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
             <Text style={styles.actionText}>Share</Text>
           </Pressable>
         ) : null}
+        {pdf.available ? (
+          <Pressable
+            style={[styles.action, pdf.busy && styles.actionBusy]}
+            accessibilityRole="button"
+            accessibilityHint="Creates a printable PDF of this recipe and opens the share sheet"
+            disabled={pdf.busy}
+            testID="export-pdf-button"
+            onPress={() => void pdf.exportPdf([recipe])}>
+            {pdf.busy ? (
+              <ActivityIndicator color={colors.primary} testID="export-pdf-busy" />
+            ) : (
+              <Text style={styles.actionText}>Export PDF</Text>
+            )}
+          </Pressable>
+        ) : null}
       </View>
+      {pdf.error ? (
+        <Text style={styles.pdfError} testID="export-pdf-error">
+          {pdf.error}
+        </Text>
+      ) : null}
       {shareOpen && share ? <ShareRecipePanel recipe={recipe} onClose={() => setShareOpen(false)} /> : null}
       {recipe.lastCookedAt ? (
         <Text style={styles.meta} testID="last-cooked">
@@ -394,6 +420,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.stat}>
       <Text style={styles.statValue}>{value}</Text>
@@ -402,7 +429,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { padding: 16, paddingBottom: 48 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   photo: { width: '100%', height: 200, borderRadius: 10, marginBottom: 12, backgroundColor: colors.card },
@@ -448,6 +475,8 @@ const styles = StyleSheet.create({
   actionOn: { backgroundColor: colors.primary },
   actionText: { color: colors.primary, fontWeight: '600' },
   actionTextOn: { color: colors.primaryText },
+  actionBusy: { opacity: 0.6 },
+  pdfError: { color: colors.danger, marginTop: 8 },
   stepBlock: { marginBottom: 8 },
   timerBtn: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
   timer: { color: colors.primary, fontWeight: '700', fontSize: 16 },
@@ -466,4 +495,4 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
   },
   deleteText: { color: colors.danger, fontWeight: '600' },
-});
+}));

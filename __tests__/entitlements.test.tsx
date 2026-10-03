@@ -56,6 +56,13 @@ describe('feature gate', () => {
     }
   });
 
+  it('registers pdfExport (v1.0.3 Export PDF), free in v1, and it needs share', () => {
+    expect(DEFAULT_FEATURE_CONFIG.pdfExport).toEqual({ tier: 'free', enabled: true });
+    expect(canUse('pdfExport')).toBe(true);
+    const gate = createFeatureGate({ config: { share: { tier: 'premium', enabled: true } }, provider: new NoEntitlements() });
+    expect(gate.canUse('pdfExport')).toBe(false);
+  });
+
   it('registers mcpAccess (future MCP server paywall switch), free in v1', () => {
     expect(DEFAULT_FEATURE_CONFIG.mcpAccess).toEqual({ tier: 'free', enabled: true });
     expect(canUse('mcpAccess')).toBe(true);
@@ -278,6 +285,8 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     renderRouter(routes(), { initialUrl: '/shopping' });
     expect(await screen.findByTestId('build-list')).toBeTruthy();
     expect(screen.queryByTestId('shopping-scan-button')).toBeNull();
+    expect(screen.queryByTestId('shopping-scan-or')).toBeNull(); // no dangling “or”
+    expect(screen.getByTestId('manual-input')).toBeTruthy();
   });
 
   it('a locked cook-with-me deep link shows a neutral message (no payment UI)', async () => {

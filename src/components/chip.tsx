@@ -1,6 +1,6 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, Text } from 'react-native';
 
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 
 /** Selectable dark-theme chip. Touch target is at least 44dp. */
 export function Chip({
@@ -16,6 +16,7 @@ export function Chip({
   testID?: string;
   accessibilityLabel?: string;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="button"
@@ -29,7 +30,7 @@ export function Chip({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   chip: {
     minHeight: 44,
     paddingHorizontal: 12,
@@ -43,4 +44,4 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { color: colors.muted, fontSize: 14 },
   chipTextActive: { color: colors.primaryText, fontWeight: '600' },
-});
+}));

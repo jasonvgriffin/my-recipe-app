@@ -1,12 +1,13 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { Chip } from '@/components/chip';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { addDays, formatLongDate } from '@/lib/dates';
 import { searchRecipes } from '@/lib/recipe-utils';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
 import { MEAL_SLOTS, type IsoDate, type MealPlanEntry, type MealSlot } from '@/types/meal-plan';
@@ -24,6 +25,9 @@ const SLOT_LABEL: Record<MealSlot, string> = {
  * Used in the expanded secondary pane and on the compact day route. Writes go through the meal-plan store.
  */
 export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => void }) {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const [entries, setEntries] = useState<MealPlanEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [slot, setSlot] = useState<MealSlot>('dinner');
@@ -103,7 +107,7 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
 
   return (
     <ScrollView
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]}
       keyboardShouldPersistTaps="handled"
       testID="day-plan">
       <Text style={styles.heading}>{formatLongDate(date)}</Text>
@@ -225,7 +229,7 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { padding: 16, paddingBottom: 48, gap: 8 },
   heading: { color: colors.text, fontSize: 20, fontWeight: '700' },
   empty: { color: colors.muted, marginVertical: 4 },
@@ -294,4 +298,4 @@ const styles = StyleSheet.create({
   },
   addTitle: { color: colors.text, fontWeight: '600', fontSize: 16 },
   addMeta: { color: colors.primary, marginTop: 2 },
-});
+}));

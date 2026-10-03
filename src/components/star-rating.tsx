@@ -1,6 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 
 const STARS = [1, 2, 3, 4, 5] as const;
 
@@ -19,6 +19,8 @@ export function StarRating({
   testID?: string;
   size?: number;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <View style={styles.row} testID={testID} accessibilityRole="adjustable" accessibilityLabel="Rating">
       {STARS.map((n) => {
@@ -44,8 +46,8 @@ export function StarRating({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   row: { flexDirection: 'row', alignItems: 'center' },
   star: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   starStatic: { minWidth: 22, minHeight: 22 },
-});
+}));

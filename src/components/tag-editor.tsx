@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 
 /** Add and remove free-form tags on one recipe (spec #20). */
 export function TagEditor({
@@ -13,6 +13,8 @@ export function TagEditor({
   onAdd: (text: string) => void;
   onRemove: (tag: string) => void;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   const [draft, setDraft] = useState('');
 
   function add() {
@@ -56,7 +58,7 @@ export function TagEditor({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tag: {
     minHeight: 44,
@@ -88,4 +90,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addText: { color: colors.primaryText, fontWeight: '700' },
-});
+}));

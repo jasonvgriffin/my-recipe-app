@@ -20,10 +20,20 @@ for tests). Gate ≠ Settings toggle (need both). Core recipe CRUD/view/search i
 free with `LocalFreeEntitlements`; no billing SDK or payment UI. Test: `__tests__/entitlements.test.tsx`.
 Full rule: top of docs/SPEC.md.
 
-## 1. Dark theme (spec #13)
+## 1. Theme (spec #13; Appearance since v1.0.3)
 
-- Dark by default and throughout. Use `colors` / `navigationTheme` from `src/lib/theme.ts`; never hard-code
-  light colors. Inputs use `colors.input` + `placeholderTextColor={colors.placeholder}`.
+- Settings → Appearance: theme mode System / Light / Dark (default System; System follows the phone, unknown →
+  dark) and an accent color (Green = original look, Orange, Blue, Purple, Red, Teal). Saved in local settings
+  (`AppSettings.appearance`); free, not gated.
+- Palettes: `src/lib/theme.ts` (`buildColors(scheme, accent)`, each accent has dark/light shades with WCAG AA
+  contrast, checked in `__tests__/appearance.test.tsx`). Components read colors only via
+  `const useStyles = makeStyles((colors) => ({ … }))` + `useStyles()`, or `useColors()` for inline colors
+  (`src/hooks/use-theme.tsx`, `AppThemeProvider` in `src/app/_layout.tsx`). Never hard-code colors; the test fails
+  on hex/rgba literals outside `src/lib/theme.ts` (the printable PDF in `src/lib/recipe-pdf.ts` is exempt: always
+  black on white). Inputs use `colors.input` + `placeholderTextColor={colors.placeholder}`.
+- Edge-to-edge: scrolling stack screens add `useBottomInset()` (`src/components/layout.tsx`) to their bottom padding
+  so the end of the content clears the Android navigation bar; bottom-tab screens get 0 (the tab bar already
+  clears it), the nav rail (expanded) gets the inset.
 
 ## 2. Foldables & large screens (spec #23)
 

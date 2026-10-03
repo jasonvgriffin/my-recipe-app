@@ -7,28 +7,29 @@ import type { FeatureId } from '@/entitlements';
 import { useFeatureVisible } from '@/hooks/use-feature';
 import { addMenuHref, visibleAddMenuItems, type AddMenuItem } from '@/lib/add-menu';
 import { toIsoDate } from '@/lib/dates';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 
 /**
  * Bottom sheet raised by the center “+” tab button (v1.0.2, like Cronometer's add menu): a 3-column grid of
  * round icon buttons. Items come from `src/lib/add-menu.ts`; anything locked or hidden in Settings is left
- * out. Tapping outside the sheet or Android back closes it.
+ * out, and a partial last row is centered (v1.0.3). Tapping outside the sheet or Android back closes it.
  */
 export function AddMenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const styles = useStyles();
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const shown: Partial<Record<FeatureId, boolean>> = {
     linkImport: useFeatureVisible('linkImport'),
-    barcodeScan: useFeatureVisible('barcodeScan'),
     shoppingList: useFeatureVisible('shoppingList'),
     pantry: useFeatureVisible('pantry'),
     mealPlan: useFeatureVisible('mealPlan'),
-    householdSync: useFeatureVisible('householdSync'),
+    pdfExport: useFeatureVisible('pdfExport'),
   };
   const items = visibleAddMenuItems((id) => shown[id] ?? false);
 
   const open = (item: AddMenuItem) => {
     onClose();
-    const href = addMenuHref(item.id, { today: toIsoDate(new Date()), pantryVisible: Boolean(shown.pantry) });
+    const href = addMenuHref(item.id, { today: toIsoDate(new Date()) });
     router.push(href as Href);
   };
 
@@ -68,9 +69,9 @@ export function AddMenuSheet({ visible, onClose }: { visible: boolean; onClose: 
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   root: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.55)' },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: colors.backdrop },
   sheet: {
     width: '100%',
     maxWidth: 560,
@@ -91,7 +92,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginBottom: 16,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
   cell: { width: '33.333%', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, gap: 8 },
   pressed: { opacity: 0.6 },
   circle: {
@@ -105,4 +106,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: { color: colors.text, fontSize: 13, fontWeight: '600', textAlign: 'center' },
-});
+}));

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
 import { FeatureLocked } from '@/components/feature-gate';
-import { TwoPaneLayout } from '@/components/layout';
+import { TwoPaneLayout, useBottomInset } from '@/components/layout';
 import { useFeature } from '@/hooks/use-feature';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { barcodeLookup, type BarcodeProduct } from '@/pantry';
 
 type ScanState =
@@ -32,6 +32,9 @@ export interface BarcodeScannerProps {
  * codes ask for a name once; that mapping is saved for the household.
  */
 export function BarcodeScanner({ visible, hiddenLabel, onProduct, testID = 'barcode-layout' }: BarcodeScannerProps) {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const access = useFeature('barcodeScan');
   const [permission, requestPermission] = useCameraPermissions();
   const [state, setState] = useState<ScanState>({ kind: 'idle' });
@@ -131,7 +134,7 @@ export function BarcodeScanner({ visible, hiddenLabel, onProduct, testID = 'barc
   );
 
   const panel = (
-    <View style={styles.panel} testID="barcode-result">
+    <View style={[styles.panel, { paddingBottom: 16 + bottomInset }]} testID="barcode-result">
       {state.kind === 'idle' ? <Text style={styles.muted}>Point the camera at a barcode.</Text> : null}
       {state.kind === 'saving' ? <ActivityIndicator color={colors.primary} testID="barcode-saving" /> : null}
       {state.kind === 'error' ? (
@@ -181,7 +184,7 @@ export function BarcodeScanner({ visible, hiddenLabel, onProduct, testID = 'barc
   return <TwoPaneLayout testID={testID} compact="stack" primary={camera} secondary={panel} primaryWidth={420} />;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   camera: { flex: 1, minHeight: 240, backgroundColor: colors.background },
   center: {
     flex: 1,
@@ -224,4 +227,4 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   secondaryBtnText: { color: colors.text, fontWeight: '600' },
-});
+}));

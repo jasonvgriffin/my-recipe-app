@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { FeatureLocked } from '@/components/feature-gate';
 import type { FeatureId } from '@/entitlements';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 
 /**
  * Entry point for an optional feature: locked features show a neutral message, hidden ones a quiet line.
@@ -19,6 +19,7 @@ export function OptionalFeature({
   hiddenLabel: string;
   children: ReactNode;
 }) {
+  const styles = useStyles();
   const access = useFeature(id);
   const shown = useFeatureVisible(id);
   if (!access.available) return <FeatureLocked id={id} />;
@@ -32,7 +33,7 @@ export function OptionalFeature({
   return <>{children}</>;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   box: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.background },
   text: { color: colors.muted, fontSize: 16, textAlign: 'center' },
-});
+}));

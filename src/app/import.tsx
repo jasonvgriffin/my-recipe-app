@@ -1,10 +1,10 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import * as Sharing from 'expo-sharing';
 
 import { FeatureGate, FeatureLocked } from '@/components/feature-gate';
-import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, useBottomInset } from '@/components/layout';
 import { useFeature } from '@/hooks/use-feature';
 import {
   importRecipe,
@@ -18,7 +18,7 @@ import {
 import { importErrorMessage } from '@/lib/import-messages';
 import { isRemotePhoto } from '@/lib/photo-path';
 import { downloadRecipePhoto } from '@/lib/photos';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
 import { PREFERRED_SWEETENER } from '@/types/recipe';
 
@@ -37,6 +37,9 @@ export default function ImportScreen() {
 }
 
 function ImportBody() {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const params = useLocalSearchParams<{ url?: string; text?: string; incoming?: string }>();
   const photos = useFeature('photos').available;
   const [url, setUrl] = useState(typeof params.url === 'string' ? params.url : '');
@@ -165,7 +168,7 @@ function ImportBody() {
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
       <Stack.Screen options={{ title: 'Import recipe' }} />
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" testID="import-screen">
+      <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="import-screen">
         <Text style={styles.lead}>Paste a recipe link. The page is read as schema.org JSON-LD, then microdata or the page text.</Text>
         <Text style={styles.label}>Recipe link</Text>
         <TextInput
@@ -281,7 +284,7 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { padding: 16, paddingBottom: 48 },
   lead: { color: colors.muted, marginBottom: 16, fontSize: 15, lineHeight: 22 },
   label: { color: colors.text, fontWeight: '600', marginBottom: 6 },
@@ -341,4 +344,4 @@ const styles = StyleSheet.create({
   warning: { color: colors.text, marginBottom: 4 },
   row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
-});
+}));

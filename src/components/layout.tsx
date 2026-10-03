@@ -1,8 +1,27 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
+
+/**
+ * True inside the bottom tab bar's screens (the bar already sits above the system navigation bar). Provided by
+ * `src/app/(tabs)/_layout.tsx`; false for stack screens and when tabs become a side rail (expanded width).
+ */
+const BottomBarCoversInsetContext = createContext(false);
+export const BottomBarCoversInsetProvider = BottomBarCoversInsetContext.Provider;
+
+/**
+ * Extra bottom space so the end of a scrolling screen (or a floating button) is never hidden behind the Android
+ * navigation bar (gesture pill / 3-button bar) — v1.0.3. 0 inside bottom tabs, else the safe-area bottom inset.
+ * Use as `contentContainerStyle={[styles.list, { paddingBottom: 48 + bottomInset }]}`.
+ */
+export function useBottomInset(): number {
+  // Read the context directly (not useSafeAreaInsets) so screens rendered without a SafeAreaProvider get 0.
+  const bottom = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
+  return useContext(BottomBarCoversInsetContext) ? 0 : bottom;
+}
 
 /** Max readable widths so content never stretches across a wide unfolded screen / hinge (spec #23). */
 export const MAX_CONTENT_WIDTH = { text: 720, list: 560, form: 640 } as const;
@@ -17,6 +36,7 @@ export function MaxWidthContainer({
   maxWidth?: number;
   style?: StyleProp<ViewStyle>;
 }) {
+  const styles = useStyles();
   return (
     <View style={[styles.maxOuter]}>
       <View style={[styles.maxInner, { maxWidth }, style]}>{children}</View>
@@ -54,6 +74,7 @@ export function TwoPaneLayout({
   primaryWidth,
   testID = 'two-pane-layout',
 }: TwoPaneLayoutProps) {
+  const styles = useStyles();
   const { isTwoPane, sizeClass } = useWindowSizeClass();
   const width = primaryWidth ?? (sizeClass === 'expanded' ? 400 : 360);
 
@@ -81,7 +102,7 @@ export function TwoPaneLayout({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   fill: { flex: 1 },
   row: { flex: 1, flexDirection: 'row' },
   primary: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.border },
@@ -90,4 +111,4 @@ const styles = StyleSheet.create({
   placeholder: { color: colors.muted, textAlign: 'center', marginTop: 48 },
   maxOuter: { flex: 1, alignItems: 'center' },
   maxInner: { flex: 1, width: '100%' },
-});
+}));

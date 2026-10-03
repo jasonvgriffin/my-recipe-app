@@ -112,6 +112,10 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
 - Requires **Apple Developer Program ($99/yr)** for device installs / TestFlight / App Store.
 - QA pass for iOS-specific UI (safe areas, keyboard, share extension).
 
+## Future features (planned)
+
+- [ ] Multi-language support (planned future feature).
+
 ## Open decisions for Jason
 
 - **Monetization (later):** which features go premium, and the billing path (Google Play Billing via

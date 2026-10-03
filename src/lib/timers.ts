@@ -39,3 +39,13 @@ export function formatDuration(seconds: number): string {
   const s = seconds % 60;
   return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
 }
+
+/** Duration in words for print/share: "45 sec", "20 min", "1 hr 5 min" (v1.0.3 PDF export). */
+export function formatDurationWords(seconds: number): string {
+  const total = Math.max(0, Math.round(seconds));
+  if (total < 60) return `${total} sec`;
+  const h = Math.floor(total / 3600);
+  const m = Math.round((total % 3600) / 60);
+  if (!h) return `${m} min`;
+  return m ? `${h} hr ${m} min` : `${h} hr`;
+}

@@ -1,12 +1,13 @@
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 
 import { useFeature } from '@/hooks/use-feature';
 import { useHousehold } from '@/hooks/use-household';
-import { colors } from '@/lib/theme';
+import { makeStyles } from '@/hooks/use-theme';
 import { authorLabel } from '@/sync/authors';
 
 /** Attribution for a synced record. Blank when the author has no display name or sharing is unavailable. */
 export function SharedBy({ createdBy }: { createdBy?: string }) {
+  const styles = useStyles();
   const access = useFeature('householdSync');
   const { account } = useHousehold();
   if (!access.available) return null;
@@ -19,6 +20,6 @@ export function SharedBy({ createdBy }: { createdBy?: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   text: { color: colors.muted, marginTop: 4, fontSize: 14 },
-});
+}));

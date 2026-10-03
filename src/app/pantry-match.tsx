@@ -1,12 +1,12 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { MAX_CONTENT_WIDTH, MaxWidthContainer } from '@/components/layout';
+import { MAX_CONTENT_WIDTH, MaxWidthContainer, useBottomInset } from '@/components/layout';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { rankRecipesByPantry, type PantryMatch } from '@/lib/pantry';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { pantryStore } from '@/storage/pantry';
 import { recipeStore } from '@/storage/recipes';
 
@@ -16,6 +16,9 @@ import { recipeStore } from '@/storage/recipes';
  * optional: when it is locked, hidden in Settings or empty, this explains gently instead of nagging.
  */
 export default function PantryMatchScreen() {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const gate = useFeature('pantry');
   const visible = useFeatureVisible('pantry');
   const [state, setState] = useState<{ pantryCount: number; matches: PantryMatch[] } | null>(null);
@@ -79,7 +82,7 @@ export default function PantryMatchScreen() {
   return (
     <View style={styles.fill} testID="pantry-match">
       <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.text}>
-        <ScrollView contentContainerStyle={styles.list} testID="pantry-suggestions">
+        <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 16 + bottomInset }]} testID="pantry-suggestions">
           {body}
         </ScrollView>
       </MaxWidthContainer>
@@ -87,10 +90,10 @@ export default function PantryMatchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   fill: { flex: 1, backgroundColor: colors.background },
   list: { padding: 16, gap: 10 },
   card: { backgroundColor: colors.card, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border, minHeight: 44 },
   title: { color: colors.text, fontSize: 16, fontWeight: '600' },
   muted: { color: colors.muted, marginTop: 2, fontSize: 15 },
-});
+}));

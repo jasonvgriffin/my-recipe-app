@@ -1,10 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 
 import { useIncomingUrl } from '@/hooks/use-incoming-url';
 import { completeMagicLink, currentAccountUser } from '@/household/runtime';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { readMagicLink } from '@/sync';
 
 const MISSING_LINK = 'That sign-in link is incomplete or has expired. Request a new code in Settings → Household.';
@@ -34,6 +34,8 @@ export function magicLinkUrlFrom(
  * `src/sync/supabase.ts`), then opens Settings → Household with a success or error message.
  */
 export default function AuthCallbackScreen() {
+  const styles = useStyles();
+  const colors = useColors();
   const router = useRouter();
   const params = useLocalSearchParams<Record<string, string>>();
   const linkingUrl = useIncomingUrl();
@@ -78,7 +80,7 @@ export default function AuthCallbackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, backgroundColor: colors.background },
   text: { fontSize: 16, color: colors.text },
-});
+}));

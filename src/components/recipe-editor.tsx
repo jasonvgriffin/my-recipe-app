@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { useBottomInset } from '@/components/layout';
 import { useFeature } from '@/hooks/use-feature';
 import { deleteLocalPhoto, PhotoPermissionError, pickRecipePhoto } from '@/lib/photos';
 import {
@@ -12,12 +13,15 @@ import {
   type RecipeEditorState,
   type StepDraft,
 } from '@/lib/recipe-edit';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
 import { PREFERRED_SWEETENER, type Recipe } from '@/types/recipe';
 
 /** Full recipe editor: title, notes, ingredients (add/delete/reorder/substitute), steps with timers (spec #2, #4, #6, #7). */
 export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (recipe: Recipe) => void }) {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const photos = useFeature('photos').available;
   const [state, setState] = useState<RecipeEditorState>(() => recipeToEditorState(recipe));
   const [errors, setErrors] = useState<string[]>([]);
@@ -63,7 +67,7 @@ export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (re
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" testID="recipe-editor">
+    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="recipe-editor">
       <Field label="Title">
         <TextInput
           value={state.title}
@@ -204,6 +208,8 @@ function IngredientRow({
   onMove: (direction: -1 | 1) => void;
   onRemove: () => void;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <View style={styles.card}>
       <TextInput
@@ -251,6 +257,8 @@ function StepRow({
   onMove: (direction: -1 | 1) => void;
   onRemove: () => void;
 }) {
+  const styles = useStyles();
+  const colors = useColors();
   return (
     <View style={styles.card}>
       <TextInput
@@ -285,6 +293,7 @@ function replaceAt<T>(items: T[], index: number, next: T): T[] {
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
+  const styles = useStyles();
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -304,6 +313,7 @@ function SmallButton({
   testID: string;
   disabled?: boolean;
 }) {
+  const styles = useStyles();
   return (
     <Pressable
       style={[styles.small, disabled && styles.disabled]}
@@ -316,7 +326,7 @@ function SmallButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   container: { padding: 16, paddingBottom: 48 },
   field: { marginBottom: 14 },
   label: { fontWeight: '600', marginBottom: 6, color: colors.text },
@@ -366,4 +376,4 @@ const styles = StyleSheet.create({
   },
   saveText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
   disabled: { opacity: 0.5 },
-});
+}));

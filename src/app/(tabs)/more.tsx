@@ -1,10 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, type Href } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { MAX_CONTENT_WIDTH, MaxWidthContainer } from '@/components/layout';
+import { MAX_CONTENT_WIDTH, MaxWidthContainer, useBottomInset } from '@/components/layout';
 import { useFeatureVisible } from '@/hooks/use-feature';
-import { colors } from '@/lib/theme';
+import { makeStyles, useColors } from '@/hooks/use-theme';
 
 interface MoreRow {
   label: string;
@@ -19,6 +19,9 @@ interface MoreRow {
  * shows it; Household only when household sharing is unlocked. Settings is always here.
  */
 export default function MoreScreen() {
+  const bottomInset = useBottomInset();
+  const styles = useStyles();
+  const colors = useColors();
   const showPantry = useFeatureVisible('pantry');
   const showHousehold = useFeatureVisible('householdSync');
   const rows: MoreRow[] = [
@@ -46,14 +49,14 @@ export default function MoreScreen() {
       : []),
     {
       label: 'Settings',
-      hint: 'Units, optional features, AI assistants',
+      hint: 'Appearance, units, optional features, AI assistants',
       icon: 'settings-outline',
       href: '/settings',
       testID: 'more-settings',
     },
   ];
   return (
-    <ScrollView contentContainerStyle={styles.scroll} testID="more-screen">
+    <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 16 + bottomInset }]} testID="more-screen">
       <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
         <View style={styles.list}>
           {rows.map((row) => (
@@ -78,7 +81,7 @@ export default function MoreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((colors) => ({
   scroll: { padding: 16, flexGrow: 1 },
   list: { gap: 12 },
   row: {
@@ -97,4 +100,4 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   label: { color: colors.text, fontSize: 18, fontWeight: '700' },
   hint: { color: colors.muted, marginTop: 2 },
-});
+}));
