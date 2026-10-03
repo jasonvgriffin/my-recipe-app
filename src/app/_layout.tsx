@@ -38,6 +38,7 @@ export default function RootLayout() {
         <Stack.Screen name="grocery-run" options={{ title: 'Grocery run' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="household" options={{ title: 'Household' }} />
+        <Stack.Screen name="auth" options={{ title: 'Signing in' }} />
         <Stack.Screen name="pantry/scan" options={{ title: 'Scan barcode' }} />
         <Stack.Screen name="shopping/scan" options={{ title: 'Scan barcode' }} />
         <Stack.Screen name="recipes" options={{ title: 'Existing Recipes' }} />

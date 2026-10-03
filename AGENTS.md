@@ -69,6 +69,7 @@ src/storage/                  repositories over a KeyValueStore (AsyncStorage by
                               pantry.ts, settings.ts
 src/app/(tabs)/index.tsx      Recipes tab: five buttons (Search, Existing Recipes, Share, Add, pantry match)
 src/app/recipes.tsx           Existing Recipes: search, filters, list + detail
+src/app/auth.tsx              magic-link redirect (myrecipeapp://auth): sign in, then Settings → Household
 src/storage/legacy-samples.ts identifies untouched v1.0.0 sample recipes (no seeding since v1.0.1)
 test-helpers/sample-recipes.ts  sample recipes for tests only
 __tests__/          jest tests

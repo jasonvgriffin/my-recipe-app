@@ -47,6 +47,7 @@ let unsubCoord: (() => void) | null = null;
 let lastKey = '';
 let realtimeFactory: HouseholdRuntimeOptions['realtime'] = undefined;
 let liveStarted = false;
+let magicLinks = new Map<string, Promise<{ ok: boolean; error?: string }>>();
 
 function refreshSnapshot(): void {
   setHouseholdSnapshot({ account: account.getState(), sync: coordinator.getStatus() });
@@ -80,6 +81,7 @@ function bind(): void {
 
 function install(options: HouseholdRuntimeOptions): void {
   coordinator.stop();
+  magicLinks = new Map();
   lastKey = '';
   realtimeFactory = options.realtime;
   account = createAccountController({
@@ -134,6 +136,7 @@ export async function resetHouseholdRuntime(options: HouseholdRuntimeOptions): P
 
 /** Drop a test backend and return to the signed-out, offline runtime (no network). */
 export function stopHouseholdRuntime(): void {
+  magicLinks = new Map();
   unsubData?.();
   unsubAccount?.();
   unsubCoord?.();
@@ -171,8 +174,23 @@ export function syncHouseholdNow(reason: SyncReason): Promise<unknown> {
   return coordinator.syncNow(reason);
 }
 
-export function completeMagicLink(url: string): Promise<unknown> {
-  return account.completeMagicLink(url);
+/**
+ * Finish a Supabase magic-link sign-in (`myrecipeapp://auth#access_token=…` or `?code=…`).
+ * The app-wide URL listener and the `/auth` route both call this with the same URL; the first call
+ * does the token exchange and later calls share its result (a PKCE code can only be exchanged once).
+ */
+export function completeMagicLink(url: string): Promise<{ ok: boolean; error?: string }> {
+  const key = url.trim();
+  const pending = magicLinks.get(key);
+  if (pending) return pending;
+  const next = account.completeMagicLink(key);
+  magicLinks.set(key, next);
+  return next;
+}
+
+/** Current signed-in user, if any (used by the `/auth` route to confirm a magic link worked). */
+export function currentAccountUser() {
+  return account.getState().user;
 }
 
 export function householdActions() {
