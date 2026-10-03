@@ -25,8 +25,8 @@ UI screens ──> stores (src/storage/*: recipeStore, mealPlanStore, pantryStor
   `createdBy?` (auth user id), `createdAt`, `updatedAt`, `deletedAt?` (tombstone).
 - **Identity:** `src/storage/identity.ts` holds `{ userId, householdId }`; new local writes are stamped with it.
 - **Synced tables:** `recipes`, `categories`, `pantry_items`, `meal_plan_entries`, `shopping_items` (each
-  shopping item is its own row so two people can check items concurrently). Settings and the cook-with-me
-  session stay per device.
+  shopping item is its own row so two people can check items concurrently), `barcode_items`, `receipt_aliases`.
+  Settings and the cook-with-me session stay per device.
 
 ## Sync algorithm (`createSyncEngine(...).syncOnce()`)
 

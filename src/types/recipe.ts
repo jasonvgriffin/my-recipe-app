@@ -255,8 +255,13 @@ export function isCategory(value: unknown): value is Category {
 export interface PantryItem extends SyncMeta {
   /** Normalized ingredient name used for matching, e.g. "almond flour". */
   name: string;
+  /** Optional — unknown quantity is left unset (never stored as 0 to mean "some"). */
   quantity?: number;
   unit?: string;
+  /** Free-form aisle / group, e.g. "Dairy". Distinct from recipe categories. */
+  category?: string;
+  /** Optional expiry, YYYY-MM-DD. */
+  expiresAt?: string;
   /** EAN/UPC of the product when added by barcode scan (spec #27). */
   barcode?: string;
   brand?: string;

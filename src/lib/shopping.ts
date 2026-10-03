@@ -1,10 +1,11 @@
 import type { IsoDate, MealPlanEntry, ShoppingList, ShoppingListItem } from '@/types/meal-plan';
 import type { Ingredient, PantryItem, Recipe } from '@/types/recipe';
 
+import { isInPantry } from '@/pantry/isInPantry';
+
 import { aisleForIngredient, AISLES, normalizeAisle, type Aisle } from './aisles';
 import { weekDates } from './dates';
 import { formatIngredient, ingredientKey, parseIngredient, scaleIngredient } from './ingredients';
-import { pantryHas } from './pantry';
 import { generateId } from './recipe-utils';
 import { getUnit } from './units';
 
@@ -36,7 +37,7 @@ export function compileItems(
     for (const raw of recipe.ingredients) {
       const ing = scaleIngredient(raw, factor);
       const key = ingredientKey(ing);
-      if (!key || pantryHas(options.pantry ?? [], key) || options.skip?.(key)) continue;
+      if (!key || isInPantry(ing, options.pantry ?? []) || options.skip?.(key)) continue;
       const g = groups.get(key);
       if (!g) {
         groups.set(key, {

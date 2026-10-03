@@ -149,6 +149,38 @@ describe.each([
     expect((await screen.findAllByText(text)).length).toBeGreaterThan(0);
   });
 
+  it('Pantry tab: list at compact, list + suggestions side by side when expanded', async () => {
+    const Pantry = require('@/app/(tabs)/pantry').default;
+    renderRouter({ index: Pantry }, { initialUrl: '/' });
+    expect(await screen.findByText('Nothing in the pantry yet.')).toBeTruthy();
+    expect(screen.getByTestId(width >= 600 ? 'pantry-layout-dual' : 'pantry-layout-single')).toBeTruthy();
+    if (width >= 600) {
+      expect(screen.getByTestId('pantry-suggestions')).toBeTruthy();
+      expect(screen.queryByTestId('pantry-show-ideas')).toBeNull();
+    } else {
+      expect(screen.getByTestId('pantry-show-ideas')).toBeTruthy();
+      fireEvent.press(screen.getByTestId('pantry-show-ideas'));
+      expect(screen.getByTestId('pantry-suggestions')).toBeTruthy();
+    }
+  });
+
+  it('barcode scanner shows the camera and the result pane', async () => {
+    const Scan = require('@/app/pantry/scan').default;
+    renderRouter({ index: Scan }, { initialUrl: '/' });
+    expect(await screen.findByTestId('barcode-camera')).toBeTruthy();
+    expect(screen.getByText('Point the camera at a barcode.')).toBeTruthy();
+    expect(screen.getByTestId(width >= 600 ? 'barcode-layout-dual' : 'barcode-layout-single')).toBeTruthy();
+  });
+
+  it('receipt scanner offers camera and gallery', async () => {
+    const Receipt = require('@/app/pantry/receipt').default;
+    renderRouter({ index: Receipt }, { initialUrl: '/' });
+    expect(await screen.findByText('Take photo')).toBeTruthy();
+    expect(screen.getByText('Choose from gallery')).toBeTruthy();
+    expect(screen.getByTestId(width >= 600 ? 'receipt-layout-dual' : 'receipt-layout-single')).toBeTruthy();
+    if (width >= 600) expect(screen.getByText('Select a line to edit the match.')).toBeTruthy();
+  });
+
   it('meal plan is a calendar, with the selected day beside it when expanded', async () => {
     const Screen = require('@/app/(tabs)/meal-plan').default;
     renderRouter({ index: Screen }, { initialUrl: '/' });

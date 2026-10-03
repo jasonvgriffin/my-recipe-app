@@ -41,6 +41,7 @@ example
 # generated native folders
 /ios
 /android
+modules/**/build/
 
 # signing (keep in GitHub secrets, never commit)
 *.keystore

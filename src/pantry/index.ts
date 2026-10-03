@@ -44,6 +44,10 @@ export const pantryMatcher = createPantryMatcher({
   canUsePantry: () => canUse('pantry'),
 });
 
+/**
+ * Async, storage-bound check (respects gate + Settings). For a pure check against a pantry list,
+ * import `isInPantry` from `@/pantry/isInPantry`.
+ */
 export function isInPantry(ingredient: string): Promise<boolean> {
   return pantryMatcher.isInPantry(ingredient);
 }

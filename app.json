@@ -41,6 +41,15 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow My Recipe App to use the camera for optional recipe photos, barcodes, and receipt photos.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
         "expo-notifications",
         {
           "color": "#66BB6A",
@@ -50,8 +59,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow My Recipe App to add an optional photo to a recipe.",
-          "cameraPermission": "Allow My Recipe App to take an optional photo of a recipe.",
+          "photosPermission": "Allow My Recipe App to use photos from your gallery for an optional recipe photo or a grocery receipt.",
+          "cameraPermission": "Allow My Recipe App to use the camera for optional recipe photos, barcodes, and receipt photos.",
           "microphonePermission": false
         }
       ],
@@ -63,7 +72,8 @@
             "singleShareMimeTypes": ["text/plain", "text/html"]
           }
         }
-      ]
+      ],
+      "mlkit-text-recognition"
     ],
     "experiments": {
       "typedRoutes": true,

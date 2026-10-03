@@ -11,6 +11,7 @@ export const SYNC_TABLES: SyncTable[] = [
   'meal_plan_entries',
   'shopping_items',
   'barcode_items',
+  'receipt_aliases',
 ];
 const CURSOR_KEY = (householdId: string) => `my-recipe-app/sync-cursors/${householdId}`;
 /** Tombstones are kept this long after a successful sync, then purged locally. */

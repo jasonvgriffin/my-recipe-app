@@ -27,6 +27,8 @@ export default function RootLayout() {
         <Stack.Screen name="meal-plan/[date]" options={{ title: 'Meal plan' }} />
         <Stack.Screen name="grocery-run" options={{ title: 'Grocery run' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="pantry/scan" options={{ title: 'Scan barcode' }} />
+        <Stack.Screen name="pantry/receipt" options={{ title: 'Scan receipt' }} />
       </Stack>
     </ThemeProvider>
   );

@@ -23,7 +23,7 @@ import type { IsoDate, ShoppingList } from '@/types/meal-plan';
 
 /**
  * Shopping list (spec #12, #23). Compiled from a chosen week, with manual lines and check-off.
- * Expanded width shows what is already on hand beside the list. Pantry skip goes through `isInPantry`.
+ * Expanded width shows what is already on hand beside the list. Pantry skip goes through `pantryMatcher` (`isInPantry` rules; off when the pantry is locked or hidden).
  */
 export default function ShoppingScreen() {
   return (
