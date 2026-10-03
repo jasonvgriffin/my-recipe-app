@@ -1,5 +1,5 @@
 import { createPantryStore } from '@/storage/pantry';
-import { createSettingsStore } from '@/storage/settings';
+import { createSettingsStore, SETTINGS_STORAGE_KEY } from '@/storage/settings';
 import { asLegacySample, SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { createRecipe } from '@/lib/recipe-utils';
 import { createRecipeStore, RECIPES_STORAGE_KEY, type KeyValueStore } from '@/storage/recipes';
@@ -83,9 +83,10 @@ describe('pantry + settings stores', () => {
     expect((await settings.get()).unitSystem).toBe('original');
     await settings.update({ unitSystem: 'metric' });
     expect((await settings.get()).unitSystem).toBe('metric');
-    await settings.update({ cookedRecentlyDays: 400 });
-    expect((await settings.get()).cookedRecentlyDays).toBe(365);
-    await settings.update({ cookedRecentlyDays: 0 });
-    expect((await settings.get()).cookedRecentlyDays).toBe(1);
+    // v1.0.2: "cooked recently" is a fixed 14 days; a legacy stored window is dropped on read/write.
+    await kv.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ unitSystem: 'metric', cookedRecentlyDays: 30 }));
+    expect(await settings.get()).not.toHaveProperty('cookedRecentlyDays');
+    await settings.update({ unitSystem: 'imperial' });
+    expect(JSON.parse((await kv.getItem(SETTINGS_STORAGE_KEY)) ?? '{}')).not.toHaveProperty('cookedRecentlyDays');
   });
 });

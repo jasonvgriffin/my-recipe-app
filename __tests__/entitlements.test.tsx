@@ -160,6 +160,8 @@ const routes = () => ({
   '(tabs)/meal-plan': require('@/app/(tabs)/meal-plan').default,
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
   '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
+  '(tabs)/more': require('@/app/(tabs)/more').default,
+  '(tabs)/add-menu': require('@/app/(tabs)/add-menu').default,
   'pantry/scan': require('@/app/pantry/scan').default,
   'shopping/scan': require('@/app/shopping/scan').default,
   recipes: require('@/app/recipes').default,
@@ -194,8 +196,8 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     renderRouter(routes(), { initialUrl: '/' });
     await screen.findByTestId('add-recipe-button');
     expect(screen.queryByTestId('import-recipe-button')).toBeNull();
-    await waitFor(() => expect(screen.queryByText('Meal plan')).toBeNull());
-    expect(screen.queryByText('Shopping list')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Meal Plan')).toBeNull());
+    expect(screen.queryByText('Shopping')).toBeNull();
     expect(screen.queryByText('Pantry')).toBeNull();
 
     await act(async () => fireEvent.press(screen.getByTestId('add-recipe-button')));
@@ -228,6 +230,26 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     expect(await screen.findByTestId('recipe-editor')).toBeTruthy();
     expect(screen.queryByTestId('take-photo-button')).toBeNull();
     expect(screen.queryByTestId('choose-photo-button')).toBeNull();
+  });
+
+  it('locked features leave the bottom bar, the + menu and More (v1.0.2); + and Settings stay', async () => {
+    featureGate.setProvider(new NoEntitlements());
+    featureGate.setConfig(premium(...ALL_FEATURE_IDS));
+    renderRouter(routes(), { initialUrl: '/' });
+    await screen.findByTestId('add-recipe-button');
+    await waitFor(() => expect(screen.queryByText('Meal Plan')).toBeNull());
+    expect(screen.queryByText('Shopping')).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
+    expect(screen.getAllByTestId(/^add-menu-(?!sheet|backdrop)/).map((n) => String(n.props.testID))).toEqual([
+      'add-menu-add-recipe',
+      'add-menu-search-recipes',
+    ]);
+    await act(async () => fireEvent.press(screen.getByTestId('add-menu-backdrop')));
+    await act(async () => fireEvent.press(screen.getByText('More')));
+    expect(await screen.findByTestId('more-settings')).toBeTruthy();
+    expect(screen.queryByTestId('more-pantry')).toBeNull();
+    expect(screen.queryByTestId('more-household')).toBeNull();
+    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
   });
 
   it('a locked link-import route shows a neutral message (no payment UI)', async () => {

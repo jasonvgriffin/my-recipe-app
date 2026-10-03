@@ -248,8 +248,6 @@ export interface AppSettings {
   unitSystem: UnitSystem | 'original';
   /** Keep the screen awake in cooking mode (spec #19). */
   cookingModeKeepAwake: boolean;
-  /** Days that count as "cooked recently" (spec #9). */
-  cookedRecentlyDays: number;
   /**
    * Optional supporting features (RECIPES ARE THE CORE — docs/SPEC.md). Hiding them removes their tabs and
    * every cross-link from recipe screens, turning the app into a pure recipe box.
@@ -266,6 +264,5 @@ export interface OptionalFeatures {
 export const DEFAULT_SETTINGS: AppSettings = {
   unitSystem: 'original',
   cookingModeKeepAwake: true,
-  cookedRecentlyDays: 14,
   features: { mealPlan: true, shopping: true, pantry: true },
 };

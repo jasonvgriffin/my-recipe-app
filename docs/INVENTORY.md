@@ -19,7 +19,7 @@
 | 6  | Free-text notes | `Recipe.notes`, `recipe-editor.tsx`, `recipe-detail.tsx` |
 | 7  | Custom recipe titles | `recipe-editor.tsx`, `validateRecipe` in `src/types/recipe.ts` |
 | 8  | Keyword search | `filterRecipes` in `src/lib/recipe-utils.ts`, the search box in `src/app/recipes.tsx` (Existing Recipes; the Recipes tab's “Search” button opens it with `?focus=search`) |
-| 9  | Filters and sort | `filterRecipes` / `sortRecipes` (`recipe-utils.ts`), `src/components/recipe-filters.tsx`, saved browse state in `src/storage/settings.ts` |
+| 9  | Filters and sort | `filterRecipes` / `sortRecipes` / `browseFilters` (`recipe-utils.ts`; “cooked recently” = fixed `COOKED_RECENTLY_DAYS` = 14 since v1.0.2, no setting), `src/components/recipe-filters.tsx`, saved browse state in `src/storage/settings.ts` |
 | 10 | Cooked toggle and cook history | `setCooked` (`recipe-utils.ts`), `formatCookedOn` (`src/lib/dates.ts`), `Recipe.cooked` / `cookHistory` |
 | 11 | Meal planning tab (month view only since v1.0.1) | `src/app/(tabs)/meal-plan.tsx`, `src/app/meal-plan/[date].tsx`, `src/components/meal-calendar.tsx`, `src/components/day-plan.tsx`, `src/storage/meal-plan.ts`, `src/types/meal-plan.ts`, date helpers in `src/lib/dates.ts` |
 | 12 | Shopping list | `src/lib/shopping.ts` (`compileItems`, `compileWeekShoppingList`, `reconcileShoppingList`, …), `src/app/(tabs)/shopping.tsx`, `src/components/shopping-list-view.tsx`, `src/components/pantry-on-hand.tsx`, barcode scan to add a line: `src/app/shopping/scan.tsx` (shared `BarcodeScanner`) |
@@ -38,9 +38,20 @@
 | 25 | Household sharing (Supabase) | `src/sync/` (`engine.ts`, `coordinator.ts`, `account.ts`, `supabase.ts`, `rows.ts`, `config.ts`, `status.ts`, `authors.ts`, `auth-url.ts`, `errors.ts`), `src/household/` (`runtime.ts`, `state.ts`), `src/hooks/use-household.ts`, `src/hooks/use-household-sync.ts`, `src/hooks/use-incoming-url.ts`, `src/app/household.tsx`, `src/app/auth.tsx` (magic-link redirect `myrecipeapp://auth`), `src/components/shared-by.tsx`, `src/components/sync-status.tsx`, `src/storage/identity.ts`, `supabase/migrations/*`, `.github/workflows/supabase-migrations.yml`. Contract: `docs/SYNC.md` |
 | 26 | ~~Receipt scanning~~: **removed in v1.0.1**. Do not re-add without Jason asking (the unused Supabase `receipt_aliases` table stays; never edit applied migrations) | none |
 | 27 | Barcode scanning (Open Food Facts for the **name and brand only**), pantry **and** shopping list | `src/components/barcode-scanner.tsx` (**the** scanner: camera, lookup, name-once), `src/pantry/barcodeLookup.ts`, `src/app/pantry/scan.tsx` (→ `pantryStore.addScanned`, back to Pantry with `?added=`), `src/app/shopping/scan.tsx` (→ `addManualItem`, back to Shopping with `?added=`). Product name is the item title (brand secondary) |
-| 28 | AI assistant access (remote MCP server) | `src/mcp/` (`server.ts` HTTP/OAuth/JSON-RPC, `tools.ts` tools on top of `importRecipeWith` / `applyRecipeEdit` / `filterRecipes` / `compileWeekShoppingList` / `addManualItem` / `isInPantry`, `repo.ts` synced tables via `src/sync/rows.ts`, `oauth.ts`, `rate-limit.ts`), `supabase/functions/mcp/` (Edge Function binding), `supabase/migrations/20261003030000_mcp_rate_limits.sql`, `.github/workflows/supabase-functions.yml`. Docs: `docs/MCP.md` |
+| 28 | AI assistant access (remote MCP server) | Settings → “AI assistants (MCP)” shows `MCP_SERVER_URL` (`src/config/index.ts`) with a copy button; `src/mcp/` (`server.ts` HTTP/OAuth/JSON-RPC, `tools.ts` tools on top of `importRecipeWith` / `applyRecipeEdit` / `filterRecipes` / `compileWeekShoppingList` / `addManualItem` / `isInPantry`, `repo.ts` synced tables via `src/sync/rows.ts`, `oauth.ts`, `rate-limit.ts`), `supabase/functions/mcp/` (Edge Function binding), `supabase/migrations/20261003030000_mcp_rate_limits.sql`, `.github/workflows/supabase-functions.yml`. Docs: `docs/MCP.md` |
 
-## Recipes tab (v1.0.1)
+## Navigation (v1.0.2)
+
+| Piece | Where |
+|-------|-------|
+| Bottom bar: Recipes · Meal Plan · **+** · Shopping · More (nav rail on expanded) | `src/app/(tabs)/_layout.tsx`. Meal Plan / Shopping drop out (`href: null`) when locked or hidden in Settings; + and More always stay. Pantry route stays in `(tabs)` (`href: null`), opened from More |
+| Center + button → add sheet (3-column round icon grid) | `PlusTabButton` in `(tabs)/_layout.tsx` (placeholder route `src/app/(tabs)/add-menu.tsx` redirects to `/`), `src/components/add-menu-sheet.tsx` (Modal; backdrop / back closes), items + filtering + routes in `src/lib/add-menu.ts` (`ADD_MENU_ITEMS`, `visibleAddMenuItems`, `addMenuHref`). Add a menu action there, never a second menu |
+| More screen: Pantry (if visible), Household (if unlocked), Settings | `src/app/(tabs)/more.tsx` |
+| Header “My Recipe App” + section name, settings gear right | `src/components/app-header.tsx` (`AppHeaderTitle`, `SettingsGearButton`), used by `(tabs)/_layout.tsx` and the Settings / Household screens in `src/app/_layout.tsx` |
+| App constants (MCP server URL) and app version | `src/config/index.ts` (`MCP_SERVER_URL`, `appVersion()` from expo-constants); version shown at the bottom of Settings |
+| Accent (orange) for the + button | `colors.accent` / `accentText` in `src/lib/theme.ts` |
+
+## Recipes tab (v1.0.1; plain green titles since v1.0.2)
 
 | Button | Opens |
 |--------|-------|
@@ -49,7 +60,7 @@
 | Add Recipe | `src/app/add.tsx` (links to `src/app/import.tsx`) |
 | What can I make with my existing pantry? | `src/app/pantry-match.tsx` (hidden when `pantry` is locked; explains when hidden/empty) |
 
-Home screen: `src/app/(tabs)/index.tsx`. Settings gear: Ionicons `settings-outline` in `src/app/(tabs)/_layout.tsx`.
+Home screen: `src/app/(tabs)/index.tsx` — since v1.0.2 each option is just its title as tappable green text (`colors.primary`), no cards or subtitles (hint kept as `accessibilityHint`). Settings gear: `SettingsGearButton` (`src/components/app-header.tsx`).
 
 ## Shared libraries (reuse these)
 
@@ -63,7 +74,7 @@ Home screen: `src/app/(tabs)/index.tsx`. Settings gear: Ionicons `settings-outli
 | Key-value storage and collections | `src/storage/kv.ts` (`createCollection`, `defaultStore`) | Every store builds on this |
 | Stores | `recipeStore` (`src/storage/recipes.ts`, incl. coalesced one-time `removeUntouchedSamples`), `mealPlanStore`, `pantryStore`, `settingsStore` | One store per data type |
 | Change notifications | `src/storage/writes.ts` (`notifyDataChange`, `onDataChange`, `withoutSyncNotify`), `src/hooks/use-on-data-change.ts` | Screens reload through `useOnDataChange` |
-| Settings | `src/storage/settings.ts`, `src/hooks/use-settings.ts` | Feature visibility lives in `settings.features` |
+| Settings | `src/storage/settings.ts`, `src/hooks/use-settings.ts` | Feature visibility lives in `settings.features` (the old `cookedRecentlyDays` setting was removed in v1.0.2 and is dropped from stored data) |
 | Entitlements / paywall-ready gating | `src/entitlements/` (`features.ts` flags, `gate.ts`, `provider.ts`, `canUse`), `src/hooks/use-feature.ts` (`useFeature`, `useFeatureVisible`), `src/components/feature-gate.tsx` (`FeatureLocked`), `src/components/optional-feature.tsx` | Gate every optional feature through these |
 | Import | `importRecipe` (`src/import`) | The only import pipeline (UI, share sheet, future MCP) |
 | Cooking state | `src/cooking/session.ts` | UI, deep links and future MCP all drive this |

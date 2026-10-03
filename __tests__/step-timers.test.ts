@@ -113,7 +113,8 @@ describe('step timer notifications (spec #15)', () => {
     const session = createCookSession({
       getRecipe: async (id) => recipes.get(id),
       kv: memoryStore(),
-      now: () => new Date('2026-10-03T12:00:00Z'),
+      // Real clock: armStepTimer compares endsAt with Date.now(), so a fixed past date stopped scheduling after it passed.
+      now: () => new Date(),
     });
     const first = await startBackgroundStepTimer(session, {
       recipeId: chicken.id,

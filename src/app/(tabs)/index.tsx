@@ -10,13 +10,14 @@ interface HomeAction {
   label: string;
   href: Href;
   testID: string;
+  /** Screen-reader hint only (v1.0.2: titles only on screen, no gray subtitle). */
   hint: string;
   /** Optional feature behind the button: a LOCKED feature hides it quietly (paywall-ready gating). */
   gate?: FeatureId;
 }
 
 /**
- * Recipes tab (v1.0.1): five clear buttons, each opening existing functionality. RECIPES ARE THE CORE: no
+ * Recipes tab (v1.0.1; since v1.0.2 plain green titles, no cards or subtitles): five clear options, each opening existing functionality. RECIPES ARE THE CORE: no
  * onboarding, no sign-in; the app opens here.
  * - Search / Existing Recipes → `recipes.tsx` (keyword search, filters, list)
  * - Share Recipes → household sharing (`household.tsx`; gated, shows a neutral message when locked)
@@ -25,9 +26,25 @@ interface HomeAction {
  * Share and pantry-match disappear quietly when their feature is LOCKED by the gate (never in v1: all free).
  */
 const ACTIONS: HomeAction[] = [
-  { label: 'Search', href: '/recipes?focus=search', testID: 'home-search', hint: 'Find a recipe by title, ingredient, note or tag' },
-  { label: 'Existing Recipes', href: '/recipes', testID: 'home-existing', hint: 'Browse, filter and open your recipes' },
-  { label: 'Share Recipes', href: '/household', testID: 'home-share', hint: 'Share recipes with your household', gate: 'householdSync' },
+  {
+    label: 'Search',
+    href: '/recipes?focus=search',
+    testID: 'home-search',
+    hint: 'Find a recipe by title, ingredient, note or tag',
+  },
+  {
+    label: 'Existing Recipes',
+    href: '/recipes',
+    testID: 'home-existing',
+    hint: 'Browse, filter and open your recipes',
+  },
+  {
+    label: 'Share Recipes',
+    href: '/household',
+    testID: 'home-share',
+    hint: 'Share recipes with your household',
+    gate: 'householdSync',
+  },
   { label: 'Add Recipe', href: '/add', testID: 'add-recipe-button', hint: 'Type one in or import from a link' },
   {
     label: 'What can I make with my existing pantry?',
@@ -41,8 +58,7 @@ const ACTIONS: HomeAction[] = [
 export default function RecipesHomeScreen() {
   const shareOk = useFeature('householdSync').available;
   const pantryOk = useFeature('pantry').available;
-  const allowed = (gate?: FeatureId) =>
-    gate === 'householdSync' ? shareOk : gate === 'pantry' ? pantryOk : true;
+  const allowed = (gate?: FeatureId) => (gate === 'householdSync' ? shareOk : gate === 'pantry' ? pantryOk : true);
   return (
     <ScrollView contentContainerStyle={styles.scroll} testID="recipes-home">
       <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
@@ -56,7 +72,6 @@ export default function RecipesHomeScreen() {
               onPress={() => router.push(a.href)}
               testID={a.testID}>
               <Text style={styles.label}>{a.label}</Text>
-              <Text style={styles.hint}>{a.hint}</Text>
             </Pressable>
           ))}
         </View>
@@ -65,20 +80,12 @@ export default function RecipesHomeScreen() {
   );
 }
 
+// v1.0.2 (Jason): no cards — each option is its title as tappable green text (the selected-tab color),
+// with a 56dp tap target and comfortable spacing.
 const styles = StyleSheet.create({
   scroll: { padding: 16, flexGrow: 1 },
-  actions: { gap: 12 },
-  button: {
-    minHeight: 64,
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  pressed: { borderColor: colors.primary },
-  label: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  hint: { color: colors.muted, marginTop: 4 },
+  actions: { gap: 8 },
+  button: { minHeight: 56, justifyContent: 'center', paddingHorizontal: 4, paddingVertical: 12 },
+  pressed: { opacity: 0.6 },
+  label: { color: colors.primary, fontSize: 20, fontWeight: '700' },
 });

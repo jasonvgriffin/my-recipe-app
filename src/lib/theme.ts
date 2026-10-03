@@ -4,6 +4,9 @@ import { DarkTheme, type Theme } from 'expo-router';
 export const colors = {
   primary: '#66BB6A',
   primaryText: '#0B1F0C',
+  /** Accent for the center + button (v1.0.2, Cronometer-style). */
+  accent: '#FF8A3D',
+  accentText: '#1F1206',
   background: '#121412',
   card: '#1D211D',
   text: '#ECEFEC',

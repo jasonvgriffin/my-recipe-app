@@ -196,16 +196,18 @@ export const DEFAULT_BROWSE: RecipeBrowse = {
   sort: 'newest',
 };
 
+/** "Cooked recently" = cooked within this many days (spec #9). Fixed since v1.0.2 (no longer a setting). */
+export const COOKED_RECENTLY_DAYS = 14;
+
 /** Map browse controls onto `filterRecipes`, dropping facets whose feature gate is closed. */
 export function browseFilters(
   browse: RecipeBrowse,
-  opts: { recentDays: number; categories: boolean; tags: boolean; ratings: boolean },
+  opts: { categories: boolean; tags: boolean; ratings: boolean },
 ): RecipeFilter {
-  const days = Number.isFinite(opts.recentDays) ? Math.min(365, Math.max(1, Math.round(opts.recentDays))) : 14;
   return {
     keyword: browse.keyword.trim() ? browse.keyword : undefined,
     cooked: browse.cooked,
-    cookedWithinDays: browse.recent ? days : undefined,
+    cookedWithinDays: browse.recent ? COOKED_RECENTLY_DAYS : undefined,
     categoryId: opts.categories ? browse.categoryId : undefined,
     tags: opts.tags && browse.tags.length ? browse.tags : undefined,
     minRating: opts.ratings ? browse.minRating : undefined,

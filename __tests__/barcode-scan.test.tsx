@@ -49,6 +49,8 @@ const routes = () => ({
   '(tabs)/_layout': require('@/app/(tabs)/_layout').default,
   '(tabs)/index': require('@/app/(tabs)/index').default,
   '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
+  '(tabs)/more': require('@/app/(tabs)/more').default,
+  '(tabs)/add-menu': require('@/app/(tabs)/add-menu').default,
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
   'pantry/scan': require('@/app/pantry/scan').default,
   'shopping/scan': require('@/app/shopping/scan').default,

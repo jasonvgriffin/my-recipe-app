@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
 import { StarRating } from '@/components/star-rating';
-import type { RecipeBrowse, RecipeSort } from '@/lib/recipe-utils';
+import { COOKED_RECENTLY_DAYS, type RecipeBrowse, type RecipeSort } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
 import type { Category } from '@/types/recipe';
 
@@ -22,7 +22,6 @@ const SORTS: { id: RecipeSort; label: string }[] = [
 export function RecipeFilters({
   browse,
   onChange,
-  recentDays,
   categories,
   showCategories,
   tagNames,
@@ -34,7 +33,6 @@ export function RecipeFilters({
 }: {
   browse: RecipeBrowse;
   onChange: (next: RecipeBrowse) => void;
-  recentDays: number;
   categories: Category[];
   showCategories: boolean;
   tagNames: string[];
@@ -75,7 +73,7 @@ export function RecipeFilters({
           onPress={() => patch({ cooked: browse.cooked === false ? undefined : false })}
         />
         <Chip
-          label={`Cooked recently (${recentDays}d)`}
+          label={`Cooked recently (${COOKED_RECENTLY_DAYS}d)`}
           active={browse.recent}
           testID="filter-recent"
           onPress={() => patch({ recent: !browse.recent })}

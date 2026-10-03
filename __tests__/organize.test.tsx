@@ -24,6 +24,8 @@ const routes = () => ({
   '(tabs)/index': require('@/app/(tabs)/index').default,
   '(tabs)/meal-plan': require('@/app/(tabs)/meal-plan').default,
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
+  '(tabs)/more': require('@/app/(tabs)/more').default,
+  '(tabs)/add-menu': require('@/app/(tabs)/add-menu').default,
   add: require('@/app/add').default,
   recipes: require('@/app/recipes').default,
   'recipe/[id]': require('@/app/recipe/[id]').default,
@@ -52,7 +54,7 @@ async function byTitle(part: string): Promise<Recipe> {
 beforeEach(async () => {
   mockWidth = 411;
   await require('@react-native-async-storage/async-storage').clear();
-  await settingsStore.update({ features: { mealPlan: true, shopping: true, pantry: true }, cookedRecentlyDays: 14 });
+  await settingsStore.update({ features: { mealPlan: true, shopping: true, pantry: true } });
 });
 
 afterEach(() => {
@@ -202,25 +204,17 @@ describe('search, filters, cooked history and ratings (spec #8 #9 #10 #22)', () 
     await waitFor(() => expect(screen.getByTestId(`recipe-item-${chicken.id}`)).toBeTruthy());
   });
 
-  it('uses the configurable cooked-recently window', async () => {
+  it('uses a fixed 14-day cooked-recently window (v1.0.2)', async () => {
     await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
     const mousse = await byTitle('Allulose');
-    await recipeStore.save(setCooked(chicken, true, new Date(Date.now() - 10 * 86_400_000)));
-    await recipeStore.save(setCooked(mousse, true, new Date(Date.now() - 2 * 86_400_000)));
+    await recipeStore.save(setCooked(chicken, true, new Date(Date.now() - 20 * 86_400_000)));
+    await recipeStore.save(setCooked(mousse, true, new Date(Date.now() - 10 * 86_400_000)));
 
     renderRouter(routes(), { initialUrl: '/recipes' });
     await screen.findByTestId('filter-recent');
+    expect(screen.getByText('Cooked recently (14d)')).toBeTruthy();
     fireEvent.press(screen.getByTestId('filter-recent'));
-    await waitFor(() => {
-      expect(screen.getByTestId(`recipe-item-${chicken.id}`)).toBeTruthy();
-      expect(screen.getByTestId(`recipe-item-${mousse.id}`)).toBeTruthy();
-    });
-
-    await act(async () => {
-      await settingsStore.update({ cookedRecentlyDays: 7 });
-    });
-    await waitFor(() => expect(screen.getByText('Cooked recently (7d)')).toBeTruthy());
     await waitFor(() => expect(screen.queryByTestId(`recipe-item-${chicken.id}`)).toBeNull());
     expect(screen.getByTestId(`recipe-item-${mousse.id}`)).toBeTruthy();
   });
@@ -286,8 +280,8 @@ describe('search, filters, cooked history and ratings (spec #8 #9 #10 #22)', () 
 describe('settings show/hide and locked organize features', () => {
   it('hides optional tabs from the settings switches and keeps the recipe list', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    expect(await screen.findByText('Meal plan')).toBeTruthy();
-    expect(screen.getByText('Shopping list')).toBeTruthy();
+    expect(await screen.findByText('Meal Plan')).toBeTruthy();
+    expect(screen.getByText('Shopping')).toBeTruthy();
     fireEvent.press(screen.getByTestId('settings-button'));
     expect(await screen.findByTestId('feature-toggle-pantry')).toBeTruthy();
     await act(async () => {
@@ -296,16 +290,17 @@ describe('settings show/hide and locked organize features', () => {
       fireEvent(screen.getByTestId('feature-toggle-pantry'), 'valueChange', false);
     });
     expect((await settingsStore.get()).features).toEqual({ mealPlan: false, shopping: false, pantry: false });
-    fireEvent.press(screen.getByTestId('cooked-recently-30'));
-    await waitFor(async () => expect((await settingsStore.get()).cookedRecentlyDays).toBe(30));
+    // v1.0.2: no cooked-recently setting any more.
+    expect(screen.queryByTestId('cooked-recently-input')).toBeNull();
 
     const { router } = require('expo-router');
     await act(async () => router.back());
-    await waitFor(() => expect(screen.queryByText('Meal plan')).toBeNull());
-    expect(screen.queryByText('Shopping list')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Meal Plan')).toBeNull());
+    expect(screen.queryByText('Shopping')).toBeNull();
+    expect(screen.getByTestId('tab-add-button')).toBeTruthy();
     expect(screen.getByTestId('add-recipe-button')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('home-existing')));
-    expect(await screen.findByText('Cooked recently (30d)')).toBeTruthy();
+    expect(await screen.findByText('Cooked recently (14d)')).toBeTruthy();
   });
 
   it('hides category, tag and rating controls when those features are locked', async () => {

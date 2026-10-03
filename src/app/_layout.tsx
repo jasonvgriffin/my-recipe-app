@@ -2,6 +2,7 @@ import { Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { AppHeaderTitle } from '@/components/app-header';
 import { useHouseholdSync } from '@/hooks/use-household-sync';
 import { colors, navigationTheme } from '@/lib/theme';
 import { configureStepTimerNotifications } from '@/notifications/step-timers';
@@ -36,8 +37,22 @@ export default function RootLayout() {
         <Stack.Screen name="cook/[action]" options={{ title: 'Cook with me' }} />
         <Stack.Screen name="meal-plan/[date]" options={{ title: 'Meal plan' }} />
         <Stack.Screen name="grocery-run" options={{ title: 'Grocery run' }} />
-        <Stack.Screen name="settings" options={{ title: 'Settings' }} />
-        <Stack.Screen name="household" options={{ title: 'Household' }} />
+        <Stack.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            headerTitleAlign: 'center',
+            headerTitle: () => <AppHeaderTitle section="Settings" />,
+          }}
+        />
+        <Stack.Screen
+          name="household"
+          options={{
+            title: 'Household',
+            headerTitleAlign: 'center',
+            headerTitle: () => <AppHeaderTitle section="Household" />,
+          }}
+        />
         <Stack.Screen name="auth" options={{ title: 'Signing in' }} />
         <Stack.Screen name="pantry/scan" options={{ title: 'Scan barcode' }} />
         <Stack.Screen name="shopping/scan" options={{ title: 'Scan barcode' }} />
