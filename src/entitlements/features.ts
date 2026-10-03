@@ -20,6 +20,8 @@ export const FeatureId = {
   categories: 'categories',
   ratings: 'ratings',
   share: 'share',
+  /** Export recipes as a printable PDF and share it (v1.0.3). Builds on `share`. */
+  pdfExport: 'pdfExport',
   photos: 'photos',
   linkImport: 'linkImport',
   /** Remote MCP server (spec #28, docs/MCP.md): assistant read/write access. Checked server-side; no in-app UI. */
@@ -56,6 +58,7 @@ export const FEATURES: Record<FeatureId, FeatureInfo> = {
   categories: { id: 'categories', label: 'Categories', spec: [3] },
   ratings: { id: 'ratings', label: 'Ratings', spec: [22] },
   share: { id: 'share', label: 'Share', spec: [14] },
+  pdfExport: { id: 'pdfExport', label: 'Export PDF', spec: [14], requires: ['share'] },
   photos: { id: 'photos', label: 'Recipe photos', spec: [4] },
   linkImport: { id: 'linkImport', label: 'Import from link / text', spec: [1] },
   mcpAccess: { id: 'mcpAccess', label: 'AI assistant access (MCP server)', spec: [28] },

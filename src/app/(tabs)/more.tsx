@@ -49,7 +49,7 @@ export default function MoreScreen() {
       : []),
     {
       label: 'Settings',
-      hint: 'Units, optional features, AI assistants',
+      hint: 'Appearance, units, optional features, AI assistants',
       icon: 'settings-outline',
       href: '/settings',
       testID: 'more-settings',

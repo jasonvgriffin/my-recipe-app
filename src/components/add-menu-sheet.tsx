@@ -23,7 +23,7 @@ export function AddMenuSheet({ visible, onClose }: { visible: boolean; onClose: 
     shoppingList: useFeatureVisible('shoppingList'),
     pantry: useFeatureVisible('pantry'),
     mealPlan: useFeatureVisible('mealPlan'),
-    householdSync: useFeatureVisible('householdSync'),
+    pdfExport: useFeatureVisible('pdfExport'),
   };
   const items = visibleAddMenuItems((id) => shown[id] ?? false);
 

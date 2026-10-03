@@ -20,7 +20,8 @@ interface HomeAction {
  * Recipes tab (v1.0.1; since v1.0.2 plain green titles, no cards or subtitles): five clear options, each opening existing functionality. RECIPES ARE THE CORE: no
  * onboarding, no sign-in; the app opens here.
  * - Search / Existing Recipes → `recipes.tsx` (keyword search, filters, list)
- * - Share Recipes → household sharing (`household.tsx`; gated, shows a neutral message when locked)
+ * - Share Recipes → v1.0.3: pick recipes and share them as a PDF (`recipes.tsx?select=pdf`, gate `pdfExport`).
+ *   Household sharing stays under More → Household (and Settings → Household).
  * - Add Recipe → `add.tsx` (which links to import from a link / text)
  * - What can I make… → `pantry-match.tsx` (explains gently when the optional pantry is hidden or empty)
  * Share and pantry-match disappear quietly when their feature is LOCKED by the gate (never in v1: all free).
@@ -40,10 +41,10 @@ const ACTIONS: HomeAction[] = [
   },
   {
     label: 'Share Recipes',
-    href: '/household',
+    href: '/recipes?select=pdf',
     testID: 'home-share',
-    hint: 'Share recipes with your household',
-    gate: 'householdSync',
+    hint: 'Pick recipes and share them as a PDF by email, text, Drive and more',
+    gate: 'pdfExport',
   },
   { label: 'Add Recipe', href: '/add', testID: 'add-recipe-button', hint: 'Type one in or import from a link' },
   {
@@ -58,9 +59,9 @@ const ACTIONS: HomeAction[] = [
 export default function RecipesHomeScreen() {
   const bottomInset = useBottomInset();
   const styles = useStyles();
-  const shareOk = useFeature('householdSync').available;
+  const shareOk = useFeature('pdfExport').available;
   const pantryOk = useFeature('pantry').available;
-  const allowed = (gate?: FeatureId) => (gate === 'householdSync' ? shareOk : gate === 'pantry' ? pantryOk : true);
+  const allowed = (gate?: FeatureId) => (gate === 'pdfExport' ? shareOk : gate === 'pantry' ? pantryOk : true);
   return (
     <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 16 + bottomInset }]} testID="recipes-home">
       <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>

@@ -13,6 +13,7 @@ import { TagEditor } from '@/components/tag-editor';
 import { cookSession } from '@/cooking';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
+import { usePdfExport } from '@/hooks/use-pdf-export';
 import { useSettings } from '@/hooks/use-settings';
 import { formatCookedOn, toIsoDate } from '@/lib/dates';
 import { presentIngredient } from '@/lib/ingredients';
@@ -57,6 +58,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   const ratingsOn = useFeature('ratings').available;
   const photos = useFeature('photos').available;
   const share = useFeature('share').available;
+  const pdf = usePdfExport();
   const unitsEnabled = useFeature('unitConversion').available;
   const settings = useSettings();
   const [scaled, setScaled] = useState<{ id: string; value: number } | undefined>();
@@ -296,7 +298,27 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
             <Text style={styles.actionText}>Share</Text>
           </Pressable>
         ) : null}
+        {pdf.available ? (
+          <Pressable
+            style={[styles.action, pdf.busy && styles.actionBusy]}
+            accessibilityRole="button"
+            accessibilityHint="Creates a printable PDF of this recipe and opens the share sheet"
+            disabled={pdf.busy}
+            testID="export-pdf-button"
+            onPress={() => void pdf.exportPdf([recipe])}>
+            {pdf.busy ? (
+              <ActivityIndicator color={colors.primary} testID="export-pdf-busy" />
+            ) : (
+              <Text style={styles.actionText}>Export PDF</Text>
+            )}
+          </Pressable>
+        ) : null}
       </View>
+      {pdf.error ? (
+        <Text style={styles.pdfError} testID="export-pdf-error">
+          {pdf.error}
+        </Text>
+      ) : null}
       {shareOpen && share ? <ShareRecipePanel recipe={recipe} onClose={() => setShareOpen(false)} /> : null}
       {recipe.lastCookedAt ? (
         <Text style={styles.meta} testID="last-cooked">
@@ -453,6 +475,8 @@ const useStyles = makeStyles((colors) => ({
   actionOn: { backgroundColor: colors.primary },
   actionText: { color: colors.primary, fontWeight: '600' },
   actionTextOn: { color: colors.primaryText },
+  actionBusy: { opacity: 0.6 },
+  pdfError: { color: colors.danger, marginTop: 8 },
   stepBlock: { marginBottom: 8 },
   timerBtn: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
   timer: { color: colors.primary, fontWeight: '700', fontSize: 16 },

@@ -42,3 +42,9 @@ jest.mock('expo-keep-awake', () => ({
   deactivateKeepAwake: jest.fn(async () => {}),
   isAvailableAsync: jest.fn(async () => true),
 }));
+
+// expo-print (PDF export, v1.0.3) has no native module under Jest.
+jest.mock('expo-print', () => ({
+  printToFileAsync: jest.fn(async () => ({ uri: 'file:///cache/Print/abc.pdf', numberOfPages: 1 })),
+  printAsync: jest.fn(async () => {}),
+}));

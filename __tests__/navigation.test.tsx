@@ -79,6 +79,7 @@ describe('add menu items (pure)', () => {
     expect(ADD_MENU_ITEMS.some((i) => /scan/i.test(i.id) || /scan/i.test(i.label))).toBe(false);
     expect(visibleAddMenuItems(() => true)).toHaveLength(8);
     expect(addMenuHref('plan-meal', { today: '2026-10-03' })).toBe('/meal-plan/2026-10-03');
+    expect(addMenuHref('share-recipe', { today: '2026-10-03' })).toBe('/recipes?select=pdf'); // v1.0.3: PDF
   });
 });
 

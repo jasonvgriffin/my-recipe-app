@@ -6,7 +6,8 @@ import { downloadSharePhoto } from '@/lib/photos';
 import type { ShareRequest } from '@/lib/share-recipe';
 
 /**
- * Open the platform share sheet for a prepared recipe payload (spec #14).
+ * Open the platform share sheet for a prepared recipe payload (spec #14): text, photo, link, or a PDF file
+ * (`exportRecipesPdf`, v1.0.3).
  * Android uses the local RecipeShare module so text, photo and link can go out together.
  * Other platforms use React Native Share and expo-sharing.
  */
@@ -26,7 +27,8 @@ export async function presentShare(request: ShareRequest): Promise<void> {
     return;
   }
   if (fileUri) {
-    await Sharing.shareAsync(fileUri, { mimeType, dialogTitle: request.title, UTI: 'public.image' });
+    const UTI = mimeType === 'application/pdf' ? 'com.adobe.pdf' : 'public.image';
+    await Sharing.shareAsync(fileUri, { mimeType, dialogTitle: request.title, UTI });
     return;
   }
   await Share.share({ message: message ?? '', title: request.title });
