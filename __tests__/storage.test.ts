@@ -37,7 +37,6 @@ describe('recipe store', () => {
         steps: [{ text: 'Scramble' }],
         tags: ['breakfast'],
         servings: 1,
-        nutrition: { netCarbsG: 1 },
       },
       new Date('2026-01-01T00:00:00Z'),
       'eggs',

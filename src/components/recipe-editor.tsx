@@ -171,19 +171,6 @@ export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (re
             />
           </Field>
         </View>
-        <View style={styles.flex}>
-          <Field label="Net carbs / serving (g)">
-            <TextInput
-              value={state.netCarbs}
-              onChangeText={(netCarbs) => patch({ netCarbs })}
-              keyboardType="decimal-pad"
-              placeholder="unknown"
-              placeholderTextColor={colors.placeholder}
-              style={styles.input}
-              testID="edit-carbs"
-            />
-          </Field>
-        </View>
       </View>
       {errors.map((error) => (
         <Text key={error} style={styles.error}>

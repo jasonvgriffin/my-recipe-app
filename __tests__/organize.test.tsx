@@ -114,13 +114,12 @@ describe('categories (spec #3)', () => {
     fireEvent.changeText(screen.getByPlaceholderText('e.g. Cauliflower Mac & Cheese'), 'Almond Bread');
     fireEvent.changeText(screen.getByPlaceholderText(/1 head cauliflower/), `2 cups almond flour\n1 tbsp allulose`);
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Mix\nBake 25 minutes');
-    fireEvent.changeText(screen.getByTestId('carbs-input'), '4');
     await act(async () => fireEvent.press(screen.getByText('Save recipe')));
 
     const saved = await byTitle('Almond Bread');
     expect(saved.rating).toBe(5);
     expect(saved.categoryIds).toHaveLength(1);
-    expect(saved.tags).toEqual(expect.arrayContaining(['low-carb', 'diabetic-friendly']));
+    expect(saved.tags).toEqual([]);
   });
 });
 
@@ -139,19 +138,19 @@ describe('tags (spec #20)', () => {
     const { router } = require('expo-router');
     await act(async () => router.push('/organize'));
     await screen.findByTestId('rename-tag-weeknight');
-    fireEvent.press(screen.getByTestId('rename-tag-low-carb'));
-    fireEvent.changeText(screen.getByTestId('rename-tag-input-low-carb'), 'keto');
-    await act(async () => fireEvent.press(screen.getByTestId('save-tag-low-carb')));
+    fireEvent.press(screen.getByTestId('rename-tag-diabetic-friendly'));
+    fireEvent.changeText(screen.getByTestId('rename-tag-input-diabetic-friendly'), 'family');
+    await act(async () => fireEvent.press(screen.getByTestId('save-tag-diabetic-friendly')));
     const mousse = await byTitle('Allulose');
     await waitFor(async () => {
-      expect((await recipeStore.get(chicken.id))?.tags).toContain('keto');
-      expect((await recipeStore.get(mousse.id))?.tags).toContain('keto');
-      expect((await recipeStore.get(mousse.id))?.tags).not.toContain('low-carb');
+      expect((await recipeStore.get(chicken.id))?.tags).toContain('family');
+      expect((await recipeStore.get(mousse.id))?.tags).toContain('family');
+      expect((await recipeStore.get(mousse.id))?.tags).not.toContain('diabetic-friendly');
     });
 
-    fireEvent.press(await screen.findByTestId('delete-tag-keto'));
-    await act(async () => fireEvent.press(screen.getByTestId('confirm-delete-tag-keto')));
-    await waitFor(async () => expect(await recipeStore.listTags()).not.toContain('keto'));
+    fireEvent.press(await screen.findByTestId('delete-tag-family'));
+    await act(async () => fireEvent.press(screen.getByTestId('confirm-delete-tag-family')));
+    await waitFor(async () => expect(await recipeStore.listTags()).not.toContain('family'));
   });
 });
 

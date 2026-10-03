@@ -34,7 +34,8 @@ const PAGE = `<html><head><script type="application/ld+json">${JSON.stringify({
         { '@type': 'HowToSection', itemListElement: [{ '@type': 'HowToStep', text: 'Mix.' }] },
         { '@type': 'HowToStep', text: '<p>Bake.</p>' },
       ],
-      keywords: 'Bread, Low-Carb',
+      keywords: 'Bread, Quick',
+      // Imports drop nutrition (recipe app, not a nutrition app); kept here to prove it is ignored.
       nutrition: {
         '@type': 'NutritionInformation',
         calories: '180 kcal',
@@ -64,7 +65,7 @@ describe('importRecipe — structured (future MCP / "Hey AI, send this recipe")'
           steps: ['Bake 20 min'],
           tags: ['Dessert'],
           categories: ['Desserts'],
-          carbsPerServing: 3,
+          ...({ carbsPerServing: 3 } as object), // ignored: imports never store nutrition
           servings: 9,
         },
         source: { channel: 'mcp', label: 'Grok' },
@@ -79,8 +80,9 @@ describe('importRecipe — structured (future MCP / "Hey AI, send this recipe")'
       ingredients: [{ text: '1 cup almond flour' }, { text: '1/2 cup allulose' }],
       tags: ['dessert'],
       servings: 9,
-      nutrition: { netCarbsG: 3, source: 'imported' },
     });
+    expect('nutrition' in result.recipe).toBe(false);
+    expect('carbsPerServing' in result.recipe).toBe(false);
     expect(result.recipe.ingredients[1]).toMatchObject({ quantity: 0.5, unit: 'cup', name: 'allulose' });
     const [cat] = await d.store.listCategories();
     expect(cat.name).toBe('Desserts');
@@ -101,15 +103,14 @@ describe('importRecipe — structured (future MCP / "Hey AI, send this recipe")'
     expect(await d.store.list()).toHaveLength(0);
   });
 
-  it('warns (not fails) on unknown carbs/servings and never invents carbs', async () => {
+  it('warns (not fails) on unknown servings', async () => {
     const result = await importRecipe(
       { kind: 'structured', recipe: { title: 'Eggs', steps: ['Scramble'] } },
       {},
       deps(),
     );
     if (!result.ok) throw new Error('expected ok');
-    expect(result.recipe.nutrition.netCarbsG).toBeUndefined();
-    expect(result.warnings.join(' ')).toMatch(/Net carbs per serving unknown/);
+    expect(result.warnings.join(' ')).toMatch(/Servings unknown/);
   });
 });
 
@@ -124,9 +125,8 @@ describe('importRecipe — url (link import, spec #1/#5)', () => {
       servings: 8,
       sourceUrl: PAGE_URL,
       photoUri: 'https://example.com/bread.jpg',
-      nutrition: { calories: 180, carbsG: 6, fiberG: 3, proteinG: 7, netCarbsG: 3, source: 'imported' },
     });
-    expect(first.warnings).toContain('Net carbs computed as total carbs minus fiber.');
+    expect('nutrition' in first.recipe).toBe(false);
 
     const again = await importRecipe({ kind: 'url', url: 'http://example.com/keto-bread' }, {}, d);
     expect(again).toMatchObject({ ok: true, status: 'duplicate' });

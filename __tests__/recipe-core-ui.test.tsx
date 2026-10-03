@@ -69,7 +69,7 @@ describe('import screen (spec #1)', () => {
     await act(async () => fireEvent.press(screen.getByTestId('import-url-button')));
     expect(await screen.findByTestId('import-draft')).toBeTruthy();
     expect(screen.getByText('Imported eggs')).toBeTruthy();
-    expect(screen.getByText(/net carbs unknown/)).toBeTruthy();
+    expect(screen.getByText(/ingredients · .* steps/)).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('import-save')));
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
     const saved = (await recipeStore.list()).find((r) => r.title === 'Imported eggs');
@@ -131,7 +131,6 @@ describe('edit, notes, title, source link, photo, share', () => {
         steps: [{ text: 'Cook.' }, { text: 'Serve.' }],
         tags: ['breakfast'],
         servings: 2,
-        nutrition: { netCarbsG: 1, source: 'manual' },
         sourceUrl: 'https://example.com/eggs',
         notes: 'Original note',
       },
@@ -182,7 +181,6 @@ describe('edit, notes, title, source link, photo, share', () => {
       steps: [{ text: 'Scramble.' }],
       tags: [],
       servings: 1,
-      nutrition: { netCarbsG: 1, source: 'manual' },
       sourceUrl: 'https://example.com/share',
       photoUri: 'file:///docs/recipe-photos/share.jpg',
     });

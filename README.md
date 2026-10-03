@@ -12,8 +12,8 @@ Full v1 feature spec: [docs/SPEC.md](docs/SPEC.md).
 - Recipe list with keyword search and filters (cooked / cooked recently / not cooked)
 - Cooked toggle with last-cooked date; "Plan for today"; tappable source link; notes
 - Meal plan week view; shopping list compiled from this week's plan with check-off
-- Add recipe: title, ingredients, steps, tags, servings, net carbs per serving
-- Recipe detail (servings, carbs/serving, total carbs, low-carb badge) and delete
+- Add recipe: title, ingredients, steps, tags, servings
+- Recipe detail (servings, ingredients, steps) and delete
 - Cook-with-me step session (`myrecipeapp://cook/...` deep links) for voice assistants
 - Stored on-device (AsyncStorage), household-sync-ready (Supabase backend; sign-in UI pending)
 - Barcode → product lookup module (Open Food Facts) for the upcoming pantry scanner

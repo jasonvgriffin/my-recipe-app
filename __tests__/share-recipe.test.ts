@@ -7,7 +7,6 @@ const recipe = createRecipe({
   steps: [{ text: 'Chill 2 hours.', durationSeconds: 7200 }],
   tags: [],
   servings: 4,
-  nutrition: { netCarbsG: 3, source: 'manual' },
   notes: 'Soft peaks.',
   sourceUrl: 'https://example.com/mousse',
   photoUri: 'file:///docs/recipe-photos/mousse.jpg',
@@ -23,7 +22,6 @@ describe('share payload (spec #14)', () => {
 
     expect(text.request.message).toContain('Allulose mousse');
     expect(text.request.message).toContain('Substitution: allulose instead of sugar');
-    expect(text.request.message).toContain('Net carbs per serving: 3 g');
     expect(text.request.message).toContain('Soft peaks.');
     expect(text.request.fileUri).toBeUndefined();
 
@@ -38,17 +36,16 @@ describe('share payload (spec #14)', () => {
     expect(all.request.fileUri).toBe(recipe.photoUri);
   });
 
-  it('keeps unknown carbs as unknown and uses a remote photo URL', () => {
+  it('uses a remote photo URL', () => {
     const unknown = createRecipe({
       title: 'Eggs',
       ingredients: [{ text: '2 eggs' }],
       steps: [{ text: 'Scramble.' }],
       tags: [],
       servings: 1,
-      nutrition: {},
       photoUri: 'https://cdn.example.com/eggs.png',
     });
-    expect(formatRecipeShareText(unknown)).toContain('Net carbs per serving: unknown');
+    expect(formatRecipeShareText(unknown)).not.toMatch(/carb/i);
     const shared = buildShareRequest(unknown, { text: false, photo: true, link: false });
     if (!shared.ok) throw new Error(shared.error);
     expect(shared.request.remotePhotoUrl).toBe('https://cdn.example.com/eggs.png');
@@ -63,7 +60,6 @@ describe('share payload (spec #14)', () => {
       steps: [{ text: 'Scramble.' }],
       tags: [],
       servings: 1,
-      nutrition: { netCarbsG: 1 },
     });
     expect(buildShareRequest(noPhoto, { text: false, photo: true, link: false }).ok).toBe(false);
     expect(buildShareRequest(noPhoto, { text: false, photo: false, link: true }).ok).toBe(false);

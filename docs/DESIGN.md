@@ -93,5 +93,4 @@ so timestamps, authorship and tombstones stay correct. The app must work fully o
 
 ## 7. Product rules
 
-Diabetic-friendly, low-carb; **allulose is the only sugar-free sweetener — never monk fruit**; never default
-unknown carbs/nutrition to 0.
+Diabetic-friendly recipes; **allulose is the only sugar-free sweetener — never monk fruit**. This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition.

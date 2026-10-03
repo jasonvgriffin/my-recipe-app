@@ -54,7 +54,7 @@ describe('barcode camera (spec #27)', () => {
     jest.spyOn(barcodeLookup, 'lookup').mockResolvedValue({
       status: 'found',
       source: 'openfoodfacts',
-      product: { barcode: EAN, name: 'Almond flour', brand: 'Bob’s' },
+      product: { barcode: EAN, name: 'Almond flour' },
     });
     renderScan();
     expect(await screen.findByTestId('barcode-camera')).toBeTruthy();

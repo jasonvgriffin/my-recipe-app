@@ -1,4 +1,4 @@
-import { netCarbs, type NutritionPerServing, type RecipeInput } from '@/types/recipe';
+import type { RecipeInput } from '@/types/recipe';
 
 import type { ImportSource, ParsedRecipeDraft } from './types';
 import { isHttpUrl, parseUrl } from './url';
@@ -36,19 +36,10 @@ export function draftToRecipeInput(
   const steps = draft.steps
     .map((st) => (typeof st === 'string' ? { text: clean(st) } : { ...st, text: clean(st.text) }))
     .filter((st) => st.text);
-  const nutrition: NutritionPerServing = { ...draft.nutrition };
-  if (nutrition.netCarbsG === undefined && draft.carbsPerServing !== undefined)
-    nutrition.netCarbsG = draft.carbsPerServing;
-  if (nutrition.netCarbsG === undefined && netCarbs(nutrition) !== undefined) {
-    nutrition.netCarbsG = netCarbs(nutrition);
-    warnings.push('Net carbs computed as total carbs minus fiber.');
-  }
-  if (Object.keys(nutrition).length) nutrition.source = 'imported';
   if (draft.servings === undefined) warnings.push('Servings unknown; defaulted to 1.');
 
   if (ingredients.length === 0) warnings.push('No ingredients found.');
   if (steps.length === 0) warnings.push('No steps found.');
-  if (nutrition.netCarbsG === undefined) warnings.push('Net carbs per serving unknown; please add it.');
   return {
     input: {
       title: clean(draft.title),
@@ -57,7 +48,6 @@ export function draftToRecipeInput(
       steps,
       tags: draft.tags,
       servings: draft.servings ?? 1,
-      nutrition,
       rating: draft.rating,
       notes: draft.notes?.trim() || undefined,
       photoUri: draft.photoUrl,

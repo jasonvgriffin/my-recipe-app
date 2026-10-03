@@ -20,7 +20,7 @@ import { isRemotePhoto } from '@/lib/photo-path';
 import { downloadRecipePhoto } from '@/lib/photos';
 import { colors } from '@/lib/theme';
 import { recipeStore } from '@/storage/recipes';
-import { PREFERRED_SWEETENER, netCarbs } from '@/types/recipe';
+import { PREFERRED_SWEETENER } from '@/types/recipe';
 
 /**
  * Paste a link or recipe text, or receive an Android share / deep link (spec #1).
@@ -213,10 +213,7 @@ function ImportBody() {
             <Text style={styles.draftTitle}>{duplicate ? 'Already in your recipes' : 'Draft'}</Text>
             <Text style={styles.recipeTitle}>{draft.recipe.title}</Text>
             <Text style={styles.meta}>
-              {draft.recipe.ingredients.length} ingredients · {draft.recipe.steps.length} steps ·{' '}
-              {netCarbs(draft.recipe.nutrition) === undefined
-                ? 'net carbs unknown'
-                : `${netCarbs(draft.recipe.nutrition)} g net carbs`}
+              {draft.recipe.ingredients.length} ingredients · {draft.recipe.steps.length} steps
             </Text>
             {draft.warnings.map((warning) => (
               <Text key={warning} style={styles.warning}>

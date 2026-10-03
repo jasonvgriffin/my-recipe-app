@@ -5,6 +5,9 @@
  * Order: household-shared local mapping (incl. cached Open Food Facts results and user-typed names)
  * → Open Food Facts API (free, no key) → not found / offline → caller asks the user for a name once and
  * calls `saveUserProduct`, which is stored household-wide so nobody has to type it again.
+ *
+ * Open Food Facts is used for the product NAME only (no brand, package size, image or nutrition). Never request or store
+ * nutrition here — the pantry tracks names and quantities, not nutrition (Jason, Oct 3 2026).
  */
 import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import type { Collection } from '@/storage/kv';
@@ -12,27 +15,11 @@ import type { SyncMeta } from '@/types/sync';
 
 export const OFF_USER_AGENT = 'MyRecipeApp/1.0 (github.com/jasonvgriffin)';
 export const OFF_PRODUCT_URL = (barcode: string) =>
-  `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=code,product_name,brands,quantity,image_front_url,image_url,nutriments`;
-
-export interface NutritionPer100g {
-  calories?: number;
-  carbsG?: number;
-  fiberG?: number;
-  /** carbs − fiber when both known. */
-  netCarbsG?: number;
-  proteinG?: number;
-  fatG?: number;
-  sugarsG?: number;
-}
+  `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=code,product_name`;
 
 export interface BarcodeProduct {
   barcode: string;
   name: string;
-  brand?: string;
-  /** Package size as printed, e.g. "500 g". */
-  quantity?: string;
-  imageUrl?: string;
-  nutritionPer100g?: NutritionPer100g;
 }
 
 /** Household-shared barcode mapping record (synced table `barcode_items`). id = barcode-derived UUID-free key. */
@@ -72,12 +59,17 @@ export function normalizeBarcode(raw: string): string | undefined {
   return code.length === 12 ? `0${code}` : code;
 }
 
-const num = (v: unknown) =>
-  typeof v === 'number' && Number.isFinite(v)
-    ? v
-    : typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))
-      ? Number(v)
-      : undefined;
+/**
+ * Keep only the name mapping: drop extra data older builds cached on barcode mappings (brand, package size,
+ * image, nutrition), so it is neither kept on device nor pushed to the household again.
+ */
+export function withoutNutrition<T extends object>(item: T): T {
+  const legacy = ['nutritionPer100g', 'brand', 'quantity', 'imageUrl'];
+  if (!legacy.some((k) => k in item)) return item;
+  const rest = { ...item } as Record<string, unknown>;
+  for (const k of legacy) delete rest[k];
+  return rest as T;
+}
 
 /** Map an Open Food Facts v2 product response to BarcodeProduct (undefined if not found). */
 export function parseOpenFoodFacts(barcode: string, json: unknown): BarcodeProduct | undefined {
@@ -87,36 +79,7 @@ export function parseOpenFoodFacts(barcode: string, json: unknown): BarcodeProdu
   if (body.status !== 1 || !p) return undefined;
   const name = typeof p.product_name === 'string' ? p.product_name.trim() : '';
   if (!name) return undefined;
-  const n = (p.nutriments ?? {}) as Record<string, unknown>;
-  const kcal =
-    num(n['energy-kcal_100g']) ??
-    (num(n.energy_100g) !== undefined ? Math.round(num(n.energy_100g)! / 4.184) : undefined);
-  const nutrition: NutritionPer100g = {
-    calories: kcal,
-    carbsG: num(n.carbohydrates_100g),
-    fiberG: num(n.fiber_100g),
-    proteinG: num(n.proteins_100g),
-    fatG: num(n.fat_100g),
-    sugarsG: num(n.sugars_100g),
-  };
-  if (nutrition.carbsG !== undefined && nutrition.fiberG !== undefined)
-    nutrition.netCarbsG = Math.max(0, +(nutrition.carbsG - nutrition.fiberG).toFixed(1));
-  const cleaned = Object.fromEntries(Object.entries(nutrition).filter(([, v]) => v !== undefined)) as NutritionPer100g;
-  const brand = typeof p.brands === 'string' ? p.brands.split(',')[0].trim() : undefined;
-  const image =
-    typeof p.image_front_url === 'string'
-      ? p.image_front_url
-      : typeof p.image_url === 'string'
-        ? p.image_url
-        : undefined;
-  return {
-    barcode,
-    name,
-    ...(brand ? { brand } : {}),
-    ...(typeof p.quantity === 'string' && p.quantity.trim() ? { quantity: p.quantity.trim() } : {}),
-    ...(image ? { imageUrl: image } : {}),
-    ...(Object.keys(cleaned).length ? { nutritionPer100g: cleaned } : {}),
-  };
+  return { barcode, name };
 }
 
 export function createBarcodeLookup({
@@ -134,7 +97,7 @@ export function createBarcodeLookup({
     const ts = now().toISOString();
     return items.save(
       {
-        ...existing,
+        ...(existing ? withoutNutrition(existing) : {}),
         ...product,
         source,
         id: existing?.id ?? newId(),
@@ -145,8 +108,8 @@ export function createBarcodeLookup({
     );
   }
   const strip = (i: BarcodeItem): BarcodeProduct => {
-    const { barcode, name, brand, quantity, imageUrl, nutritionPer100g } = i;
-    return { barcode, name, brand, quantity, imageUrl, nutritionPer100g };
+    const { barcode, name } = i;
+    return { barcode, name };
   };
 
   return {
@@ -174,11 +137,10 @@ export function createBarcodeLookup({
     async saveUserProduct(
       rawBarcode: string,
       name: string,
-      extra: Partial<BarcodeProduct> = {},
     ): Promise<BarcodeProduct> {
       const barcode = normalizeBarcode(rawBarcode) ?? rawBarcode.replace(/\D/g, '');
       if (!name.trim()) throw new Error('Name is required.');
-      return strip(await store({ ...extra, barcode, name: name.trim() }, 'user'));
+      return strip(await store({ barcode, name: name.trim() }, 'user'));
     },
   };
 }

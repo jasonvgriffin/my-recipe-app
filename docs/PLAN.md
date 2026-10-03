@@ -6,10 +6,13 @@ AI-friendly, diabetic-friendly recipe app. Android first, iOS later from the sam
 
 **v1 = [docs/SPEC.md](SPEC.md)** (Jason's 27-item feature spec: link import, editing, categories, photos,
 source links, notes, search, filters, cooked tracking, meal plan calendar, shopping list, dark theme, share,
-step timers, unit conversion, nutrition, grocery run mode, cooking mode, tags, pantry, ratings, foldables,
+step timers, unit conversion, ~~nutrition~~ (removed), grocery run mode, cooking mode, tags, pantry, ratings, foldables,
 cook-with-me, household sharing, receipt scanning, barcode scanning).
 
-**Release policy:** v1.0.0 = ALL SPEC items 1–27 complete. The first published APK is v1.0.0. Until then CI only
+**Standing rule (Jason, Oct 3 2026):** This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition. Spec #17 (nutrition) was removed;
+the pantry tracks item names and quantities only, and barcode scans use Open Food Facts for the product name only.
+
+**Release policy:** v1.0.0 = ALL SPEC items 1–27 complete (#17 removed). The first published APK is v1.0.0. Until then CI only
 uploads APK _artifacts_ on each push/PR (to keep builds green); a GitHub Release is created only by pushing a
 `v*` tag (or a manual `publish` workflow run) — Eve/Jason decide when.
 Household sync on Supabase (#25) **is** in v1 (project live, migrations applied); the remote MCP server is Phase 3.
@@ -17,7 +20,7 @@ Household sync on Supabase (#25) **is** in v1 (project live, migrations applied)
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
 - [x] Expo SDK 57 + TypeScript + expo-router scaffold
-- [x] `Recipe` schema (`src/types/recipe.ts`) with validation (required fields, servings > 0, carbs ≥ 0,
+- [x] `Recipe` schema (`src/types/recipe.ts`) with validation (required fields, servings > 0,
       **no monk fruit** — allulose only)
 - [x] Recipe list with search (title / tag / ingredient), add-recipe form, detail view, delete
 - [x] Local persistence (AsyncStorage behind a swappable repository) + 2 seed recipes
@@ -26,7 +29,7 @@ Household sync on Supabase (#25) **is** in v1 (project live, migrations applied)
 - [x] Dark theme by default; bottom tabs Recipes · Meal plan · Shopping list
 - [x] Single import pipeline `src/import/importRecipe` (zod contract, JSON-LD, text, dedupe) — see IMPORT_API.md
 - [x] Data model for items 15–22: structured steps (timers), parsed ingredients (units/scaling/merge),
-      nutrition per serving, ratings, tags, pantry, app settings; schema migration v2→v3
+      ratings, tags, pantry, app settings; schema migration v2→v3 (nutrition removed in v5)
 - [x] Data layer for v1: categories, cooked/lastCookedAt, notes, sourceUrl, photoUri, meal plan entries,
       shopping lists, schema migration v1→v2, JSON-LD import parser
 - [x] Foldables (#23): `useWindowSizeClass`, `TwoPaneLayout`, nav rail, compact/expanded tests
@@ -52,7 +55,7 @@ Suggested PR order (each small, with tests; update the status table in SPEC.md):
 7. Share sheet with selectable parts: text / photo / link (#14)
 8. Step timers: tap ⏱ to start, background + notification (`expo-notifications`) (#15)
 9. Unit toggle per recipe + app setting; servings scaler (#16)
-10. Nutrition entry/edit form (all six fields) + display (#17)
+10. ~~Nutrition (#17)~~ — removed by Jason (Oct 3 2026): recipe app, not a nutrition app
 11. Grocery run mode for a recipe or the planned week (big checklist, pantry-aware) (#18)
 12. Cooking mode: full-screen step pager, keep-awake, large text, inline timers (#19)
 13. Tag filter chips + tag management (#20)
@@ -72,7 +75,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
 
 1. **Export / import**
    - Export one or all recipes as **JSON** (schema-versioned, round-trippable) and **Markdown**
-     (human/LLM-readable: title, servings, carbs, ingredients, steps, tags).
+     (human/LLM-readable: title, servings, ingredients, steps, tags).
    - Import JSON (and later Markdown/plain text) via `importRecipe({ kind: 'structured' | 'text' })`.
 2. **Share sheet**
    - Share a recipe out as Markdown/text (expo-sharing / RN `Share`).
@@ -100,8 +103,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
    - Sync with the same backend the MCP server uses: last-write-wins on `updatedAt` to start, soft deletes
      (tombstones), per-user API token stored in `expo-secure-store`.
    - Swap in a `SyncedRecipeStore` implementing the existing repository interface.
-5. Nice-to-haves: carb calculator from ingredients, scale servings, AI "make this low-carb" suggestions
-   (must respect the allulose-only rule).
+5. Nice-to-haves: scale servings, AI recipe tweak suggestions (must respect the allulose-only rule; no nutrition features).
 
 ## Phase 4 — iOS
 
@@ -122,11 +124,10 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
 3. **Backend / hosting** for sync + MCP: Cloudflare, Supabase, Fly.io, or something else? Any budget?
 4. ~~**MCP auth:** API key only vs OAuth?~~ **Resolved (Oct 3 2026): OAuth** tied to the household-sharing email-code account; own paywall switch; per-user rate limits (see Phase 3).
 5. **Storage engine:** stay on AsyncStorage for now, or switch to `expo-sqlite` early?
-6. **Nutrition lookup source** for computed nutrition later (spec #17): USDA FoodData Central (free),
-   Cronometer export, or other (may need keys/money)?
+6. ~~Nutrition lookup source~~ — resolved (Oct 3 2026): no nutrition features at all.
 7. **iOS timing** and whether to pay for Apple Developer ($99/yr) and/or EAS.
 8. **Multi-user:** just Jason, or family members sharing a recipe box?
-9. **Low-carb threshold:** currently ≤ 15 g net carbs/serving gets the "low-carb" label — adjust?
+9. ~~Low-carb threshold~~ — resolved (Oct 3 2026): label removed with nutrition.
 10. **"Cooked recently" window:** currently 14 days (`AppSettings.cookedRecentlyDays`) — adjust?
 11. **Photos:** keep on-device only (lost if the app is uninstalled) until a sync backend exists — OK?
 12. **Timer notifications:** OK to request Android notification permission on first timer start?

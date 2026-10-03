@@ -1,6 +1,5 @@
 import {
   RECIPE_SCHEMA_VERSION,
-  netCarbs,
   type Ingredient,
   type Recipe,
   type RecipeInput,
@@ -60,7 +59,6 @@ export function createRecipe(input: RecipeInput, now: Date = new Date(), id: str
     steps: input.steps.map(normalizeStep).filter((st) => st.text),
     tags: [...new Set(input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean))],
     servings: input.servings,
-    nutrition: { ...input.nutrition },
     rating: input.rating,
     unitSystem: input.unitSystem,
     categoryIds: [...new Set(input.categoryIds ?? [])],
@@ -107,7 +105,7 @@ export interface RecipeFilter {
   minRating?: number;
 }
 
-export type RecipeSort = 'newest' | 'title' | 'rating' | 'netCarbs' | 'lastCooked';
+export type RecipeSort = 'newest' | 'title' | 'rating' | 'lastCooked';
 
 /** Sort recipes (spec #22 rating sort etc.). Unknown values sort last. */
 export function sortRecipes(recipes: Recipe[], sort: RecipeSort): Recipe[] {
@@ -118,8 +116,6 @@ export function sortRecipes(recipes: Recipe[], sort: RecipeSort): Recipe[] {
       return out.sort((a, b) => a.title.localeCompare(b.title));
     case 'rating':
       return out.sort((a, b) => last(a.rating, -1) - last(b.rating, -1) || a.title.localeCompare(b.title));
-    case 'netCarbs':
-      return out.sort((a, b) => last(netCarbs(a.nutrition), 1) - last(netCarbs(b.nutrition), 1));
     case 'lastCooked':
       return out.sort((a, b) => (b.lastCookedAt ?? '').localeCompare(a.lastCookedAt ?? ''));
     default:

@@ -16,7 +16,6 @@ function sample(): Recipe {
       ],
       tags: ['dinner'],
       servings: 4,
-      nutrition: { netCarbsG: 5, calories: 390, source: 'imported' },
       notes: 'Crispy skin.',
       sourceUrl: 'https://example.com/chicken',
     },
@@ -57,7 +56,6 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
     expect(saved.lastCookedAt).toBe(recipe.lastCookedAt);
     expect(saved.rating).toBe(4);
     expect(saved.tags).toEqual(['dinner']);
-    expect(saved.nutrition.calories).toBe(390);
     expect(saved.sourceUrl).toBe('https://example.com/chicken');
   });
 
@@ -80,13 +78,9 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
     expect(saved.title).toBe('Edited by someone else');
   });
 
-  it('leaves net carbs unknown when the field is cleared and rejects monk fruit', () => {
+  it('rejects monk fruit', () => {
     const recipe = sample();
     const state = recipeToEditorState(recipe);
-    state.netCarbs = '';
-    const cleared = editorStateToInput(state, recipe);
-    if (!cleared.ok) throw new Error(cleared.errors.join());
-    expect(cleared.input.nutrition?.netCarbsG).toBeUndefined();
 
     state.ingredients[0].text = '1 tsp monk fruit';
     const forbidden = editorStateToInput(state, recipe);

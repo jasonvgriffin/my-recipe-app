@@ -59,7 +59,6 @@ describe('recipes-first', () => {
     fireEvent.changeText(screen.getByPlaceholderText('e.g. Cauliflower Mac & Cheese'), 'Zucchini Lasagna');
     fireEvent.changeText(screen.getByPlaceholderText(/1 head cauliflower/), '2 zucchini\n1 cup ricotta');
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Layer\nBake 30 minutes');
-    fireEvent.changeText(screen.getByTestId('carbs-input'), '7');
     await act(async () => fireEvent.press(screen.getByText('Save recipe')));
 
     // Back on the list → open it → detail has recipe actions but no meal-plan cross-link

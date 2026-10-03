@@ -25,9 +25,8 @@ const recipeInput = (title: string) => ({
   title,
   ingredients: [{ text: '2 eggs' }],
   steps: [{ text: 'Cook 5 minutes' }],
-  tags: ['low-carb'],
+  tags: ['dinner'],
   servings: 2,
-  nutrition: { netCarbsG: 1, source: 'manual' as const },
 });
 
 afterEach(async () => {

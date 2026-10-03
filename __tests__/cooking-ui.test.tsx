@@ -40,7 +40,6 @@ describe('cooking mode UI (spec #19, #15, #24)', () => {
       title: 'Timer chicken',
       servings: 2,
       tags: [],
-      nutrition: { netCarbsG: 1, source: 'manual' },
       ingredients: [{ text: '200 g chicken thighs' }, { text: '1 tbsp olive oil' }],
       steps: [{ text: 'Sear 2 minutes per side.' }, { text: 'Rest 5 minutes.' }],
     });
@@ -78,7 +77,6 @@ describe('cooking mode UI (spec #19, #15, #24)', () => {
       title: 'Quiet timer',
       servings: 1,
       tags: [],
-      nutrition: { netCarbsG: 1 },
       ingredients: [{ text: '1 egg' }],
       steps: [{ text: 'Boil 3 minutes.' }],
     });
@@ -93,7 +91,7 @@ describe('cooking mode UI (spec #19, #15, #24)', () => {
   });
 });
 
-describe('recipe units, scaling, and nutrition (spec #16, #17)', () => {
+describe('recipe units and scaling (spec #16)', () => {
   it('converts from the settings default, overrides per recipe, and scales servings', async () => {
     await settingsStore.update({ unitSystem: 'metric' });
     await recipeStore.seedIfNeeded();
@@ -111,43 +109,6 @@ describe('recipe units, scaling, and nutrition (spec #16, #17)', () => {
     });
     expect(screen.getByTestId('servings-value')).toHaveTextContent('3');
     expect(screen.getByText(/1 tbsp olive oil/)).toBeTruthy();
-  });
-
-  it('edits nutrition by hand and can apply a complete barcode computation', async () => {
-    await recipeStore.seedIfNeeded();
-    const base = (await recipeStore.list()).find((x) => x.title === SEED_RECIPES[0].title)!;
-    const recipe = await recipeStore.save({
-      ...base,
-      id: 'weighed-chicken',
-      servings: 2,
-      ingredients: [{ text: '200 g chicken thighs', quantity: 200, unit: 'g', name: 'chicken thighs' }],
-      nutrition: { source: 'manual' },
-    });
-    await barcodeItems.save({
-      id: 'off-chicken',
-      barcode: '00012345678905',
-      name: 'chicken thighs',
-      source: 'openfoodfacts',
-      nutritionPer100g: { calories: 200, carbsG: 0, fiberG: 0, proteinG: 25, fatG: 12 },
-      createdAt: '2026-10-03T00:00:00.000Z',
-      updatedAt: '2026-10-03T00:00:00.000Z',
-    });
-    renderRouter({ index: () => <RecipeDetail id={recipe.id} /> }, { initialUrl: '/' });
-    expect(await screen.findByTestId('nutrition-netCarbsG')).toHaveTextContent(/unknown/);
-
-    await act(async () => fireEvent.press(screen.getByTestId('nutrition-edit')));
-    fireEvent.changeText(screen.getByTestId('nutrition-input-calories'), '390');
-    fireEvent.changeText(screen.getByTestId('nutrition-input-netCarbsG'), '5');
-    fireEvent.changeText(screen.getByTestId('nutrition-input-carbsG'), '');
-    await act(async () => fireEvent.press(screen.getByTestId('nutrition-save')));
-    expect(await screen.findByTestId('nutrition-calories')).toHaveTextContent(/390 kcal/);
-    expect(screen.getByTestId('nutrition-carbsG')).toHaveTextContent(/unknown/);
-    expect(screen.getByTestId('nutrition-netCarbsG')).toHaveTextContent(/5 g/);
-
-    await act(async () => fireEvent.press(await screen.findByTestId('nutrition-use-computed')));
-    expect(await screen.findByTestId('nutrition-calories')).toHaveTextContent(/200 kcal/);
-    expect(screen.getByTestId('nutrition-netCarbsG')).toHaveTextContent(/0 g/);
-    expect(screen.getByText('Computed from ingredient nutrition')).toBeTruthy();
   });
 
   it('starts a step timer from the recipe with a notification', async () => {

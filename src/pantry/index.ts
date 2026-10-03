@@ -5,7 +5,7 @@ import { createCollection, defaultStore } from '@/storage/kv';
 import { pantryStore } from '@/storage/pantry';
 import { settingsStore } from '@/storage/settings';
 
-import { createBarcodeLookup, type BarcodeItem } from './barcodeLookup';
+import { createBarcodeLookup, withoutNutrition, type BarcodeItem } from './barcodeLookup';
 import { createPantryMatcher } from './match';
 
 export * from './barcodeLookup';
@@ -21,7 +21,7 @@ const isBarcodeItem = (v: unknown): v is BarcodeItem =>
 
 /** Household-shared barcode mappings (synced table `barcode_items`). */
 export const barcodeItems = createCollection<BarcodeItem>(defaultStore, BARCODE_ITEMS_STORAGE_KEY, (v) =>
-  isBarcodeItem(v) ? v : undefined,
+  isBarcodeItem(v) ? withoutNutrition(v) : undefined,
 );
 
 /** App-wide lookup bound to on-device storage + global fetch. */
