@@ -6,7 +6,7 @@ import { isInPantry } from '@/pantry/isInPantry';
 import { aisleForIngredient, AISLES, normalizeAisle, type Aisle } from './aisles';
 import { weekDates } from './dates';
 import { formatIngredient, ingredientKey, parseIngredient, scaleIngredient } from './ingredients';
-import { generateId } from './recipe-utils';
+import { uuid } from '@/lib/ids';
 import { getUnit } from './units';
 
 export interface CompileOptions {
@@ -63,7 +63,7 @@ export function compileItems(
   }
   const ts = (options.now ?? new Date()).toISOString();
   return [...groups.entries()].map(([key, g]) => ({
-    id: generateId(),
+    id: uuid(),
     weekStart: options.weekStart ?? '',
     createdAt: ts,
     updatedAt: ts,
@@ -167,7 +167,7 @@ export function addManualItem(list: ShoppingList, text: string, now: Date = new 
   const ing = parseIngredient(trimmed);
   const ts = now.toISOString();
   const item: ShoppingListItem = {
-    id: generateId(),
+    id: uuid(),
     weekStart: list.weekStart,
     createdAt: ts,
     updatedAt: ts,

@@ -27,11 +27,6 @@ export function parseTags(text: string): string[] {
   return [...new Set(tags)];
 }
 
-/** Stable record id (UUID v4, sync-friendly — spec #25). */
-export function generateId(): string {
-  return uuid();
-}
-
 /** Trim + parse quantity/unit/name if the ingredient hasn't been parsed yet. */
 export function normalizeIngredient(i: Ingredient): Ingredient {
   const text = i.text.trim();
@@ -48,7 +43,7 @@ export function normalizeStep(st: Step | string): Step {
 }
 
 /** Build a full Recipe from user input, normalizing whitespace and tags. */
-export function createRecipe(input: RecipeInput, now: Date = new Date(), id: string = generateId()): Recipe {
+export function createRecipe(input: RecipeInput, now: Date = new Date(), id: string = uuid()): Recipe {
   const ts = now.toISOString();
   return {
     id,

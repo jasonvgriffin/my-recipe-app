@@ -1,11 +1,6 @@
 import { isInPantry } from '@/pantry/isInPantry';
 import type { PantryItem, Recipe } from '@/types/recipe';
 
-/** Does the pantry have this ingredient key? Prefer `isInPantry` for full ingredient lines. */
-export function pantryHas(pantry: PantryItem[], key: string): boolean {
-  return isInPantry(key, pantry);
-}
-
 export interface PantryMatch {
   recipe: Recipe;
   have: number;

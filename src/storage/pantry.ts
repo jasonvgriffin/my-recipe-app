@@ -1,5 +1,5 @@
 import { ingredientKey } from '@/lib/ingredients';
-import { generateId } from '@/lib/recipe-utils';
+import { uuid } from '@/lib/ids';
 import { findUnit } from '@/lib/units';
 import { isPantryItem, slimPantryItem, withSyncDefaults, type PantryItem } from '@/types/recipe';
 
@@ -31,7 +31,7 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
       const existing = (await items.all()).find((p) => p.name === key);
       const item: PantryItem = {
         ...existing,
-        id: existing?.id ?? generateId(),
+        id: existing?.id ?? uuid(),
         name: key,
         quantity,
         unit,
@@ -57,7 +57,7 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
       }
       return items.save(
         {
-          id: generateId(),
+          id: uuid(),
           name: key,
           barcode: product.barcode,
           quantity: count,
@@ -117,7 +117,7 @@ async function writeItem(
   const ts = now.toISOString();
   const next: PantryItem = {
     ...(existing ? slimPantryItem(existing) : {}),
-    id: existing?.id ?? generateId(),
+    id: existing?.id ?? uuid(),
     name: key,
     createdAt: existing?.createdAt ?? ts,
     updatedAt: ts,

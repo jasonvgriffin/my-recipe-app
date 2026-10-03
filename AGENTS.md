@@ -2,6 +2,10 @@
 
 Guidance for Cursor cloud agents (and any other coding agent) working in this repo.
 
+## Before building anything (mandatory)
+
+**Before building anything, read docs/INVENTORY.md, docs/SPEC.md and search the codebase. If something similar exists, extend it instead of creating a duplicate (no second helper, component, store, hook, or screen for the same job). Update docs/INVENTORY.md in your PR.**
+
 ## Rule #1: RECIPES ARE THE CORE
 
 Pantry, meal planning, shopping list, grocery run, receipt/barcode scanning and household sharing are optional

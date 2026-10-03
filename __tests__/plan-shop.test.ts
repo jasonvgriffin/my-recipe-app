@@ -13,7 +13,7 @@ import {
   setItemChecked,
   shoppingProgress,
 } from '@/lib/shopping';
-import { createPantryMatcher, ingredientIsInPantry, isInPantry } from '@/pantry';
+import { createPantryMatcher, isInPantry, pantryMatcher } from '@/pantry';
 import { createMealPlanStore } from '@/storage/meal-plan';
 import { createPantryStore } from '@/storage/pantry';
 import { featureGate, LocalFreeEntitlements, NoEntitlements } from '@/entitlements';
@@ -108,13 +108,13 @@ describe('shopping list merge, manual lines, pantry skip (spec #12, #18)', () =>
 
   it('skips pantry keys supplied by isInPantry and groups the rest by aisle', () => {
     const pantry: PantryItem[] = [{ id: 'p', name: 'almond flour', createdAt: '', updatedAt: '' }];
-    expect(ingredientIsInPantry(pantry, '1 cup almond flour')).toBe(true);
+    expect(isInPantry('1 cup almond flour', pantry)).toBe(true);
     const list = compileWeekShoppingList(
       '2026-09-28',
       [{ id: 'e', date: '2026-10-03', recipeId: bowl.id, createdAt: '', updatedAt: '' }],
       [bowl],
       undefined,
-      (key) => ingredientIsInPantry(pantry, key),
+      (key) => isInPantry(key, pantry),
       NOW,
     );
     expect(list.items.map((i) => i.name)).toEqual(['allulose']);
@@ -164,10 +164,10 @@ describe('isInPantry (spec #12, #21)', () => {
     const { pantryStore } = require('@/storage/pantry') as typeof import('@/storage/pantry');
     await require('@react-native-async-storage/async-storage').clear();
     await pantryStore.upsert('allulose');
-    expect(await isInPantry('powdered allulose')).toBe(true);
+    expect(await pantryMatcher.isInPantry('powdered allulose')).toBe(true);
 
     featureGate.setProvider(new NoEntitlements());
     featureGate.setConfig({ pantry: { tier: 'premium', enabled: true } });
-    expect(await isInPantry('powdered allulose')).toBe(false);
+    expect(await pantryMatcher.isInPantry('powdered allulose')).toBe(false);
   });
 });
