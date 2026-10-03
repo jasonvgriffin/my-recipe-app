@@ -70,6 +70,7 @@ describe('feature gate', () => {
     expect(() => gate.assert('pantry')).toThrow(FeatureLockedError);
     // Children follow their parent (barcode/receipt scanning need pantry)
     expect(gate.check('barcodeScan')).toMatchObject({ available: false, reason: 'requires' });
+    expect(gate.check('receiptScan')).toMatchObject({ available: false, reason: 'requires' });
     expect(gate.canUse('mealPlan')).toBe(true);
 
     gate.setProvider(new StaticEntitlements(['pantry']));
@@ -158,6 +159,9 @@ const routes = () => ({
   '(tabs)/index': require('@/app/(tabs)/index').default,
   '(tabs)/meal-plan': require('@/app/(tabs)/meal-plan').default,
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
+  '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
+  'pantry/scan': require('@/app/pantry/scan').default,
+  'pantry/receipt': require('@/app/pantry/receipt').default,
   add: require('@/app/add').default,
   'recipe/[id]': require('@/app/recipe/[id]').default,
   'cook/[action]': require('@/app/cook/[action]').default,
@@ -178,6 +182,7 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     await screen.findByTestId('add-recipe-button');
     await waitFor(() => expect(screen.queryByText('Meal plan')).toBeNull());
     expect(screen.queryByText('Shopping list')).toBeNull();
+    expect(screen.queryByText('Pantry')).toBeNull();
 
     await act(async () => fireEvent.press(screen.getByTestId('add-recipe-button')));
     await screen.findByText('Save recipe');
@@ -195,6 +200,14 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     expect(screen.queryByTestId('cook-button')).toBeNull();
     expect(screen.queryByTestId('plan-today-button')).toBeNull();
     expect(screen.queryByText(/⏱/)).toBeNull();
+  });
+
+  it('locked pantry scan routes show a neutral message (no payment UI)', async () => {
+    featureGate.setProvider(new NoEntitlements());
+    featureGate.setConfig(premium('pantry'));
+    renderRouter(routes(), { initialUrl: '/pantry/scan' });
+    expect(await screen.findByTestId('feature-locked-barcodeScan')).toBeTruthy();
+    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
   });
 
   it('a locked cook-with-me deep link shows a neutral message (no payment UI)', async () => {

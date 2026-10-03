@@ -3,10 +3,12 @@ import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { useFeatureVisible } from '@/hooks/use-feature';
 import { startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
 import { buildShoppingList, toggleItem } from '@/lib/shopping';
 import { colors } from '@/lib/theme';
 import { mealPlanStore } from '@/storage/meal-plan';
+import { pantryStore } from '@/storage/pantry';
 import { recipeStore } from '@/storage/recipes';
 import type { ShoppingList } from '@/types/meal-plan';
 
@@ -18,6 +20,8 @@ import type { ShoppingList } from '@/types/meal-plan';
 export default function ShoppingScreen() {
   const weekStart = toIsoDate(startOfWeek(new Date()));
   const [list, setList] = useState<ShoppingList | undefined>();
+  // Spec #21: skip pantry items only when pantry is allowed and the user hasn't hidden it.
+  const skipPantry = useFeatureVisible('pantry');
 
   useFocusEffect(
     useCallback(() => {
@@ -27,8 +31,12 @@ export default function ShoppingScreen() {
 
   async function compile() {
     const days = weekDates(weekStart);
-    const [entries, recipes] = await Promise.all([mealPlanStore.entriesForDates(days), recipeStore.list()]);
-    const next = buildShoppingList(weekStart, days, entries, recipes);
+    const [entries, recipes, pantry] = await Promise.all([
+      mealPlanStore.entriesForDates(days),
+      recipeStore.list(),
+      skipPantry ? pantryStore.list() : Promise.resolve([]),
+    ]);
+    const next = buildShoppingList(weekStart, days, entries, recipes, new Date(), { pantry });
     await mealPlanStore.saveShoppingList(next);
     setList(next);
   }

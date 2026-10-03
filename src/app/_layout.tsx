@@ -18,6 +18,8 @@ export default function RootLayout() {
         <Stack.Screen name="recipe/[id]" options={{ title: 'Recipe' }} />
         <Stack.Screen name="cook/[action]" options={{ title: 'Cook with me' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="pantry/scan" options={{ title: 'Scan barcode' }} />
+        <Stack.Screen name="pantry/receipt" options={{ title: 'Scan receipt' }} />
       </Stack>
     </ThemeProvider>
   );

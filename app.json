@@ -35,7 +35,25 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow My Recipe App to use the camera for barcodes and receipt photos.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow My Recipe App to read grocery receipt photos from your gallery.",
+          "cameraPermission": "Allow My Recipe App to use the camera for barcodes and receipt photos.",
+          "microphonePermission": false
+        }
+      ],
+      "mlkit-text-recognition"
     ],
     "experiments": {
       "typedRoutes": true,
