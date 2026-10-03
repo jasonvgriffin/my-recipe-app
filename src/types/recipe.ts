@@ -88,8 +88,11 @@ export interface Recipe extends SyncMeta {
   cookHistory: string[];
   /** 1–5 stars; undefined = not rated (spec #22). */
   rating?: number;
-  /** Per-recipe unit display override (spec #16); falls back to the app setting. */
-  unitSystem?: UnitSystem;
+  /**
+   * Per-recipe unit display (spec #16). `'metric'` / `'imperial'` override the app default;
+   * `'original'` shows amounts as written. Undefined follows `AppSettings.unitSystem`.
+   */
+  unitSystem?: UnitSystem | 'original';
 }
 
 /** Fields a user (or an AI assistant) supplies when creating a recipe. */

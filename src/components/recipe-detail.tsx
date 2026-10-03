@@ -1,21 +1,27 @@
-import { Link, useFocusEffect } from 'expo-router';
+import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
+import { NutritionPanel } from '@/components/nutrition-panel';
+import { ServingsUnits } from '@/components/servings-units';
+import { ShareRecipePanel } from '@/components/share-recipe-panel';
 import { StarRating } from '@/components/star-rating';
 import { TagEditor } from '@/components/tag-editor';
-import { ShareRecipePanel } from '@/components/share-recipe-panel';
+import { cookSession } from '@/cooking';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
+import { useSettings } from '@/hooks/use-settings';
 import { formatCookedOn, toIsoDate } from '@/lib/dates';
-import { formatIngredient } from '@/lib/ingredients';
+import { presentIngredient } from '@/lib/ingredients';
 import { addRecipeTags, removeRecipeTag, setCooked, setRating, toggleRecipeCategory } from '@/lib/recipe-utils';
-import { formatDuration } from '@/lib/timers';
 import { colors } from '@/lib/theme';
+import { formatDuration } from '@/lib/timers';
+import { effectiveUnitSystem } from '@/lib/units';
+import { startBackgroundStepTimer } from '@/notifications/step-timers';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
-import { isLowCarb, netCarbs, type Category, type Recipe } from '@/types/recipe';
+import { isLowCarb, netCarbs, type Category, type Recipe, type UnitSystem } from '@/types/recipe';
 
 export interface RecipeDetailProps {
   id: string;
@@ -46,6 +52,11 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   const ratingsOn = useFeature('ratings').available;
   const photos = useFeature('photos').available;
   const share = useFeature('share').available;
+  const unitsEnabled = useFeature('unitConversion').available;
+  const nutritionEnabled = useFeature('nutrition').available;
+  const settings = useSettings();
+  const [scaled, setScaled] = useState<{ id: string; value: number } | undefined>();
+  const targetServings = scaled?.id === id ? scaled.value : undefined;
   const [shareOpen, setShareOpen] = useState(false);
   const [loadedCategories, setLoadedCategories] = useState<Category[]>([]);
   const categories = categoriesProp ?? loadedCategories;
@@ -133,8 +144,49 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   }
 
   const history = [...(recipe.cookHistory ?? [])].reverse();
-  // TODO(spec #15, #19): tap ⏱ to start a background step timer w/ notification; full cooking mode UI.
-  // TODO(spec #16): unit toggle (convertIngredient).
+  const current = recipe;
+  const unitSystem = effectiveUnitSystem(current, settings);
+  const scaledServings = targetServings ?? current.servings;
+  const factor = current.servings > 0 ? scaledServings / current.servings : 1;
+
+  async function openCook() {
+    const state = await cookSession.getState();
+    const action = state?.recipeId === current.id ? 'current' : current.id;
+    router.push({ pathname: '/cook/[action]', params: { action, via: 'app' } });
+  }
+
+  async function setUnit(next: UnitSystem | 'original') {
+    const saved = await recipeStore.save({ ...current, unitSystem: next });
+    setRecipe(saved);
+    onChange?.(saved);
+  }
+
+  function startTimer(stepIndex: number, durationSeconds: number | undefined) {
+    void startBackgroundStepTimer(cookSession, {
+      recipeId: current.id,
+      recipeTitle: current.title,
+      stepIndex,
+      durationSeconds,
+    }).then((outcome) => {
+      if (!outcome.ok) {
+        Alert.alert('Timer', outcome.result.ok ? 'Could not start that timer.' : outcome.result.message);
+        return;
+      }
+      const label = durationSeconds ? formatDuration(durationSeconds) : 'Timer';
+      if (outcome.permission === 'granted') {
+        Alert.alert(
+          'Timer started',
+          `${label}. You’ll get a notification and a sound when it ends, even if you leave this screen.`,
+        );
+      } else {
+        Alert.alert(
+          'Timer running',
+          'Notifications are off, so this countdown only updates while the app is open. Allow notifications to hear it in the background.',
+        );
+      }
+    });
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container} testID="recipe-detail">
       {photos && recipe.photoUri ? (
@@ -209,11 +261,9 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
           </Text>
         </Pressable>
         <FeatureGate id="cookingMode">
-          <Link href={{ pathname: '/cook/[action]', params: { action: recipe.id, via: 'app' } }} asChild>
-            <Pressable style={styles.action} testID="cook-button">
-              <Text style={styles.actionText}>Cook</Text>
-            </Pressable>
-          </Link>
+          <Pressable style={styles.action} testID="cook-button" onPress={() => void openCook()}>
+            <Text style={styles.actionText}>Cook</Text>
+          </Pressable>
         </FeatureGate>
         {showPlanToday ? (
           <Pressable style={styles.action} onPress={() => planToday(recipe)} testID="plan-today-button">
@@ -279,9 +329,29 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
         </Pressable>
       ) : null}
       <Text style={styles.section}>Ingredients</Text>
+      {unitsEnabled ? (
+        <ServingsUnits
+          baseServings={recipe.servings}
+          targetServings={scaledServings}
+          onAdjust={(delta) =>
+            setScaled((prev) => {
+              const base = prev?.id === id ? prev.value : current.servings;
+              return { id, value: Math.max(1, base + delta) };
+            })
+          }
+          unitSystem={unitSystem}
+          onUnitSystem={(u) => void setUnit(u)}
+        />
+      ) : null}
       {recipe.ingredients.map((i, idx) => (
         <View key={idx}>
-          <Text style={styles.item}>• {formatIngredient(i)}</Text>
+          <Text style={styles.item}>
+            •{' '}
+            {presentIngredient(i, {
+              unitSystem: unitsEnabled ? unitSystem : 'original',
+              factor: unitsEnabled ? factor : 1,
+            })}
+          </Text>
           {i.substitutionNote ? (
             <Text style={styles.substitution} testID={`substitution-${idx}`}>
               Substitution: {i.substitutionNote}
@@ -291,13 +361,31 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
       ))}
       <Text style={styles.section}>Steps</Text>
       {recipe.steps.map((st, idx) => (
-        <Text key={idx} style={styles.item}>
-          {idx + 1}. {st.text}
+        <View key={idx} style={styles.stepBlock}>
+          <Text style={styles.item}>
+            {idx + 1}. {st.text}
+          </Text>
           {timers && st.durationSeconds ? (
-            <Text style={styles.timer}> ⏱ {formatDuration(st.durationSeconds)}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Start ${formatDuration(st.durationSeconds)} timer for step ${idx + 1}`}
+              testID={`step-timer-${idx}`}
+              style={styles.timerBtn}
+              onPress={() => startTimer(idx, st.durationSeconds)}>
+              <Text style={styles.timer}>⏱ {formatDuration(st.durationSeconds)}</Text>
+            </Pressable>
           ) : null}
-        </Text>
+        </View>
       ))}
+      {nutritionEnabled ? (
+        <NutritionPanel
+          recipe={recipe}
+          onChange={(next) => {
+            setRecipe(next);
+            onChange?.(next);
+          }}
+        />
+      ) : null}
       {recipe.notes ? (
         <>
           <Text style={styles.section}>Notes</Text>
@@ -379,7 +467,9 @@ const styles = StyleSheet.create({
   actionOn: { backgroundColor: colors.primary },
   actionText: { color: colors.primary, fontWeight: '600' },
   actionTextOn: { color: colors.primaryText },
-  timer: { color: colors.primary, fontWeight: '600' },
+  stepBlock: { marginBottom: 8 },
+  timerBtn: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
+  timer: { color: colors.primary, fontWeight: '700', fontSize: 16 },
   meta: { color: colors.muted, marginTop: 8 },
   linkHit: { minHeight: 44, justifyContent: 'center', marginTop: 8 },
   link: { color: colors.primary, textDecorationLine: 'underline' },

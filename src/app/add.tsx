@@ -6,10 +6,11 @@ import { CategoryChips } from '@/components/category-chips';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
 import { StarRating } from '@/components/star-rating';
 import { useFeature } from '@/hooks/use-feature';
+import { parseNutritionField } from '@/lib/nutrition';
 import { createRecipe, parseLines, parseTags } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
 import { recipeStore } from '@/storage/recipes';
-import { PREFERRED_SWEETENER, validateRecipeInput, type Category, type RecipeInput } from '@/types/recipe';
+import { PREFERRED_SWEETENER, validateRecipeInput, type Category, type NutritionPerServing, type RecipeInput } from '@/types/recipe';
 
 export default function AddRecipeScreen() {
   const [title, setTitle] = useState('');
@@ -25,6 +26,12 @@ export default function AddRecipeScreen() {
   const [rating, setRatingValue] = useState<number | undefined>();
   const [servings, setServings] = useState('4');
   const [carbs, setCarbs] = useState('');
+  const [calories, setCalories] = useState('');
+  const [carbsTotal, setCarbsTotal] = useState('');
+  const [fiber, setFiber] = useState('');
+  const [protein, setProtein] = useState('');
+  const [fat, setFat] = useState('');
+  const nutritionAvailable = useFeature('nutrition').available;
   const [notes, setNotes] = useState('');
   const canImport = useFeature('linkImport').available;
   const [errors, setErrors] = useState<string[]>([]);
@@ -53,6 +60,26 @@ export default function AddRecipeScreen() {
   }
 
   async function onSave() {
+    const nutrition: NutritionPerServing = {
+      netCarbsG: carbs.trim() === '' ? undefined : Number(carbs),
+      source: 'manual',
+    };
+    if (nutritionAvailable) {
+      const extra = {
+        calories: parseNutritionField(calories),
+        carbsG: parseNutritionField(carbsTotal),
+        fiberG: parseNutritionField(fiber),
+        proteinG: parseNutritionField(protein),
+        fatG: parseNutritionField(fat),
+      };
+      for (const [key, value] of Object.entries(extra)) {
+        if (value === 'invalid') {
+          setErrors([`${key} must be a number of 0 or more.`]);
+          return;
+        }
+        if (value !== undefined) (nutrition as Record<string, number>)[key] = value;
+      }
+    }
     const input: RecipeInput = {
       title,
       ingredients: parseLines(ingredients).map((text) => ({ text })),
@@ -61,7 +88,7 @@ export default function AddRecipeScreen() {
       categoryIds: categoriesOn ? categoryIds : undefined,
       rating: ratingsOn ? rating : undefined,
       servings: Number(servings),
-      nutrition: { netCarbsG: carbs.trim() === '' ? undefined : Number(carbs), source: 'manual' },
+      nutrition,
       notes: notes.trim() || undefined,
     };
     const result = validateRecipeInput(input);
@@ -200,7 +227,35 @@ export default function AddRecipeScreen() {
             </Field>
           </View>
         </View>
-        <Text style={styles.hint}>Sweetener rule: {PREFERRED_SWEETENER} only (no monk fruit).</Text>
+        {nutritionAvailable ? (
+          <>
+            {(
+              [
+                ['Calories', calories, setCalories, 'nutrition-add-calories'],
+                ['Total carbs (g)', carbsTotal, setCarbsTotal, 'nutrition-add-carbs'],
+                ['Fiber (g)', fiber, setFiber, 'nutrition-add-fiber'],
+                ['Protein (g)', protein, setProtein, 'nutrition-add-protein'],
+                ['Fat (g)', fat, setFat, 'nutrition-add-fat'],
+              ] as const
+            ).map(([label, value, setValue, testID]) => (
+              <Field key={testID} label={`${label} — optional`}>
+                <TextInput
+                  placeholderTextColor={colors.placeholder}
+                  style={styles.input}
+                  value={value}
+                  onChangeText={setValue}
+                  keyboardType="decimal-pad"
+                  placeholder="unknown"
+                  testID={testID}
+                />
+              </Field>
+            ))}
+          </>
+        ) : null}
+        <Text style={styles.hint}>
+          Leave nutrition blank if you don’t know it — blank is unknown, not zero. Sweetener rule: {PREFERRED_SWEETENER}{' '}
+          only (no monk fruit).
+        </Text>
         {errors.map((e) => (
           <Text key={e} style={styles.error}>
             • {e}

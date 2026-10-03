@@ -193,6 +193,7 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     await act(async () => fireEvent.press(screen.getByTestId('add-recipe-button')));
     await screen.findByText('Save recipe');
     expect(screen.queryByText('Tags (comma separated)')).toBeNull();
+    expect(screen.queryByTestId('nutrition-add-calories')).toBeNull();
     fireEvent.changeText(screen.getByPlaceholderText('e.g. Cauliflower Mac & Cheese'), 'Zucchini Lasagna');
     fireEvent.changeText(screen.getByPlaceholderText(/1 head cauliflower/), '2 zucchini\n1 cup ricotta');
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Layer\nBake 30 minutes');
@@ -208,6 +209,9 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     expect(screen.queryByTestId('share-recipe-button')).toBeNull();
     expect(screen.getByTestId('edit-recipe-button')).toBeTruthy();
     expect(screen.queryByText(/⏱/)).toBeNull();
+    expect(screen.queryByTestId('nutrition-panel')).toBeNull();
+    expect(screen.queryByTestId('servings-units')).toBeNull();
+    expect(screen.queryByTestId('nutrition-add-calories')).toBeNull();
 
     await act(async () => fireEvent.press(screen.getByTestId('edit-recipe-button')));
     expect(await screen.findByTestId('recipe-editor')).toBeTruthy();
@@ -229,6 +233,16 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     renderRouter(routes(), { initialUrl: '/cook/current' });
     expect(await screen.findByTestId('feature-locked-cookWithMe')).toBeTruthy();
     expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
+  });
+
+  it('hides unit default and keep-awake when those features are locked', async () => {
+    featureGate.setProvider(new NoEntitlements());
+    featureGate.setConfig(premium('unitConversion', 'cookingMode'));
+    renderRouter(routes(), { initialUrl: '/settings' });
+    await screen.findByText('Optional features');
+    expect(screen.queryByTestId('settings-unit-metric')).toBeNull();
+    expect(screen.queryByTestId('keep-awake-toggle')).toBeNull();
+    expect(screen.getByTestId('feature-toggle-shopping')).toBeTruthy();
   });
 
   it('settings hides toggles for locked features; entitlement brings tabs back live', async () => {
