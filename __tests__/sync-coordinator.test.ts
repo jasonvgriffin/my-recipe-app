@@ -1,7 +1,7 @@
 import { setIdentity } from '@/storage/identity';
 import { createCollection, type KeyValueStore, type StoredRecord } from '@/storage/kv';
 import { withoutSyncNotify } from '@/storage/writes';
-import { createSyncCoordinator, type RemoteAdapter, type SyncCollections } from '@/sync';
+import { createSyncCoordinator, SYNC_TABLES, type RemoteAdapter, type SyncCollections } from '@/sync';
 
 function memoryStore(): KeyValueStore {
   const data = new Map<string, string>();
@@ -79,16 +79,16 @@ describe('sync coordinator triggers and offline queue', () => {
     expect(remote.pull).not.toHaveBeenCalled();
     clock.flush();
     await flushMicrotasks();
-    expect(remote.pull).toHaveBeenCalledTimes(6);
+    expect(remote.pull).toHaveBeenCalledTimes(SYNC_TABLES.length);
 
     remote.pull.mockClear();
     engine.requestSync('foreground');
     await flushMicrotasks();
-    expect(remote.pull).toHaveBeenCalledTimes(6);
+    expect(remote.pull).toHaveBeenCalledTimes(SYNC_TABLES.length);
 
     remote.pull.mockClear();
     await engine.syncNow('pull');
-    expect(remote.pull).toHaveBeenCalledTimes(6);
+    expect(remote.pull).toHaveBeenCalledTimes(SYNC_TABLES.length);
     expect(engine.getStatus().phase).toBe('synced');
   });
 

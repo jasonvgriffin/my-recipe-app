@@ -112,3 +112,19 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
     expect(moveItem(['a', 'b'], 1, 1)).toEqual(['a', 'b']);
   });
 });
+
+describe('recipeStore.seedIfNeeded', () => {
+  it('seeds once even when called concurrently', async () => {
+    const { createRecipeStore } = require('@/storage/recipes');
+    const data = new Map<string, string>();
+    const store = createRecipeStore({
+      getItem: async (k: string) => data.get(k) ?? null,
+      setItem: async (k: string, v: string) => void data.set(k, v),
+      removeItem: async (k: string) => void data.delete(k),
+    });
+    await Promise.all([store.seedIfNeeded(), store.seedIfNeeded(), store.seedIfNeeded()]);
+    await store.seedIfNeeded();
+    const { SEED_RECIPES } = require('@/data/seed');
+    expect(await store.list()).toHaveLength(SEED_RECIPES.length);
+  });
+});
