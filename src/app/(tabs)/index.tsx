@@ -21,7 +21,7 @@ import {
 } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
 import { recipeStore } from '@/storage/recipes';
-import { isLowCarb, netCarbs, type Category, type Recipe } from '@/types/recipe';
+import type { Category, Recipe } from '@/types/recipe';
 
 export default function RecipeListScreen() {
   const [recipes, setRecipes] = useState<Recipe[] | null>(null);
@@ -185,8 +185,7 @@ export default function RecipeListScreen() {
                 <StarRating value={item.rating} testID={`recipe-rating-${item.id}`} size={16} />
               ) : null}
               <Text style={styles.meta}>
-                {netCarbs(item.nutrition) ?? '?'} g net carbs/serving · {item.servings} servings
-                {isLowCarb(item) ? ' · low-carb' : ''}
+                {item.servings} servings
                 {item.cooked ? ' · cooked' : ''}
               </Text>
               {names.length > 0 ? <Text style={styles.meta}>{names.join(' · ')}</Text> : null}

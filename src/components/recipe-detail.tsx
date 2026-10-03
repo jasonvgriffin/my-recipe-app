@@ -4,7 +4,6 @@ import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleS
 
 import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
-import { NutritionPanel } from '@/components/nutrition-panel';
 import { ServingsUnits } from '@/components/servings-units';
 import { SharedBy } from '@/components/shared-by';
 import { ShareRecipePanel } from '@/components/share-recipe-panel';
@@ -23,7 +22,7 @@ import { effectiveUnitSystem } from '@/lib/units';
 import { startBackgroundStepTimer } from '@/notifications/step-timers';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
-import { isLowCarb, netCarbs, type Category, type Recipe, type UnitSystem } from '@/types/recipe';
+import type { Category, Recipe, UnitSystem } from '@/types/recipe';
 
 export interface RecipeDetailProps {
   id: string;
@@ -55,7 +54,6 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   const photos = useFeature('photos').available;
   const share = useFeature('share').available;
   const unitsEnabled = useFeature('unitConversion').available;
-  const nutritionEnabled = useFeature('nutrition').available;
   const settings = useSettings();
   const [scaled, setScaled] = useState<{ id: string; value: number } | undefined>();
   const targetServings = scaled?.id === id ? scaled.value : undefined;
@@ -130,8 +128,6 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
       },
     ]);
   }
-
-  const net = netCarbs(recipe.nutrition);
 
   async function persist(next: Recipe) {
     await recipeStore.save(next);
@@ -211,13 +207,8 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
       {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}
       <View style={styles.stats}>
         <Stat label="Servings" value={String(recipe.servings)} />
-        <Stat label="Net carbs / serving" value={net === undefined ? 'unknown' : `${net} g`} />
-        <Stat
-          label="Calories / serving"
-          value={recipe.nutrition.calories === undefined ? '—' : String(recipe.nutrition.calories)}
-        />
+        <Stat label="Times cooked" value={String(recipe.cookHistory?.length ?? 0)} />
       </View>
-      {isLowCarb(recipe) && <Text style={styles.badge}>Low-carb</Text>}
       {ratingsOn ? (
         <View style={styles.block}>
           <Text style={styles.section}>Rating</Text>
@@ -387,15 +378,6 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
           ) : null}
         </View>
       ))}
-      {nutritionEnabled ? (
-        <NutritionPanel
-          recipe={recipe}
-          onChange={(next) => {
-            setRecipe(next);
-            onChange?.(next);
-          }}
-        />
-      ) : null}
       {recipe.notes ? (
         <>
           <Text style={styles.section}>Notes</Text>
@@ -438,17 +420,6 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 18, fontWeight: '700', color: colors.text },
   statLabel: { fontSize: 12, color: colors.muted, textAlign: 'center' },
-  badge: {
-    alignSelf: 'flex-start',
-    marginTop: 12,
-    backgroundColor: colors.primary,
-    color: colors.primaryText,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-    fontWeight: '600',
-  },
   block: { marginTop: 4 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
   action: {

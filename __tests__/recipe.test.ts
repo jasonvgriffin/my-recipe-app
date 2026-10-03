@@ -1,6 +1,6 @@
 import { createRecipe, parseLines, parseTags, searchRecipes } from '@/lib/recipe-utils';
 import { SEED_RECIPES } from '@/data/seed';
-import { isLowCarb, isRecipe, validateRecipeInput, type RecipeInput } from '@/types/recipe';
+import { isRecipe, validateRecipeInput, type RecipeInput } from '@/types/recipe';
 
 const base: RecipeInput = {
   title: 'Test Recipe',
@@ -8,7 +8,6 @@ const base: RecipeInput = {
   steps: [{ text: 'Mix' }, { text: 'Bake 20 minutes' }],
   tags: ['dessert'],
   servings: 4,
-  nutrition: { netCarbsG: 3 },
 };
 
 describe('validateRecipeInput', () => {
@@ -23,10 +22,9 @@ describe('validateRecipeInput', () => {
       ingredients: [],
       steps: [],
       servings: 0,
-      nutrition: { netCarbsG: NaN },
     });
     expect(r.ok).toBe(false);
-    expect(r.errors).toHaveLength(5);
+    expect(r.errors).toHaveLength(4);
   });
 
   it.each(['1 tbsp monk fruit sweetener', 'Monk-fruit blend', 'luo han guo extract'])(
@@ -42,7 +40,7 @@ describe('validateRecipeInput', () => {
 describe('recipe utils', () => {
   it('parses lines and tags', () => {
     expect(parseLines(' a \n\n b\r\nc ')).toEqual(['a', 'b', 'c']);
-    expect(parseTags('Low-Carb, dinner,low-carb\nKeto')).toEqual(['low-carb', 'dinner', 'keto']);
+    expect(parseTags('Weeknight, dinner,weeknight\nFamily')).toEqual(['weeknight', 'dinner', 'family']);
   });
 
   it('creates a normalized recipe', () => {
@@ -61,10 +59,9 @@ describe('recipe utils', () => {
     expect(searchRecipes(SEED_RECIPES, '')).toHaveLength(2);
   });
 
-  it('seed recipes are valid, low-carb and monk-fruit free', () => {
+  it('seed recipes are valid and monk-fruit free', () => {
     for (const r of SEED_RECIPES) {
       expect(isRecipe(r)).toBe(true);
-      expect(isLowCarb(r)).toBe(true);
       expect(validateRecipeInput(r).ok).toBe(true);
     }
   });

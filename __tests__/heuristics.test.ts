@@ -2,7 +2,7 @@ import { extractRecipeHeuristically } from '@/import/parsers/heuristics';
 
 const MICRODATA = `<div itemscope itemtype="http://schema.org/Recipe">
   <h1 itemprop="name">Allulose Lemon Bars</h1>
-  <meta itemprop="description" content="Bright and low-carb." />
+  <meta itemprop="description" content="Bright and simple." />
   <span itemprop="recipeYield">9</span>
   <li itemprop="recipeIngredient">1 cup almond flour</li>
   <li itemprop="recipeIngredient">1/2 cup allulose</li>
@@ -46,7 +46,7 @@ describe('extractRecipeHeuristically (spec #1 fallback)', () => {
   it('reads schema.org microdata', () => {
     expect(extractRecipeHeuristically(MICRODATA, 'https://example.com/bars')).toMatchObject({
       title: 'Allulose Lemon Bars',
-      description: 'Bright and low-carb.',
+      description: 'Bright and simple.',
       servings: 9,
       ingredients: ['1 cup almond flour', '1/2 cup allulose'],
       steps: ['Mix.', 'Bake 20 minutes.'],

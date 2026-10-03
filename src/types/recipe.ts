@@ -11,7 +11,7 @@
 import type { SyncMeta } from './sync';
 
 /** Current schema version. Bump when the stored shape changes and add a migration in `migrateRecipe`. */
-export const RECIPE_SCHEMA_VERSION = 4;
+export const RECIPE_SCHEMA_VERSION = 5;
 
 export type UnitSystem = 'metric' | 'imperial';
 
@@ -44,20 +44,6 @@ export interface Step {
   durationSeconds?: number;
 }
 
-/** Nutrition per serving (spec #17). All fields optional = unknown; never default unknowns to 0. */
-export interface NutritionPerServing {
-  calories?: number;
-  /** Total carbohydrates, g. */
-  carbsG?: number;
-  /** Net carbs, g (what Jason tracks). If unknown but carbs + fiber known, see `netCarbs()`. */
-  netCarbsG?: number;
-  proteinG?: number;
-  fatG?: number;
-  fiberG?: number;
-  /** Where the numbers came from. */
-  source?: 'manual' | 'imported' | 'computed';
-}
-
 export interface Recipe extends SyncMeta {
   schemaVersion: number;
   /** User-editable title (spec #7). */
@@ -70,8 +56,6 @@ export interface Recipe extends SyncMeta {
   tags: string[];
   /** Number of servings the recipe makes (> 0). Base for scaling. */
   servings: number;
-  /** Per-serving nutrition (spec #17). Net carbs lives in `nutrition.netCarbsG`. */
-  nutrition: NutritionPerServing;
   /** Ids of user-defined categories (spec #3). */
   categoryIds: string[];
   /** Local file URI of the optional recipe photo (spec #4). */
@@ -100,17 +84,9 @@ export type RecipeInput = Pick<Recipe, 'title' | 'ingredients' | 'steps' | 'tags
   Partial<
     Pick<
       Recipe,
-      'nutrition' | 'description' | 'categoryIds' | 'photoUri' | 'sourceUrl' | 'notes' | 'rating' | 'unitSystem'
+      'description' | 'categoryIds' | 'photoUri' | 'sourceUrl' | 'notes' | 'rating' | 'unitSystem'
     >
   >;
-
-/** Net carbs per serving: explicit value, else carbs − fiber when both known, else undefined. */
-export function netCarbs(n: NutritionPerServing | undefined): number | undefined {
-  if (!n) return undefined;
-  if (n.netCarbsG !== undefined) return n.netCarbsG;
-  if (n.carbsG !== undefined && n.fiberG !== undefined) return Math.max(0, +(n.carbsG - n.fiberG).toFixed(1));
-  return undefined;
-}
 
 /** User-defined recipe category, e.g. "Breakfast" or "Breads" (spec #3). */
 export interface Category extends SyncMeta {
@@ -126,9 +102,6 @@ export const FORBIDDEN_INGREDIENT_PATTERNS: readonly RegExp[] = [
   /luo\s*han\s*guo/i,
   /mogroside/i,
 ];
-
-/** Carbs-per-serving threshold (grams) under which a recipe is labeled low-carb. */
-export const LOW_CARB_THRESHOLD_G = 15;
 
 export interface ValidationResult {
   ok: boolean;
@@ -155,31 +128,12 @@ export function findForbiddenIngredients(
   return [...hits];
 }
 
-export interface ValidateOptions {
-  /** Manual entry requires carbs; imports may leave them unknown. Default true. */
-  requireCarbs?: boolean;
-}
-
-export function validateRecipeInput(
-  input: RecipeInput,
-  { requireCarbs = true }: ValidateOptions = {},
-): ValidationResult {
+export function validateRecipeInput(input: RecipeInput): ValidationResult {
   const errors: string[] = [];
   if (!input.title || !input.title.trim()) errors.push('Title is required.');
   if (input.ingredients.filter((i) => i.text.trim()).length === 0) errors.push('At least one ingredient is required.');
   if (input.steps.filter((st) => st.text.trim()).length === 0) errors.push('At least one step is required.');
   if (!Number.isFinite(input.servings) || input.servings <= 0) errors.push('Servings must be a number greater than 0.');
-  const carbs = input.nutrition?.netCarbsG;
-  if (carbs === undefined ? requireCarbs : !Number.isFinite(carbs) || carbs < 0)
-    errors.push('Net carbs per serving must be a number of 0 or more.');
-  for (const [k, v] of Object.entries(input.nutrition ?? {}))
-    if (
-      k !== 'source' &&
-      k !== 'netCarbsG' &&
-      v !== undefined &&
-      (typeof v !== 'number' || !Number.isFinite(v) || v < 0)
-    )
-      errors.push(`Nutrition "${k}" must be a number of 0 or more.`);
   if (input.rating !== undefined && !(Number.isInteger(input.rating) && input.rating >= 1 && input.rating <= 5))
     errors.push('Rating must be 1–5 stars.');
   const forbidden = findForbiddenIngredients(input);
@@ -188,11 +142,6 @@ export function validateRecipeInput(
       `Forbidden sweetener found (${forbidden.join(', ')}). Use ${PREFERRED_SWEETENER} as the only sugar-free sweetener.`,
     );
   return { ok: errors.length === 0, errors };
-}
-
-export function isLowCarb(recipe: Pick<Recipe, 'nutrition'>): boolean {
-  const n = netCarbs(recipe.nutrition);
-  return n !== undefined && n <= LOW_CARB_THRESHOLD_G;
 }
 
 /** Runtime type guard, used when loading stored or imported JSON. */
@@ -209,8 +158,6 @@ export function isRecipe(value: unknown): value is Recipe {
     Array.isArray(r.tags) &&
     r.tags.every((t) => typeof t === 'string') &&
     typeof r.servings === 'number' &&
-    typeof r.nutrition === 'object' &&
-    r.nutrition !== null &&
     (r.rating === undefined || typeof r.rating === 'number') &&
     typeof r.createdAt === 'string' &&
     typeof r.updatedAt === 'string' &&
@@ -231,15 +178,14 @@ export function migrateRecipe(value: unknown): Recipe | undefined {
   // v1 -> v2: add categories + cooked tracking.
   if (!Array.isArray(r.categoryIds)) r.categoryIds = [];
   if (typeof r.cooked !== 'boolean') r.cooked = typeof r.lastCookedAt === 'string';
-  // v2 -> v3: structured steps, nutrition object (carbsPerServing -> nutrition.netCarbsG).
+  // v2 -> v3: structured steps.
   if (Array.isArray(r.steps)) r.steps = r.steps.map((st) => (typeof st === 'string' ? { text: st } : st));
-  if (typeof r.nutrition !== 'object' || r.nutrition === null) {
-    r.nutrition = typeof r.carbsPerServing === 'number' ? { netCarbsG: r.carbsPerServing, source: 'manual' } : {};
-  }
-  delete r.carbsPerServing;
   // v3 -> v4: cook history. Keep any valid timestamps; otherwise seed from lastCookedAt.
   if (Array.isArray(r.cookHistory)) r.cookHistory = r.cookHistory.filter((t) => typeof t === 'string');
   else r.cookHistory = typeof r.lastCookedAt === 'string' ? [r.lastCookedAt] : [];
+  // v4 -> v5: nutrition removed — this is a recipe app, not a nutrition app (Jason, Oct 3 2026).
+  delete r.nutrition;
+  delete r.carbsPerServing;
   if (typeof r.updatedAt !== 'string' && typeof r.createdAt === 'string') r.updatedAt = r.createdAt;
   r.schemaVersion = RECIPE_SCHEMA_VERSION;
   return isRecipe(r) ? r : undefined;
@@ -258,13 +204,20 @@ export interface PantryItem extends SyncMeta {
   /** Optional — unknown quantity is left unset (never stored as 0 to mean "some"). */
   quantity?: number;
   unit?: string;
-  /** Free-form aisle / group, e.g. "Dairy". Distinct from recipe categories. */
-  category?: string;
-  /** Optional expiry, YYYY-MM-DD. */
-  expiresAt?: string;
-  /** EAN/UPC of the product when added by barcode scan (spec #27). */
+  /** EAN/UPC of the product when added by barcode scan (spec #27) — lets a re-scan increment this item. */
   barcode?: string;
-  brand?: string;
+}
+
+/**
+ * The pantry tracks item name and quantity (+ optional unit) only (Jason, Oct 3 2026) — no category, expiry,
+ * brand or nutrition. Drops fields older builds stored so they are not kept or synced again.
+ */
+export function slimPantryItem<T extends object>(item: T): T {
+  const legacy = ['category', 'expiresAt', 'brand', 'nutrition', 'nutritionPer100g'];
+  if (!legacy.some((k) => k in item)) return item;
+  const rest = { ...item } as Record<string, unknown>;
+  for (const k of legacy) delete rest[k];
+  return rest as T;
 }
 
 export function isPantryItem(v: unknown): v is PantryItem {

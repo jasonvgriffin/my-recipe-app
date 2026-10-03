@@ -24,25 +24,24 @@ function renderPantry() {
 }
 
 describe('pantry screen (spec #21)', () => {
-  it('adds, edits, and removes an item with quantity, unit, category, and expiry', async () => {
+  it('adds, edits, and removes an item with name, quantity and unit only', async () => {
     renderPantry();
     expect(await screen.findByText('Nothing in the pantry yet.')).toBeTruthy();
     fireEvent.press(screen.getByTestId('pantry-add-button'));
     fireEvent.changeText(screen.getByTestId('pantry-name-input'), 'Chicken breast');
     fireEvent.changeText(screen.getByTestId('pantry-quantity-input'), '2');
     fireEvent.changeText(screen.getByTestId('pantry-unit-input'), 'lb');
-    fireEvent.press(screen.getByText('Meat'));
-    fireEvent.changeText(screen.getByTestId('pantry-expiry-input'), '2020-01-01');
     await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
 
     expect(await screen.findByText('chicken breast')).toBeTruthy();
-    expect(screen.getByText(/2 lb · Meat/)).toBeTruthy();
-    expect(screen.getByText(/Expired 2020-01-01/)).toBeTruthy();
+    expect(screen.getByText('2 lb')).toBeTruthy();
+    expect(screen.queryByTestId('pantry-expiry-input')).toBeNull();
+    expect(screen.queryByTestId('pantry-category-input')).toBeNull();
 
     fireEvent.press(screen.getByTestId(/^pantry-item-/));
     fireEvent.changeText(screen.getByTestId('pantry-quantity-input'), '4');
     await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
-    expect(await screen.findByText(/4 lb · Meat/)).toBeTruthy();
+    expect(await screen.findByText('4 lb')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId(/^pantry-item-/));
     await act(async () => fireEvent.press(screen.getByTestId('pantry-remove-button')));

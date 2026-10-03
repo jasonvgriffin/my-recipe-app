@@ -51,7 +51,7 @@ src/app/_layout.tsx           root Stack + dark navigation theme
 src/app/(tabs)/               bottom tabs: index.tsx (Recipes), meal-plan.tsx, shopping.tsx
 src/app/add.tsx               add-recipe form (modal)
 src/app/recipe/[id].tsx       recipe detail (cooked toggle, plan for today, source link, delete)
-src/types/recipe.ts           Recipe (structured steps, parsed ingredients, nutrition, rating, unitSystem),
+src/types/recipe.ts           Recipe (structured steps, parsed ingredients, rating, unitSystem),
                               Category, PantryItem, AppSettings, validation, migrations (single source of truth)
 src/types/meal-plan.ts        MealPlanEntry, ShoppingList types
 src/import/                   THE import pipeline: importRecipe(), zod contract, parsers (JSON-LD, text,
@@ -107,7 +107,7 @@ never edit an applied migration. Details: `docs/SYNC.md`.
    the build stays green. Download it from the run page while signed in to GitHub (private repo).
 5. **Releases:** a GitHub Release with the APK is published **only** for a pushed tag `v*` (e.g. `v1.0.0`) or a
    manual run with `publish: true` + `tag`. The tag must match `app.json` `expo.version`; existing releases are
-   never overwritten. **No rolling/incremental releases.** **v1.0.0 = all SPEC items 1–27 complete, and is the
+   never overwritten. **No rolling/incremental releases.** **v1.0.0 = all SPEC items 1–27 complete (#17 removed), and is the
    first published APK.** Agents must not push `v*` tags or trigger a publish run — Eve/Jason do that.
 
 Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the Android SDK.
@@ -123,11 +123,12 @@ Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the And
 
 - **Dark theme throughout** (spec #13). Use `colors` from `src/lib/theme.ts`; never hard-code light colors.
 
-- Recipes are **diabetic-friendly and low-carb**. Always track `servings` and `carbsPerServing` (net grams).
+- **This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition.**
+  No nutrition fields, calories, macros, carb counts, nutrition lookups, nutrition imports, or nutrition UI. The pantry
+  tracks item names and quantities only; barcode scans may use Open Food Facts for the product **name** only.
+- Recipes are **diabetic-friendly**. Always track `servings`.
 - **Allulose is the only sugar-free sweetener. Never use or suggest monk fruit** (or luo han guo / mogrosides)
   — not in seed data, examples, tests, AI prompts, or suggestions. `validateRecipeInput` enforces this; keep it.
-- Net carbs live in `recipe.nutrition.netCarbsG` (use `netCarbs()`); all nutrition is per serving.
-- Never default unknown carbs/nutrition to 0 (`carbsPerServing` is optional = unknown); that would mislead a diabetic user.
 - Keep the `Recipe` schema in `src/types/recipe.ts` JSON-serializable and versioned (`schemaVersion`);
   bump `RECIPE_SCHEMA_VERSION` and extend `migrateRecipe` when changing the stored shape.
 - Put logic in pure, unit-tested helpers (`src/lib`, `src/storage`); keep screens thin.

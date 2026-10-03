@@ -1,7 +1,7 @@
 import { formatIngredient } from '@/lib/ingredients';
 import { isRemotePhoto, mimeForUri } from '@/lib/photo-path';
 import { formatDuration } from '@/lib/timers';
-import { netCarbs, type Recipe } from '@/types/recipe';
+import type { Recipe } from '@/types/recipe';
 
 /** What the share sheet should include (spec #14). Any combination is valid. */
 export interface ShareParts {
@@ -23,17 +23,15 @@ export interface ShareRequest {
 
 type ShareRecipe = Pick<
   Recipe,
-  'title' | 'servings' | 'nutrition' | 'ingredients' | 'steps' | 'notes' | 'sourceUrl' | 'photoUri'
+  'title' | 'servings' | 'ingredients' | 'steps' | 'notes' | 'sourceUrl' | 'photoUri'
 >;
 
-/** Plain-text recipe for the share sheet. Net carbs stay "unknown" when they are not set. */
+/** Plain-text recipe for the share sheet. */
 export function formatRecipeShareText(recipe: ShareRecipe): string {
-  const net = netCarbs(recipe.nutrition);
   const lines: string[] = [
     recipe.title,
     '',
     `Servings: ${recipe.servings}`,
-    `Net carbs per serving: ${net === undefined ? 'unknown' : `${net} g`}`,
     '',
     'Ingredients',
   ];

@@ -86,7 +86,6 @@ describe.each([
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
     expect(screen.getByText('Ingredients')).toBeTruthy();
     expect(screen.getByTestId('servings-units')).toBeTruthy();
-    expect(screen.getByTestId('nutrition-panel')).toBeTruthy();
     expect(screen.getByTestId('detail-rating')).toBeTruthy();
     expect(screen.getByTestId('cooked-toggle')).toBeTruthy();
     expect(screen.getByTestId('add-tag-input')).toBeTruthy();

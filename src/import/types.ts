@@ -33,7 +33,8 @@ const ingredient = z.union([z.string(), z.object({ text: z.string(), substitutio
 /**
  * A recipe as supplied by an outside party (parser, AI assistant, share intent...).
  * Lenient on purpose: only `title` plus at least one ingredient or step is required.
- * Ingredients may be plain strings or `{ text }` objects. Unknown keys are stripped.
+ * Ingredients may be plain strings or `{ text }` objects. Unknown keys are stripped — including any nutrition
+ * (`nutrition`, `carbsPerServing`, …): this is a recipe app, not a nutrition app.
  */
 export const RecipeDraftSchema = z
   .object({
@@ -50,18 +51,6 @@ export const RecipeDraftSchema = z
     /** Category names (not ids); created on import if missing. */
     categories: z.array(z.string()).max(50).default([]),
     servings: z.number().positive().max(1000).optional(),
-    /** Shorthand for nutrition.netCarbsG (handy for AI assistants). */
-    carbsPerServing: z.number().min(0).max(10000).optional(),
-    nutrition: z
-      .object({
-        calories: z.number().min(0).optional(),
-        carbsG: z.number().min(0).optional(),
-        netCarbsG: z.number().min(0).optional(),
-        proteinG: z.number().min(0).optional(),
-        fatG: z.number().min(0).optional(),
-        fiberG: z.number().min(0).optional(),
-      })
-      .optional(),
     rating: z.number().int().min(1).max(5).optional(),
     notes: z.string().max(20000).optional(),
     /** http(s) or file:// URI of a photo. The import screen copies remote http(s) photos into app documents (spec #4). */
@@ -116,7 +105,7 @@ export type ImportResult =
       ok: true;
       status: 'created' | 'updated' | 'duplicate';
       recipe: Recipe;
-      /** Non-fatal issues, e.g. "carbs per serving unknown". */
+      /** Non-fatal issues, e.g. "servings unknown". */
       warnings: string[];
     }
   | { ok: false; code: ImportErrorCode; errors: string[] };

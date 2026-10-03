@@ -3,7 +3,7 @@ import type { Recipe, RecipeInput } from '@/types/recipe';
 
 const SEED_TS = '2026-10-02T00:00:00.000Z';
 
-/** Sample recipes (built through createRecipe so ingredients are parsed + step timers detected) inserted on first launch. Diabetic-friendly, low-carb, allulose only. */
+/** Sample recipes (built through createRecipe so ingredients are parsed + step timers detected) inserted on first launch. Diabetic-friendly, allulose only. */
 const SEED_INPUTS: (RecipeInput & { id: string })[] = [
   {
     id: 'seed-lemon-herb-chicken',
@@ -24,9 +24,8 @@ const SEED_INPUTS: (RecipeInput & { id: string })[] = [
       { text: 'Arrange skin-side up on a sheet pan with the green beans around it.' },
       { text: 'Roast 35–40 minutes until the chicken reaches 175°F (80°C) and the skin is crisp.' },
     ],
-    tags: ['dinner', 'low-carb', 'diabetic-friendly', 'sheet-pan'],
+    tags: ['dinner', 'diabetic-friendly', 'sheet-pan'],
     servings: 6,
-    nutrition: { calories: 390, carbsG: 8, fiberG: 3, netCarbsG: 5, proteinG: 28, fatG: 27, source: 'manual' },
   },
   {
     id: 'seed-allulose-cheesecake-mousse',
@@ -46,9 +45,8 @@ const SEED_INPUTS: (RecipeInput & { id: string })[] = [
       { text: 'Fold the whipped cream into the cream cheese mixture.' },
       { text: 'Spoon into 6 cups and chill at least 1 hour.' },
     ],
-    tags: ['dessert', 'low-carb', 'diabetic-friendly', 'allulose', 'no-bake'],
+    tags: ['dessert', 'diabetic-friendly', 'allulose', 'no-bake'],
     servings: 6,
-    nutrition: { calories: 280, carbsG: 2, fiberG: 0, netCarbsG: 2, proteinG: 3, fatG: 28, source: 'manual' },
   },
 ];
 
