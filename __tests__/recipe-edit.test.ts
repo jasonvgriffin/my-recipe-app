@@ -61,6 +61,18 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
     expect(saved.sourceUrl).toBe('https://example.com/chicken');
   });
 
+  it('keeps household and author (SyncMeta) when a shared recipe is edited', () => {
+    const recipe: Recipe = { ...sample(), householdId: 'house-1', createdBy: 'user-a' };
+    const state = recipeToEditorState(recipe);
+    state.title = 'Edited by someone else';
+    const built = editorStateToInput(state, recipe);
+    if (!built.ok) throw new Error(built.errors.join());
+    const saved = applyRecipeEdit(recipe, built.input, new Date('2026-10-03T00:00:00Z'));
+    expect(saved.householdId).toBe('house-1');
+    expect(saved.createdBy).toBe('user-a');
+    expect(saved.title).toBe('Edited by someone else');
+  });
+
   it('leaves net carbs unknown when the field is cleared and rejects monk fruit', () => {
     const recipe = sample();
     const state = recipeToEditorState(recipe);

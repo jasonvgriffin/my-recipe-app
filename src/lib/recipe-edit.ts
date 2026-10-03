@@ -121,12 +121,14 @@ export function editorStateToInput(
 }
 
 /**
- * Build the saved recipe. Keeps identity, cooked history, rating, categories, tags and unit
- * preference — editing must not reset them.
+ * Build the saved recipe. Keeps identity, authorship/household (SyncMeta), cooked history, rating,
+ * categories, tags and unit preference — editing must not reset them.
  */
 export function applyRecipeEdit(original: Recipe, input: RecipeInput, now: Date = new Date()): Recipe {
   const next = createRecipe(input, now, original.id);
   return {
+    // Keep fields the editor does not own (sync meta: householdId/createdBy, plus any newer fields).
+    ...original,
     ...next,
     createdAt: original.createdAt,
     cooked: original.cooked,
