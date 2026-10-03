@@ -14,6 +14,8 @@ const routes = () => ({
   '(tabs)/meal-plan': require('@/app/(tabs)/meal-plan').default,
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
   '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
+  '(tabs)/more': require('@/app/(tabs)/more').default,
+  '(tabs)/add-menu': require('@/app/(tabs)/add-menu').default,
   'pantry/scan': require('@/app/pantry/scan').default,
   'shopping/scan': require('@/app/shopping/scan').default,
   recipes: require('@/app/recipes').default,
@@ -48,6 +50,9 @@ describe('recipes-first', () => {
     // v1.0.1: five clear buttons and no sample recipes.
     for (const id of ['home-search', 'home-existing', 'home-share', 'add-recipe-button', 'home-pantry-match'])
       expect(screen.getByTestId(id)).toBeTruthy();
+    // v1.0.2: titles only, no gray subtitle under the buttons.
+    expect(screen.queryByText('Browse, filter and open your recipes')).toBeNull();
+    expect(screen.queryByText('Type one in or import from a link')).toBeNull();
     await act(async () => fireEvent.press(screen.getByTestId('home-existing')));
     expect(await screen.findByText(/No recipes yet/)).toBeTruthy();
   });
@@ -64,9 +69,16 @@ describe('recipes-first', () => {
     await settingsStore.update({ features: { mealPlan: false, shopping: false, pantry: false } });
     renderRouter(routes(), { initialUrl: '/' });
     await screen.findByTestId('add-recipe-button');
-    await waitFor(() => expect(screen.queryByText('Meal plan')).toBeNull());
-    expect(screen.queryByText('Shopping list')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Meal Plan')).toBeNull());
+    expect(screen.queryByText('Shopping')).toBeNull();
     expect(screen.queryByText('Pantry')).toBeNull();
+    // v1.0.2: the + button and More stay; the + menu only offers recipe actions.
+    await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
+    expect(screen.getByTestId('add-menu-add-recipe')).toBeTruthy();
+    for (const id of ['add-shopping', 'add-pantry', 'plan-meal', 'what-can-i-make'])
+      expect(screen.queryByTestId(`add-menu-${id}`)).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId('add-menu-backdrop')));
+    await waitFor(() => expect(screen.queryByTestId('add-menu-sheet')).toBeNull());
 
     // Add a recipe
     await act(async () => fireEvent.press(screen.getByTestId('add-recipe-button')));
@@ -89,8 +101,10 @@ describe('recipes-first', () => {
   it('optional tabs come back when enabled in Settings', async () => {
     await settingsStore.update({ features: { mealPlan: true, shopping: true, pantry: true } });
     renderRouter(routes(), { initialUrl: '/' });
-    expect(await screen.findByText('Meal plan')).toBeTruthy();
-    expect(screen.getByText('Shopping list')).toBeTruthy();
-    expect(screen.getByText('Pantry')).toBeTruthy();
+    expect(await screen.findByText('Meal Plan')).toBeTruthy();
+    expect(screen.getByText('Shopping')).toBeTruthy();
+    // v1.0.2: Pantry lives under More.
+    await act(async () => fireEvent.press(screen.getByText('More')));
+    expect(await screen.findByTestId('more-pantry')).toBeTruthy();
   });
 });

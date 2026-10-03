@@ -128,6 +128,6 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
 7. **iOS timing** and whether to pay for Apple Developer ($99/yr) and/or EAS.
 8. **Multi-user:** just Jason, or family members sharing a recipe box?
 9. ~~Low-carb threshold~~ — resolved (Oct 3 2026): label removed with nutrition.
-10. **"Cooked recently" window:** currently 14 days (`AppSettings.cookedRecentlyDays`) — adjust?
+10. **"Cooked recently" window:** fixed at 14 days since v1.0.2 (`COOKED_RECENTLY_DAYS` in `src/lib/recipe-utils.ts`; the setting was removed).
 11. **Photos:** keep on-device only (lost if the app is uninstalled) until a sync backend exists — OK?
 12. **Timer notifications:** OK to request Android notification permission on first timer start?

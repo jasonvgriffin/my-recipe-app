@@ -8,7 +8,6 @@ import { RecipeFilters } from '@/components/recipe-filters';
 import { StarRating } from '@/components/star-rating';
 import { useFeature } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
-import { useSettings } from '@/hooks/use-settings';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import {
   browseFilters,
@@ -38,7 +37,6 @@ export default function RecipeListScreen() {
   /** Selected recipe for the detail pane (medium/expanded). Kept across fold/unfold. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { isTwoPane } = useWindowSizeClass();
-  const settings = useSettings();
   const showRatings = useFeature('ratings').available;
   const showTags = useFeature('tags').available;
   const showCategories = useFeature('categories').available;
@@ -117,7 +115,6 @@ export default function RecipeListScreen() {
     filterRecipes(
       recipes,
       browseFilters(filteredBrowse, {
-        recentDays: settings.cookedRecentlyDays,
         categories: showCategories,
         tags: showTags,
         ratings: showRatings,
@@ -158,7 +155,6 @@ export default function RecipeListScreen() {
           <RecipeFilters
             browse={filteredBrowse}
             onChange={changeBrowse}
-            recentDays={settings.cookedRecentlyDays}
             categories={categories}
             showCategories={showCategories}
             tagNames={tagNames}

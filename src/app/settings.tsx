@@ -1,20 +1,20 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Clipboard from 'expo-clipboard';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { Chip } from '@/components/chip';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
 import { FeatureGate } from '@/components/feature-gate';
+import { appVersion, MCP_SERVER_URL } from '@/config';
 import { featureGate, type FeatureId } from '@/entitlements';
 import { useFeature } from '@/hooks/use-feature';
 import { useHousehold } from '@/hooks/use-household';
 import { useSettings } from '@/hooks/use-settings';
 import { colors } from '@/lib/theme';
-import { clampCookedRecentlyDays, settingsStore } from '@/storage/settings';
+import { settingsStore } from '@/storage/settings';
 import { syncStatusLabel } from '@/sync/status';
 import type { OptionalFeatures, UnitSystem } from '@/types/recipe';
-
-const RECENT_PRESETS = [7, 14, 30, 90];
 
 const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; help: string }[] = [
   { key: 'mealPlan', gate: 'mealPlan', label: 'Meal plan', help: 'Plan recipes on a calendar.' },
@@ -28,8 +28,9 @@ const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; h
 ];
 
 /**
- * Settings. Recipes are the core: everything here is optional. Recipe list preferences (cooked-recently
- * window), units, cooking mode, and optional-feature toggles. Turning every optional feature off makes the
+ * Settings. Recipes are the core: everything here is optional. AI assistant (MCP) connection info, units,
+ * cooking mode, and optional-feature toggles; the app version at the bottom. (The "cooked recently" window is
+ * fixed at 14 days since v1.0.2 — `COOKED_RECENTLY_DAYS`.) Turning every optional feature off makes the
  * app a pure recipe box.
  */
 const UNIT_CHOICES: { id: UnitSystem | 'original'; label: string }[] = [
@@ -64,27 +65,11 @@ export default function SettingsScreen() {
   useFeature('mealPlan');
   const units = useFeature('unitConversion').available;
   const cooking = useFeature('cookingMode').available;
+  const version = appVersion();
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
       <ScrollView contentContainerStyle={styles.container} testID="settings-screen">
-        <Text style={styles.section}>Recipes</Text>
-        <Text style={styles.help}>
-          “Cooked recently” means cooked within this many days. It applies to the filter on the Recipes tab.
-        </Text>
-        <View style={styles.presets}>
-          {RECENT_PRESETS.map((days) => (
-            <Chip
-              key={days}
-              label={`${days} days`}
-              active={settings.cookedRecentlyDays === days}
-              testID={`cooked-recently-${days}`}
-              onPress={() => {
-                void settingsStore.update({ cookedRecentlyDays: days });
-              }}
-            />
-          ))}
-        </View>
-        <CookedRecentlyInput days={settings.cookedRecentlyDays} />
+        <McpServerSection />
         <Text style={styles.section}>Optional features</Text>
         <Text style={styles.help}>Recipes always work on their own. Show only the extras you want.</Text>
         {FEATURES.filter((f) => featureGate.canUse(f.gate)).map((f) => (
@@ -148,51 +133,69 @@ export default function SettingsScreen() {
         <FeatureGate id="householdSync">
           <HouseholdSettingsLink />
         </FeatureGate>
+        {version ? (
+          <Text style={styles.version} testID="app-version">
+            Version {version}
+          </Text>
+        ) : null}
       </ScrollView>
     </MaxWidthContainer>
   );
 }
 
-/**
- * Free-form "cooked recently" days (1–365). Keeps a local draft so the field can be cleared while typing;
- * valid values save immediately, and leaving the field restores the saved value if the draft is invalid.
- */
-function CookedRecentlyInput({ days }: { days: number }) {
-  const [draft, setDraft] = useState<string | null>(null);
+/** AI assistants (MCP): the server URL (`MCP_SERVER_URL`, src/config) with a copy button. Spec #28, docs/MCP.md. */
+function McpServerSection() {
+  const [copied, setCopied] = useState(false);
   return (
-    <TextInput
-      style={styles.input}
-      value={draft ?? String(days)}
-      onChangeText={(text) => {
-        if (!/^\d{0,3}$/.test(text)) return;
-        setDraft(text);
-        const n = Number(text);
-        if (text && n >= 1) void settingsStore.update({ cookedRecentlyDays: clampCookedRecentlyDays(n) });
-      }}
-      onBlur={() => setDraft(null)}
-      keyboardType="number-pad"
-      accessibilityLabel="Cooked recently window in days"
-      placeholder="14"
-      placeholderTextColor={colors.placeholder}
-      testID="cooked-recently-input"
-    />
+    <>
+      <Text style={styles.section}>AI assistants (MCP)</Text>
+      <Text style={styles.help}>
+        Add this server URL to Grok, Claude or ChatGPT as a connector so your assistant can work with your recipes.
+      </Text>
+      <View style={styles.mcpBox} testID="mcp-server">
+        <Text style={styles.url} selectable testID="mcp-server-url">
+          {MCP_SERVER_URL}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={copied ? 'Copied' : 'Copy MCP server URL'}
+          hitSlop={8}
+          onPress={async () => {
+            await Clipboard.setStringAsync(MCP_SERVER_URL);
+            setCopied(true);
+          }}
+          style={styles.copy}
+          testID="mcp-copy-button">
+          <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={20} color={colors.primary} />
+          <Text style={styles.copyText}>{copied ? 'Copied' : 'Copy'}</Text>
+        </Pressable>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { padding: 16, gap: 12 },
   section: { color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 8 },
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  input: {
-    minHeight: 44,
+  url: { color: colors.text, fontSize: 14, flexShrink: 1 },
+  mcpBox: {
+    gap: 4,
+    backgroundColor: colors.card,
+    borderRadius: 10,
+    padding: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    backgroundColor: colors.input,
-    color: colors.text,
-    fontSize: 16,
   },
+  copy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: 4,
+    minHeight: 44,
+    paddingHorizontal: 4,
+  },
+  copyText: { color: colors.primary, fontWeight: '700' },
+  version: { color: colors.muted, textAlign: 'center', marginTop: 16 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

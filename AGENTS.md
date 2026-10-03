@@ -52,7 +52,8 @@ Android first; iOS later from the **same codebase**.
 
 ```
 src/app/_layout.tsx           root Stack + dark navigation theme
-src/app/(tabs)/               bottom tabs: index.tsx (Recipes), meal-plan.tsx, shopping.tsx
+src/app/(tabs)/               bottom tabs (v1.0.2): index.tsx (Recipes), meal-plan.tsx, + (add-menu.tsx placeholder →
+                              components/add-menu-sheet.tsx), shopping.tsx, more.tsx (Pantry, Household, Settings); pantry.tsx
 src/app/add.tsx               add-recipe form (modal)
 src/app/recipe/[id].tsx       recipe detail (cooked toggle, plan for today, source link, delete)
 src/types/recipe.ts           Recipe (structured steps, parsed ingredients, rating, unitSystem),
@@ -67,7 +68,8 @@ src/lib/                      pure helpers: recipe-utils (create/search/filter/s
 src/storage/                  repositories over a KeyValueStore (AsyncStorage by default; inject one in tests):
                               kv.ts (createCollection), recipes.ts (recipes + categories), meal-plan.ts,
                               pantry.ts, settings.ts
-src/app/(tabs)/index.tsx      Recipes tab: five buttons (Search, Existing Recipes, Share, Add, pantry match)
+src/app/(tabs)/index.tsx      Recipes tab: five green title links (Search, Existing Recipes, Share, Add, pantry match)
+src/config/index.ts           app constants: MCP_SERVER_URL, appVersion() (expo-constants)
 src/app/recipes.tsx           Existing Recipes: search, filters, list + detail
 src/app/auth.tsx              magic-link redirect (myrecipeapp://auth): sign in, then Settings → Household
 src/storage/legacy-samples.ts identifies untouched v1.0.0 sample recipes (no seeding since v1.0.1)
