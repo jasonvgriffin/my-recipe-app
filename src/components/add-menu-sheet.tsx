@@ -12,13 +12,12 @@ import { colors } from '@/lib/theme';
 /**
  * Bottom sheet raised by the center “+” tab button (v1.0.2, like Cronometer's add menu): a 3-column grid of
  * round icon buttons. Items come from `src/lib/add-menu.ts`; anything locked or hidden in Settings is left
- * out. Tapping outside the sheet or Android back closes it.
+ * out, and a partial last row is centered (v1.0.3). Tapping outside the sheet or Android back closes it.
  */
 export function AddMenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const shown: Partial<Record<FeatureId, boolean>> = {
     linkImport: useFeatureVisible('linkImport'),
-    barcodeScan: useFeatureVisible('barcodeScan'),
     shoppingList: useFeatureVisible('shoppingList'),
     pantry: useFeatureVisible('pantry'),
     mealPlan: useFeatureVisible('mealPlan'),
@@ -28,7 +27,7 @@ export function AddMenuSheet({ visible, onClose }: { visible: boolean; onClose: 
 
   const open = (item: AddMenuItem) => {
     onClose();
-    const href = addMenuHref(item.id, { today: toIsoDate(new Date()), pantryVisible: Boolean(shown.pantry) });
+    const href = addMenuHref(item.id, { today: toIsoDate(new Date()) });
     router.push(href as Href);
   };
 
@@ -91,7 +90,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     marginBottom: 16,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
   cell: { width: '33.333%', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 4, gap: 8 },
   pressed: { opacity: 0.6 },
   circle: {

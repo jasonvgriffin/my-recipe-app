@@ -133,5 +133,8 @@ follow the Recipes-are-the-core rule above.
   scanning is locked or hidden, the Scan Item button and the “or” are both left out (#12, #27).
 - **Meal Plan hint** (`src/components/meal-calendar.tsx`): muted “Tap a day to add meal plan” text on the same row as
   the green **Today** link (to its left, above the month name) (#11).
-- **+ add sheet:** the “Plan a Meal” item is now labeled **Meal Plan** (same action: opens today’s day plan;
-  `src/lib/add-menu.ts`).
+- **+ add sheet** (`src/lib/add-menu.ts`, `src/components/add-menu-sheet.tsx`): the “Plan a Meal” item is now labeled
+  **Meal Plan** (same action: opens today’s day plan). The **Scan Barcode** item is removed: scanning already lives in
+  Add to Shopping List (the list’s Scan Item button) and Add Pantry Item (the Pantry’s Scan barcode button). Eight items
+  remain (Add Recipe, Import Link, Search Recipes, Add to Shopping List, Add Pantry Item, Meal Plan, Share Recipe, What
+  Can I Make?) in the 3-column grid; a partial last row is centered.
