@@ -17,16 +17,26 @@ describe('validateRecipeInput', () => {
   });
 
   it('requires title, ingredients, steps and sane numbers', () => {
-    const r = validateRecipeInput({ ...base, title: ' ', ingredients: [], steps: [], servings: 0, nutrition: { netCarbsG: NaN } });
+    const r = validateRecipeInput({
+      ...base,
+      title: ' ',
+      ingredients: [],
+      steps: [],
+      servings: 0,
+      nutrition: { netCarbsG: NaN },
+    });
     expect(r.ok).toBe(false);
     expect(r.errors).toHaveLength(5);
   });
 
-  it.each(['1 tbsp monk fruit sweetener', 'Monk-fruit blend', 'luo han guo extract'])('rejects forbidden sweetener: %s', (text) => {
-    const r = validateRecipeInput({ ...base, ingredients: [{ text }] });
-    expect(r.ok).toBe(false);
-    expect(r.errors.join(' ')).toMatch(/allulose/);
-  });
+  it.each(['1 tbsp monk fruit sweetener', 'Monk-fruit blend', 'luo han guo extract'])(
+    'rejects forbidden sweetener: %s',
+    (text) => {
+      const r = validateRecipeInput({ ...base, ingredients: [{ text }] });
+      expect(r.ok).toBe(false);
+      expect(r.errors.join(' ')).toMatch(/allulose/);
+    },
+  );
 });
 
 describe('recipe utils', () => {

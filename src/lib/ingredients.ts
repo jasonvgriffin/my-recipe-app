@@ -3,7 +3,15 @@ import type { Ingredient, UnitSystem } from '@/types/recipe';
 import { convertAmount, findUnit, roundNice } from './units';
 
 const UNICODE_FRACTIONS: Record<string, number> = {
-  '¼': 0.25, '½': 0.5, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3, '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875,
+  '¼': 0.25,
+  '½': 0.5,
+  '¾': 0.75,
+  '⅓': 1 / 3,
+  '⅔': 2 / 3,
+  '⅛': 0.125,
+  '⅜': 0.375,
+  '⅝': 0.625,
+  '⅞': 0.875,
 };
 
 /** Parse "2", "1/2", "2 1/2", "1½", "0.5" → number. */
@@ -100,7 +108,13 @@ export function convertIngredient(ing: Ingredient, target: UnitSystem): Ingredie
 export function formatQuantity(q: number): string {
   const whole = Math.floor(q);
   const frac = q - whole;
-  const nice: [number, string][] = [[0.25, '¼'], [1 / 3, '⅓'], [0.5, '½'], [2 / 3, '⅔'], [0.75, '¾']];
+  const nice: [number, string][] = [
+    [0.25, '¼'],
+    [1 / 3, '⅓'],
+    [0.5, '½'],
+    [2 / 3, '⅔'],
+    [0.75, '¾'],
+  ];
   const match = nice.find(([v]) => Math.abs(v - frac) < 0.02);
   if (match) return whole ? `${whole}${match[1]}` : match[1];
   return String(roundNice(q));
@@ -112,11 +126,16 @@ export function formatQuantity(q: number): string {
  */
 export function formatIngredient(ing: Ingredient): string {
   if (ing.quantity === undefined || !ing.name) return ing.text;
-  const qty = formatQuantity(ing.quantity) + (ing.quantityMax !== undefined ? `–${formatQuantity(ing.quantityMax)}` : '');
+  const qty =
+    formatQuantity(ing.quantity) + (ing.quantityMax !== undefined ? `–${formatQuantity(ing.quantityMax)}` : '');
   return [qty, ing.unit, ing.name].filter(Boolean).join(' ') + (ing.note ? `, ${ing.note}` : '');
 }
 
 /** Key used to merge shopping-list lines and match the pantry. */
 export function ingredientKey(ing: Ingredient): string {
-  return (ing.name ?? ing.text).toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+  return (ing.name ?? ing.text)
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

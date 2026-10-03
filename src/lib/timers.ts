@@ -4,12 +4,25 @@
  * "1 hour 15 minutes" → 4500. Returns undefined if no time found.
  */
 const UNIT_SECONDS: Record<string, number> = {
-  s: 1, sec: 1, secs: 1, second: 1, seconds: 1,
-  m: 60, min: 60, mins: 60, minute: 60, minutes: 60,
-  h: 3600, hr: 3600, hrs: 3600, hour: 3600, hours: 3600,
+  s: 1,
+  sec: 1,
+  secs: 1,
+  second: 1,
+  seconds: 1,
+  m: 60,
+  min: 60,
+  mins: 60,
+  minute: 60,
+  minutes: 60,
+  h: 3600,
+  hr: 3600,
+  hrs: 3600,
+  hour: 3600,
+  hours: 3600,
 };
 
-const TIME_RE = /(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?|[hms])\b/gi;
+const TIME_RE =
+  /(\d+(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(\d+(?:\.\d+)?))?\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?|[hms])\b/gi;
 
 export function detectStepDuration(text: string): number | undefined {
   let total = 0;

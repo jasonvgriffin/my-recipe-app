@@ -47,7 +47,7 @@ export function compileItems(
   }
   return [...groups.entries()].map(([key, g]) => ({
     id: generateId(),
-    text: g.summable ? formatIngredient(g.ing) : g.ing.name ?? g.ing.text,
+    text: g.summable ? formatIngredient(g.ing) : (g.ing.name ?? g.ing.text),
     name: key,
     checked: false,
     recipeIds: g.recipeIds,

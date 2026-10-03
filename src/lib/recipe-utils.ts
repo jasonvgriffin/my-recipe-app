@@ -1,4 +1,11 @@
-import { RECIPE_SCHEMA_VERSION, netCarbs, type Ingredient, type Recipe, type RecipeInput, type Step } from '@/types/recipe';
+import {
+  RECIPE_SCHEMA_VERSION,
+  netCarbs,
+  type Ingredient,
+  type Recipe,
+  type RecipeInput,
+  type Step,
+} from '@/types/recipe';
 
 import { parseIngredient } from './ingredients';
 import { detectStepDuration } from './timers';

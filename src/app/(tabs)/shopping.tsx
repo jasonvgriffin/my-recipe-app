@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
 import { startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
 import { buildShoppingList, toggleItem } from '@/lib/shopping';
 import { colors } from '@/lib/theme';
@@ -11,6 +12,7 @@ import type { ShoppingList } from '@/types/meal-plan';
 
 /**
  * Shopping list tab (spec #12): compiled from this week's meal plan, with check-off.
+ * TODO(spec #23): medium/expanded → TwoPaneLayout (shopping list + pantry, spec #21).
  * TODO(spec #12): pick which week, merge quantities, add manual items, clear checked.
  */
 export default function ShoppingScreen() {
@@ -39,27 +41,31 @@ export default function ShoppingScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Pressable style={styles.button} onPress={compile}>
-        <Text style={styles.buttonText}>{list ? 'Rebuild from this week’s plan' : 'Build from this week’s plan'}</Text>
-      </Pressable>
-      <FlatList
-        data={list?.items ?? []}
-        keyExtractor={(i) => i.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            {list ? 'No ingredients — plan some recipes for this week first.' : 'No list yet for this week.'}
+    <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.list}>
+      <View style={styles.container}>
+        <Pressable style={styles.button} onPress={compile}>
+          <Text style={styles.buttonText}>
+            {list ? 'Rebuild from this week’s plan' : 'Build from this week’s plan'}
           </Text>
-        }
-        renderItem={({ item }) => (
-          <Pressable style={styles.item} onPress={() => toggle(item.id)}>
-            <Text style={styles.check}>{item.checked ? '☑' : '☐'}</Text>
-            <Text style={[styles.itemText, item.checked && styles.checked]}>{item.text}</Text>
-          </Pressable>
-        )}
-      />
-    </View>
+        </Pressable>
+        <FlatList
+          data={list?.items ?? []}
+          keyExtractor={(i) => i.id}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <Text style={styles.empty}>
+              {list ? 'No ingredients — plan some recipes for this week first.' : 'No list yet for this week.'}
+            </Text>
+          }
+          renderItem={({ item }) => (
+            <Pressable style={styles.item} onPress={() => toggle(item.id)}>
+              <Text style={styles.check}>{item.checked ? '☑' : '☐'}</Text>
+              <Text style={[styles.itemText, item.checked && styles.checked]}>{item.text}</Text>
+            </Pressable>
+          )}
+        />
+      </View>
+    </MaxWidthContainer>
   );
 }
 

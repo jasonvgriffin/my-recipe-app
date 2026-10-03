@@ -37,7 +37,8 @@ export function draftToRecipeInput(
     .map((st) => (typeof st === 'string' ? { text: clean(st) } : { ...st, text: clean(st.text) }))
     .filter((st) => st.text);
   const nutrition: NutritionPerServing = { ...draft.nutrition };
-  if (nutrition.netCarbsG === undefined && draft.carbsPerServing !== undefined) nutrition.netCarbsG = draft.carbsPerServing;
+  if (nutrition.netCarbsG === undefined && draft.carbsPerServing !== undefined)
+    nutrition.netCarbsG = draft.carbsPerServing;
   if (nutrition.netCarbsG === undefined && netCarbs(nutrition) !== undefined) {
     nutrition.netCarbsG = netCarbs(nutrition);
     warnings.push('Net carbs computed as total carbs minus fiber.');

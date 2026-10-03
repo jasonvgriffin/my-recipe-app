@@ -28,10 +28,7 @@ export const ImportSourceSchema = z.object({
 });
 export type ImportSource = z.infer<typeof ImportSourceSchema>;
 
-const ingredient = z.union([
-  z.string(),
-  z.object({ text: z.string(), substitutionNote: z.string().optional() }),
-]);
+const ingredient = z.union([z.string(), z.object({ text: z.string(), substitutionNote: z.string().optional() })]);
 
 /**
  * A recipe as supplied by an outside party (parser, AI assistant, share intent...).
@@ -44,7 +41,9 @@ export const RecipeDraftSchema = z
     description: z.string().trim().max(5000).optional(),
     ingredients: z.array(ingredient).max(500).default([]),
     steps: z
-      .array(z.union([z.string(), z.object({ text: z.string(), durationSeconds: z.number().int().positive().optional() })]))
+      .array(
+        z.union([z.string(), z.object({ text: z.string(), durationSeconds: z.number().int().positive().optional() })]),
+      )
       .max(500)
       .default([]),
     tags: z.array(z.string()).max(100).default([]),

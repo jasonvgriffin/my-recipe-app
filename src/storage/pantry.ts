@@ -18,7 +18,13 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
       const key = ingredientKey({ text: name });
       if (!key) throw new Error('Pantry item name is required.');
       const existing = (await items.all()).find((p) => p.name === key);
-      const item: PantryItem = { id: existing?.id ?? generateId(), name: key, quantity, unit, updatedAt: now.toISOString() };
+      const item: PantryItem = {
+        id: existing?.id ?? generateId(),
+        name: key,
+        quantity,
+        unit,
+        updatedAt: now.toISOString(),
+      };
       await items.save(item);
       return item;
     },

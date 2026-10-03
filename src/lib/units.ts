@@ -13,22 +13,56 @@ export interface UnitDef {
 }
 
 export const UNITS: UnitDef[] = [
-  { id: 'tsp', dimension: 'volume', system: 'imperial', toBase: 4.92892, aliases: ['tsp', 'teaspoon', 'teaspoons', 't'] },
-  { id: 'tbsp', dimension: 'volume', system: 'imperial', toBase: 14.7868, aliases: ['tbsp', 'tbs', 'tablespoon', 'tablespoons', 'T'] },
-  { id: 'fl oz', dimension: 'volume', system: 'imperial', toBase: 29.5735, aliases: ['fl oz', 'fl. oz', 'fluid ounce', 'fluid ounces'] },
+  {
+    id: 'tsp',
+    dimension: 'volume',
+    system: 'imperial',
+    toBase: 4.92892,
+    aliases: ['tsp', 'teaspoon', 'teaspoons', 't'],
+  },
+  {
+    id: 'tbsp',
+    dimension: 'volume',
+    system: 'imperial',
+    toBase: 14.7868,
+    aliases: ['tbsp', 'tbs', 'tablespoon', 'tablespoons', 'T'],
+  },
+  {
+    id: 'fl oz',
+    dimension: 'volume',
+    system: 'imperial',
+    toBase: 29.5735,
+    aliases: ['fl oz', 'fl. oz', 'fluid ounce', 'fluid ounces'],
+  },
   { id: 'cup', dimension: 'volume', system: 'imperial', toBase: 236.588, aliases: ['cup', 'cups', 'c'] },
   { id: 'pint', dimension: 'volume', system: 'imperial', toBase: 473.176, aliases: ['pint', 'pints', 'pt'] },
   { id: 'quart', dimension: 'volume', system: 'imperial', toBase: 946.353, aliases: ['quart', 'quarts', 'qt'] },
   { id: 'gallon', dimension: 'volume', system: 'imperial', toBase: 3785.41, aliases: ['gallon', 'gallons', 'gal'] },
-  { id: 'ml', dimension: 'volume', system: 'metric', toBase: 1, aliases: ['ml', 'milliliter', 'milliliters', 'millilitre', 'millilitres'] },
-  { id: 'l', dimension: 'volume', system: 'metric', toBase: 1000, aliases: ['l', 'liter', 'liters', 'litre', 'litres'] },
+  {
+    id: 'ml',
+    dimension: 'volume',
+    system: 'metric',
+    toBase: 1,
+    aliases: ['ml', 'milliliter', 'milliliters', 'millilitre', 'millilitres'],
+  },
+  {
+    id: 'l',
+    dimension: 'volume',
+    system: 'metric',
+    toBase: 1000,
+    aliases: ['l', 'liter', 'liters', 'litre', 'litres'],
+  },
   { id: 'oz', dimension: 'mass', system: 'imperial', toBase: 28.3495, aliases: ['oz', 'ounce', 'ounces'] },
   { id: 'lb', dimension: 'mass', system: 'imperial', toBase: 453.592, aliases: ['lb', 'lbs', 'pound', 'pounds'] },
   { id: 'g', dimension: 'mass', system: 'metric', toBase: 1, aliases: ['g', 'gram', 'grams', 'gr'] },
   { id: 'kg', dimension: 'mass', system: 'metric', toBase: 1000, aliases: ['kg', 'kilogram', 'kilograms'] },
-  ...['clove', 'pinch', 'dash', 'can', 'slice', 'stick', 'head', 'bunch', 'package', 'piece'].map(
-    (id): UnitDef => ({ id, dimension: 'count', system: 'both', toBase: 1, aliases: [id, `${id}s`, `${id}es`] }),
-  ),
+  ...['clove', 'pinch', 'dash', 'can', 'slice', 'stick', 'head', 'bunch', 'package', 'piece'].map((id): UnitDef => ({
+    id,
+    dimension: 'count',
+    system: 'both',
+    toBase: 1,
+    aliases: [id, `${id}s`, `${id}es`],
+  })),
 ];
 
 const BY_ALIAS = new Map<string, UnitDef>();

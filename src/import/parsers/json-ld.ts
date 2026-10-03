@@ -96,7 +96,8 @@ function toDraft(r: Node, sourceUrl?: string): Partial<RecipeDraft> {
   const yieldRaw = Array.isArray(r.recipeYield) ? r.recipeYield[0] : r.recipeYield;
   const servings = parseInt(String(yieldRaw ?? ''), 10);
   const keywords = typeof r.keywords === 'string' ? r.keywords.split(',') : Array.isArray(r.keywords) ? r.keywords : [];
-  const category = typeof r.recipeCategory === 'string' ? [r.recipeCategory] : Array.isArray(r.recipeCategory) ? r.recipeCategory : [];
+  const category =
+    typeof r.recipeCategory === 'string' ? [r.recipeCategory] : Array.isArray(r.recipeCategory) ? r.recipeCategory : [];
   return {
     title: typeof r.name === 'string' ? decodeHtml(r.name) : undefined,
     description: typeof r.description === 'string' ? decodeHtml(r.description) : undefined,

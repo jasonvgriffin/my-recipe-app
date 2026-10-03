@@ -33,7 +33,13 @@ const PAGE = `<html><head><script type="application/ld+json">${JSON.stringify({
         { '@type': 'HowToStep', text: '<p>Bake.</p>' },
       ],
       keywords: 'Bread, Low-Carb',
-      nutrition: { '@type': 'NutritionInformation', calories: '180 kcal', carbohydrateContent: '6 g', fiberContent: '3 g', proteinContent: '7g' },
+      nutrition: {
+        '@type': 'NutritionInformation',
+        calories: '180 kcal',
+        carbohydrateContent: '6 g',
+        fiberContent: '3 g',
+        proteinContent: '7g',
+      },
       recipeCategory: 'Breads',
       image: [{ url: 'https://example.com/bread.jpg' }],
     },
@@ -94,7 +100,11 @@ describe('importRecipe — structured (future MCP / "Hey AI, send this recipe")'
   });
 
   it('warns (not fails) on unknown carbs/servings and never invents carbs', async () => {
-    const result = await importRecipe({ kind: 'structured', recipe: { title: 'Eggs', steps: ['Scramble'] } }, {}, deps());
+    const result = await importRecipe(
+      { kind: 'structured', recipe: { title: 'Eggs', steps: ['Scramble'] } },
+      {},
+      deps(),
+    );
     if (!result.ok) throw new Error('expected ok');
     expect(result.recipe.nutrition.netCarbsG).toBeUndefined();
     expect(result.warnings.join(' ')).toMatch(/Net carbs per serving unknown/);
@@ -132,7 +142,9 @@ describe('importRecipe — url (link import, spec #1/#5)', () => {
       ok: false,
       code: 'fetch_failed',
     });
-    expect(await importRecipe({ kind: 'url', url: 'https://x.com/r' }, {}, deps(undefined, '<html></html>'))).toMatchObject({
+    expect(
+      await importRecipe({ kind: 'url', url: 'https://x.com/r' }, {}, deps(undefined, '<html></html>')),
+    ).toMatchObject({
       ok: false,
       code: 'no_recipe_found',
     });
@@ -149,14 +161,20 @@ describe('importRecipe — text', () => {
     const result = await importRecipe({ kind: 'text', text }, { dryRun: true }, deps());
     expect(result).toMatchObject({
       ok: true,
-      recipe: { title: 'Cauliflower Mash', ingredients: [{ text: '1 head cauliflower' }, { text: '2 tbsp butter' }], steps: [{ text: 'Steam' }, { text: 'Mash' }] },
+      recipe: {
+        title: 'Cauliflower Mash',
+        ingredients: [{ text: '1 head cauliflower' }, { text: '2 tbsp butter' }],
+        steps: [{ text: 'Steam' }, { text: 'Mash' }],
+      },
     });
   });
 });
 
 describe('entry-point adapters', () => {
   it('normalizes source URLs for dedupe', () => {
-    expect(normalizeSourceUrl('HTTPS://WWW.Example.com/a/?b=2&utm_medium=x&a=1#top')).toBe('https://example.com/a?a=1&b=2');
+    expect(normalizeSourceUrl('HTTPS://WWW.Example.com/a/?b=2&utm_medium=x&a=1#top')).toBe(
+      'https://example.com/a?a=1&b=2',
+    );
     expect(normalizeSourceUrl('ftp://example.com')).toBeUndefined();
   });
 

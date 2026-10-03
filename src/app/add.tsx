@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
 import { createRecipe, parseLines, parseTags } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
 import { recipeStore } from '@/storage/recipes';
@@ -41,60 +42,82 @@ export default function AddRecipeScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Field label="Title">
-        <TextInput
-          placeholderTextColor={colors.placeholder} style={styles.input} value={title} onChangeText={setTitle} placeholder="e.g. Cauliflower Mac & Cheese" />
-      </Field>
-      <Field label="Ingredients (one per line)">
-        <TextInput
-          placeholderTextColor={colors.placeholder}
-          style={[styles.input, styles.multiline]}
-          value={ingredients}
-          onChangeText={setIngredients}
-          multiline
-          placeholder={`1 head cauliflower\n2 tbsp ${PREFERRED_SWEETENER}`}
-        />
-      </Field>
-      <Field label="Steps (one per line)">
-        <TextInput
-          placeholderTextColor={colors.placeholder}
-          style={[styles.input, styles.multiline]}
-          value={steps}
-          onChangeText={setSteps}
-          multiline
-          placeholder={'Preheat oven to 400°F\nRoast 25 minutes'}
-        />
-      </Field>
-      {/* TODO(spec #1,#3,#4,#6,#17,#22): link import, category picker, photo, notes, full nutrition, rating. */}
-      <Field label="Tags (comma separated)">
-        <TextInput
-          placeholderTextColor={colors.placeholder} style={styles.input} value={tags} onChangeText={setTags} autoCapitalize="none" />
-      </Field>
-      <View style={styles.row}>
-        <View style={styles.flex}>
-          <Field label="Servings">
-            <TextInput
-          placeholderTextColor={colors.placeholder} style={styles.input} value={servings} onChangeText={setServings} keyboardType="numeric" />
-          </Field>
+    <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Field label="Title">
+          <TextInput
+            placeholderTextColor={colors.placeholder}
+            style={styles.input}
+            value={title}
+            onChangeText={setTitle}
+            placeholder="e.g. Cauliflower Mac & Cheese"
+          />
+        </Field>
+        <Field label="Ingredients (one per line)">
+          <TextInput
+            placeholderTextColor={colors.placeholder}
+            style={[styles.input, styles.multiline]}
+            value={ingredients}
+            onChangeText={setIngredients}
+            multiline
+            placeholder={`1 head cauliflower\n2 tbsp ${PREFERRED_SWEETENER}`}
+          />
+        </Field>
+        <Field label="Steps (one per line)">
+          <TextInput
+            placeholderTextColor={colors.placeholder}
+            style={[styles.input, styles.multiline]}
+            value={steps}
+            onChangeText={setSteps}
+            multiline
+            placeholder={'Preheat oven to 400°F\nRoast 25 minutes'}
+          />
+        </Field>
+        {/* TODO(spec #1,#3,#4,#6,#17,#22): link import, category picker, photo, notes, full nutrition, rating. */}
+        <Field label="Tags (comma separated)">
+          <TextInput
+            placeholderTextColor={colors.placeholder}
+            style={styles.input}
+            value={tags}
+            onChangeText={setTags}
+            autoCapitalize="none"
+          />
+        </Field>
+        <View style={styles.row}>
+          <View style={styles.flex}>
+            <Field label="Servings">
+              <TextInput
+                placeholderTextColor={colors.placeholder}
+                style={styles.input}
+                value={servings}
+                onChangeText={setServings}
+                keyboardType="numeric"
+              />
+            </Field>
+          </View>
+          <View style={styles.flex}>
+            <Field label="Net carbs / serving (g)">
+              <TextInput
+                placeholderTextColor={colors.placeholder}
+                style={styles.input}
+                value={carbs}
+                onChangeText={setCarbs}
+                keyboardType="decimal-pad"
+              />
+            </Field>
+          </View>
         </View>
-        <View style={styles.flex}>
-          <Field label="Net carbs / serving (g)">
-            <TextInput
-          placeholderTextColor={colors.placeholder} style={styles.input} value={carbs} onChangeText={setCarbs} keyboardType="decimal-pad" />
-          </Field>
-        </View>
-      </View>
-      <Text style={styles.hint}>Sweetener rule: {PREFERRED_SWEETENER} only (no monk fruit).</Text>
-      {errors.map((e) => (
-        <Text key={e} style={styles.error}>
-          • {e}
-        </Text>
-      ))}
-      <Pressable style={[styles.button, saving && styles.disabled]} onPress={onSave} disabled={saving}>
-        <Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save recipe'}</Text>
-      </Pressable>
-    </ScrollView>
+        <Text style={styles.hint}>Sweetener rule: {PREFERRED_SWEETENER} only (no monk fruit).</Text>
+        {errors.map((e) => (
+          <Text key={e} style={styles.error}>
+            • {e}
+          </Text>
+        ))}
+        <Pressable style={[styles.button, saving && styles.disabled]} onPress={onSave} disabled={saving}>
+          <Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save recipe'}</Text>
+        </Pressable>
+      </ScrollView>
+    </MaxWidthContainer>
   );
 }
 

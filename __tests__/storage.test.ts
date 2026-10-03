@@ -27,7 +27,14 @@ describe('recipe store', () => {
   it('saves, updates, gets, removes and lists tags', async () => {
     const store = createRecipeStore(memoryStore());
     const r = createRecipe(
-      { title: 'Eggs', ingredients: [{ text: '2 eggs' }], steps: [{ text: 'Scramble' }], tags: ['breakfast'], servings: 1, nutrition: { netCarbsG: 1 } },
+      {
+        title: 'Eggs',
+        ingredients: [{ text: '2 eggs' }],
+        steps: [{ text: 'Scramble' }],
+        tags: ['breakfast'],
+        servings: 1,
+        nutrition: { netCarbsG: 1 },
+      },
       new Date('2026-01-01T00:00:00Z'),
       'eggs',
     );

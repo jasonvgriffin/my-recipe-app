@@ -23,8 +23,14 @@ describe('ingredient parsing / scaling / conversion (spec #16, #12)', () => {
     const flour = parseIngredient('1 cup almond flour');
     expect(scaleIngredient(flour, 1.5).quantity).toBe(1.5);
     expect(convertIngredient(flour, 'metric')).toMatchObject({ quantity: 237, unit: 'ml' });
-    expect(convertIngredient(parseIngredient('1 lb green beans'), 'metric')).toMatchObject({ quantity: 454, unit: 'g' });
-    expect(convertIngredient(parseIngredient('500 g chicken'), 'imperial')).toMatchObject({ quantity: 1.1, unit: 'lb' });
+    expect(convertIngredient(parseIngredient('1 lb green beans'), 'metric')).toMatchObject({
+      quantity: 454,
+      unit: 'g',
+    });
+    expect(convertIngredient(parseIngredient('500 g chicken'), 'imperial')).toMatchObject({
+      quantity: 1.1,
+      unit: 'lb',
+    });
     expect(convertIngredient(parseIngredient('3 cloves garlic'), 'metric').unit).toBe('clove');
     expect(formatIngredient(scaleIngredient(parseIngredient('1/2 cup allulose'), 0.5))).toBe('¼ cup allulose');
   });
@@ -53,7 +59,13 @@ describe('nutrition (spec #17)', () => {
   });
 
   it('migrates v2 recipes (string steps, carbsPerServing)', () => {
-    const v2 = { ...SEED_RECIPES[0], schemaVersion: 2, steps: ['Bake 10 minutes'], carbsPerServing: 5, nutrition: undefined };
+    const v2 = {
+      ...SEED_RECIPES[0],
+      schemaVersion: 2,
+      steps: ['Bake 10 minutes'],
+      carbsPerServing: 5,
+      nutrition: undefined,
+    };
     const r = migrateRecipe(v2)!;
     expect(r.steps).toEqual([{ text: 'Bake 10 minutes' }]);
     expect(r.nutrition).toEqual({ netCarbsG: 5, source: 'manual' });
@@ -75,11 +87,17 @@ describe('ratings + tags (spec #20, #22)', () => {
 
 describe('shopping merge, grocery run, pantry (spec #12, #18, #21)', () => {
   const r1 = createRecipe({
-    title: 'A', servings: 2, tags: [], steps: [{ text: 'x' }],
+    title: 'A',
+    servings: 2,
+    tags: [],
+    steps: [{ text: 'x' }],
     ingredients: [{ text: '1 cup almond flour' }, { text: '2 tbsp allulose' }, { text: '2 eggs' }],
   });
   const r2 = createRecipe({
-    title: 'B', servings: 4, tags: [], steps: [{ text: 'y' }],
+    title: 'B',
+    servings: 4,
+    tags: [],
+    steps: [{ text: 'y' }],
     ingredients: [{ text: '1 tbsp allulose' }, { text: '1/2 cup almond flour' }, { text: '1 tsp salt' }],
   });
 

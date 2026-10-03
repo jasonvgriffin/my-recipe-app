@@ -2,6 +2,7 @@ import { Link, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
 import { fromIsoDate, startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
 import { colors } from '@/lib/theme';
 import { mealPlanStore } from '@/storage/meal-plan';
@@ -11,6 +12,7 @@ import type { Recipe } from '@/types/recipe';
 
 /**
  * Meal plan tab (spec #11) — week view scaffold.
+ * TODO(spec #23): medium/expanded → TwoPaneLayout (calendar + day detail).
  * TODO(spec #11): month calendar view, add/link recipes to a day (recipe picker), move/remove entries.
  * Recipes can already be planned from the recipe detail screen ("Plan for today").
  */
@@ -44,40 +46,42 @@ export default function MealPlanScreen() {
   const today = toIsoDate(new Date());
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.weekNav}>
-        <Pressable onPress={() => shiftWeek(-1)} hitSlop={12}>
-          <Text style={styles.navText}>‹ Prev</Text>
-        </Pressable>
-        <Text style={styles.weekLabel}>Week of {fromIsoDate(weekStart).toLocaleDateString()}</Text>
-        <Pressable onPress={() => shiftWeek(1)} hitSlop={12}>
-          <Text style={styles.navText}>Next ›</Text>
-        </Pressable>
-      </View>
-      {days.map((day) => {
-        const dayEntries = entries.filter((e) => e.date === day);
-        return (
-          <View key={day} style={[styles.day, day === today && styles.today]}>
-            <Text style={styles.dayLabel}>
-              {fromIsoDate(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-            </Text>
-            {dayEntries.length === 0 ? (
-              <Text style={styles.empty}>Nothing planned</Text>
-            ) : (
-              dayEntries.map((e) => {
-                const r = recipes.get(e.recipeId);
-                return r ? (
-                  <Link key={e.id} href={{ pathname: '/recipe/[id]', params: { id: r.id } }} style={styles.entry}>
-                    {e.slot ? `${e.slot}: ` : ''}
-                    {r.title}
-                  </Link>
-                ) : null;
-              })
-            )}
-          </View>
-        );
-      })}
-    </ScrollView>
+    <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.text}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.weekNav}>
+          <Pressable onPress={() => shiftWeek(-1)} hitSlop={12}>
+            <Text style={styles.navText}>‹ Prev</Text>
+          </Pressable>
+          <Text style={styles.weekLabel}>Week of {fromIsoDate(weekStart).toLocaleDateString()}</Text>
+          <Pressable onPress={() => shiftWeek(1)} hitSlop={12}>
+            <Text style={styles.navText}>Next ›</Text>
+          </Pressable>
+        </View>
+        {days.map((day) => {
+          const dayEntries = entries.filter((e) => e.date === day);
+          return (
+            <View key={day} style={[styles.day, day === today && styles.today]}>
+              <Text style={styles.dayLabel}>
+                {fromIsoDate(day).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+              </Text>
+              {dayEntries.length === 0 ? (
+                <Text style={styles.empty}>Nothing planned</Text>
+              ) : (
+                dayEntries.map((e) => {
+                  const r = recipes.get(e.recipeId);
+                  return r ? (
+                    <Link key={e.id} href={{ pathname: '/recipe/[id]', params: { id: r.id } }} style={styles.entry}>
+                      {e.slot ? `${e.slot}: ` : ''}
+                      {r.title}
+                    </Link>
+                  ) : null;
+                })
+              )}
+            </View>
+          );
+        })}
+      </ScrollView>
+    </MaxWidthContainer>
   );
 }
 

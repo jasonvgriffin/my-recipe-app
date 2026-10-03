@@ -1,7 +1,10 @@
-import { Link, useFocusEffect } from 'expo-router';
+import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
+import { RecipeDetail } from '@/components/recipe-detail';
+import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { filterRecipes, type RecipeFilter } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
 import { recipeStore } from '@/storage/recipes';
@@ -26,6 +29,16 @@ export default function RecipeListScreen() {
   const [recipes, setRecipes] = useState<Recipe[] | null>(null);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<FilterMode>('all');
+  /** Selected recipe for the detail pane (medium/expanded). Kept across fold/unfold. */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { isTwoPane } = useWindowSizeClass();
+
+  const reload = useCallback(async () => setRecipes(await recipeStore.list()), []);
+
+  function openRecipe(id: string) {
+    if (isTwoPane) setSelectedId(id);
+    else router.push({ pathname: '/recipe/[id]', params: { id } });
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -51,7 +64,7 @@ export default function RecipeListScreen() {
 
   const visible = filterRecipes(recipes, { keyword: query, ...FILTERS[mode] });
 
-  return (
+  const list = (
     <View style={styles.container}>
       <TextInput
         style={styles.search}
@@ -75,18 +88,19 @@ export default function RecipeListScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={<Text style={styles.empty}>No recipes yet. Tap “Add recipe” to create one.</Text>}
         renderItem={({ item }) => (
-          <Link href={{ pathname: '/recipe/[id]', params: { id: item.id } }} asChild>
-            <Pressable style={styles.card}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.meta}>
-                {netCarbs(item.nutrition) ?? '?'} g net carbs/serving · {item.servings} servings
-                {isLowCarb(item) ? ' · low-carb' : ''}
-                {item.cooked ? ' · cooked' : ''}
-                {item.rating ? ` · ${'★'.repeat(item.rating)}` : ''}
-              </Text>
-              {item.tags.length > 0 && <Text style={styles.tags}>{item.tags.map((t) => `#${t}`).join('  ')}</Text>}
-            </Pressable>
-          </Link>
+          <Pressable
+            style={[styles.card, isTwoPane && item.id === selectedId && styles.cardSelected]}
+            onPress={() => openRecipe(item.id)}
+            testID={`recipe-item-${item.id}`}>
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.meta}>
+              {netCarbs(item.nutrition) ?? '?'} g net carbs/serving · {item.servings} servings
+              {isLowCarb(item) ? ' · low-carb' : ''}
+              {item.cooked ? ' · cooked' : ''}
+              {item.rating ? ` · ${'★'.repeat(item.rating)}` : ''}
+            </Text>
+            {item.tags.length > 0 && <Text style={styles.tags}>{item.tags.map((t) => `#${t}`).join('  ')}</Text>}
+          </Pressable>
         )}
       />
       <Link href="/add" asChild>
@@ -95,6 +109,27 @@ export default function RecipeListScreen() {
         </Pressable>
       </Link>
     </View>
+  );
+
+  return (
+    <TwoPaneLayout
+      testID="recipes-layout"
+      primary={<MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.list}>{list}</MaxWidthContainer>}
+      secondary={
+        selectedId ? (
+          <RecipeDetail
+            key={selectedId}
+            id={selectedId}
+            onChange={reload}
+            onDeleted={() => {
+              setSelectedId(null);
+              reload();
+            }}
+          />
+        ) : null
+      }
+      placeholder={<Text style={styles.empty}>Select a recipe to see it here.</Text>}
+    />
   );
 }
 
@@ -125,6 +160,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  cardSelected: { borderColor: colors.primary },
   title: { fontSize: 17, fontWeight: '600', color: colors.text },
   meta: { marginTop: 4, color: colors.muted },
   tags: { marginTop: 6, color: colors.primary, fontSize: 13 },

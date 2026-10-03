@@ -160,19 +160,25 @@ export interface ValidateOptions {
   requireCarbs?: boolean;
 }
 
-export function validateRecipeInput(input: RecipeInput, { requireCarbs = true }: ValidateOptions = {}): ValidationResult {
+export function validateRecipeInput(
+  input: RecipeInput,
+  { requireCarbs = true }: ValidateOptions = {},
+): ValidationResult {
   const errors: string[] = [];
   if (!input.title || !input.title.trim()) errors.push('Title is required.');
-  if (input.ingredients.filter((i) => i.text.trim()).length === 0)
-    errors.push('At least one ingredient is required.');
+  if (input.ingredients.filter((i) => i.text.trim()).length === 0) errors.push('At least one ingredient is required.');
   if (input.steps.filter((st) => st.text.trim()).length === 0) errors.push('At least one step is required.');
-  if (!Number.isFinite(input.servings) || input.servings <= 0)
-    errors.push('Servings must be a number greater than 0.');
+  if (!Number.isFinite(input.servings) || input.servings <= 0) errors.push('Servings must be a number greater than 0.');
   const carbs = input.nutrition?.netCarbsG;
   if (carbs === undefined ? requireCarbs : !Number.isFinite(carbs) || carbs < 0)
     errors.push('Net carbs per serving must be a number of 0 or more.');
   for (const [k, v] of Object.entries(input.nutrition ?? {}))
-    if (k !== 'source' && k !== 'netCarbsG' && v !== undefined && (typeof v !== 'number' || !Number.isFinite(v) || v < 0))
+    if (
+      k !== 'source' &&
+      k !== 'netCarbsG' &&
+      v !== undefined &&
+      (typeof v !== 'number' || !Number.isFinite(v) || v < 0)
+    )
       errors.push(`Nutrition "${k}" must be a number of 0 or more.`);
   if (input.rating !== undefined && !(Number.isInteger(input.rating) && input.rating >= 1 && input.rating <= 5))
     errors.push('Rating must be 1–5 stars.');
