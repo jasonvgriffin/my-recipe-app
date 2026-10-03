@@ -1,271 +1,84 @@
-import { Link, router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { router, type Href } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
-import { RecipeDetail } from '@/components/recipe-detail';
-import { RecipeFilters } from '@/components/recipe-filters';
-import { StarRating } from '@/components/star-rating';
+import { MAX_CONTENT_WIDTH, MaxWidthContainer } from '@/components/layout';
+import type { FeatureId } from '@/entitlements';
 import { useFeature } from '@/hooks/use-feature';
-import { useOnDataChange } from '@/hooks/use-on-data-change';
-import { useSettings } from '@/hooks/use-settings';
-import { useWindowSizeClass } from '@/hooks/use-window-size-class';
-import {
-  browseFilters,
-  DEFAULT_BROWSE,
-  effectiveRecipeSort,
-  filterRecipes,
-  isBrowseFiltered,
-  sortRecipes,
-  type RecipeBrowse,
-} from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
-import { recipeStore } from '@/storage/recipes';
-import type { Category, Recipe } from '@/types/recipe';
 
-export default function RecipeListScreen() {
-  const [recipes, setRecipes] = useState<Recipe[] | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [tagNames, setTagNames] = useState<string[]>([]);
-  const [catalogReady, setCatalogReady] = useState(false);
-  const [browse, setBrowse] = useState<RecipeBrowse>(DEFAULT_BROWSE);
-  const canImport = useFeature('linkImport').available;
-  /** Selected recipe for the detail pane (medium/expanded). Kept across fold/unfold. */
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { isTwoPane } = useWindowSizeClass();
-  const settings = useSettings();
-  const showRatings = useFeature('ratings').available;
-  const showTags = useFeature('tags').available;
-  const showCategories = useFeature('categories').available;
+interface HomeAction {
+  label: string;
+  href: Href;
+  testID: string;
+  hint: string;
+  /** Optional feature behind the button: a LOCKED feature hides it quietly (paywall-ready gating). */
+  gate?: FeatureId;
+}
 
-  const applyCatalog = useCallback((list: Recipe[], cats: Category[], tags: string[]) => {
-    setRecipes(list);
-    setCategories(cats);
-    setTagNames(tags);
-    setCatalogReady(true);
-    setBrowse((b) => ({
-      ...b,
-      categoryId: b.categoryId && cats.some((c) => c.id === b.categoryId) ? b.categoryId : undefined,
-      tags: b.tags.filter((t) => tags.includes(t)),
-    }));
-  }, []);
+/**
+ * Recipes tab (v1.0.1): five clear buttons, each opening existing functionality. RECIPES ARE THE CORE: no
+ * onboarding, no sign-in; the app opens here.
+ * - Search / Existing Recipes → `recipes.tsx` (keyword search, filters, list)
+ * - Share Recipes → household sharing (`household.tsx`; gated, shows a neutral message when locked)
+ * - Add Recipe → `add.tsx` (which links to import from a link / text)
+ * - What can I make… → `pantry-match.tsx` (explains gently when the optional pantry is hidden or empty)
+ * Share and pantry-match disappear quietly when their feature is LOCKED by the gate (never in v1: all free).
+ */
+const ACTIONS: HomeAction[] = [
+  { label: 'Search', href: '/recipes?focus=search', testID: 'home-search', hint: 'Find a recipe by title, ingredient, note or tag' },
+  { label: 'Existing Recipes', href: '/recipes', testID: 'home-existing', hint: 'Browse, filter and open your recipes' },
+  { label: 'Share Recipes', href: '/household', testID: 'home-share', hint: 'Share recipes with your household', gate: 'householdSync' },
+  { label: 'Add Recipe', href: '/add', testID: 'add-recipe-button', hint: 'Type one in or import from a link' },
+  {
+    label: 'What can I make with my existing pantry?',
+    href: '/pantry-match',
+    testID: 'home-pantry-match',
+    hint: 'Recipes ranked by what you have on hand',
+    gate: 'pantry',
+  },
+];
 
-  const reload = useCallback(async () => {
-    const [list, cats, tags] = await Promise.all([
-      recipeStore.list(),
-      recipeStore.listCategories(),
-      recipeStore.listTags(),
-    ]);
-    applyCatalog(list, cats, tags);
-  }, [applyCatalog]);
-  useOnDataChange(() => {
-    void reload();
-  });
-
-  function openRecipe(id: string) {
-    if (isTwoPane) setSelectedId(id);
-    else router.push({ pathname: '/recipe/[id]', params: { id } });
-  }
-
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      (async () => {
-        await recipeStore.seedIfNeeded();
-        const [list, cats, tags] = await Promise.all([
-          recipeStore.list(),
-          recipeStore.listCategories(),
-          recipeStore.listTags(),
-        ]);
-        if (!active) return;
-        applyCatalog(list, cats, tags);
-      })();
-      return () => {
-        active = false;
-      };
-    }, [applyCatalog]),
-  );
-
-  function changeBrowse(next: RecipeBrowse) {
-    if (catalogReady && next.categoryId && !categories.some((c) => c.id === next.categoryId)) {
-      next = { ...next, categoryId: undefined };
-    }
-    if (catalogReady) next = { ...next, tags: next.tags.filter((t) => tagNames.includes(t)) };
-    setBrowse(next);
-  }
-
-  if (!recipes) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    );
-  }
-
-  const filteredBrowse: RecipeBrowse = {
-    ...browse,
-    categoryId: showCategories ? browse.categoryId : undefined,
-    tags: showTags ? browse.tags.filter((t) => tagNames.includes(t)) : [],
-    minRating: showRatings ? browse.minRating : undefined,
-    sort: effectiveRecipeSort(browse.sort, showRatings),
-  };
-  const visible = sortRecipes(
-    filterRecipes(
-      recipes,
-      browseFilters(filteredBrowse, {
-        recentDays: settings.cookedRecentlyDays,
-        categories: showCategories,
-        tags: showTags,
-        ratings: showRatings,
-      }),
-    ),
-    filteredBrowse.sort,
-  );
-  const categoryName = (id: string) => categories.find((c) => c.id === id)?.name;
-
-  const list = (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.search}
-        placeholder="Search title, ingredients, notes, or tags"
-        value={browse.keyword}
-        onChangeText={(keyword) => setBrowse((b) => ({ ...b, keyword }))}
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholderTextColor={colors.placeholder}
-        accessibilityLabel="Search recipes"
-        testID="search-input"
-      />
-      {canImport ? (
-        <Link href="/import" asChild>
-          <Pressable style={styles.importLink} accessibilityRole="button" testID="import-recipe-button">
-            <Text style={styles.importLinkText}>Import from link</Text>
-          </Pressable>
-        </Link>
-      ) : null}
-      <FlatList
-        data={visible}
-        keyExtractor={(r) => r.id}
-        extraData={selectedId}
-        contentContainerStyle={styles.list}
-        keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={
-          <RecipeFilters
-            browse={filteredBrowse}
-            onChange={changeBrowse}
-            recentDays={settings.cookedRecentlyDays}
-            categories={categories}
-            showCategories={showCategories}
-            tagNames={tagNames}
-            showTags={showTags}
-            showRatings={showRatings}
-            showOrganize={showCategories || showTags}
-            filtersActive={isBrowseFiltered(filteredBrowse)}
-            onClear={() => setBrowse((b) => ({ ...DEFAULT_BROWSE, sort: b.sort }))}
-          />
-        }
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            {isBrowseFiltered(filteredBrowse)
-              ? 'No recipes match.'
-              : 'No recipes yet. Tap “Add recipe” to create one.'}
-          </Text>
-        }
-        renderItem={({ item }) => {
-          const names = showCategories
-            ? item.categoryIds.map(categoryName).filter((n): n is string => Boolean(n))
-            : [];
-          return (
-            <Pressable
-              style={[styles.card, isTwoPane && item.id === selectedId && styles.cardSelected]}
-              onPress={() => openRecipe(item.id)}
-              testID={`recipe-item-${item.id}`}>
-              <Text style={styles.title}>{item.title}</Text>
-              {showRatings && item.rating ? (
-                <StarRating value={item.rating} testID={`recipe-rating-${item.id}`} size={16} />
-              ) : null}
-              <Text style={styles.meta}>
-                {item.servings} servings
-                {item.cooked ? ' · cooked' : ''}
-              </Text>
-              {names.length > 0 ? <Text style={styles.meta}>{names.join(' · ')}</Text> : null}
-              {showTags && item.tags.length > 0 ? (
-                <Text style={styles.tags}>{item.tags.map((t) => `#${t}`).join('  ')}</Text>
-              ) : null}
-            </Pressable>
-          );
-        }}
-      />
-      <Link href="/add" asChild>
-        <Pressable style={styles.fab} accessibilityRole="button" testID="add-recipe-button">
-          <Text style={styles.fabText}>+ Add recipe</Text>
-        </Pressable>
-      </Link>
-    </View>
-  );
-
+export default function RecipesHomeScreen() {
+  const shareOk = useFeature('householdSync').available;
+  const pantryOk = useFeature('pantry').available;
+  const allowed = (gate?: FeatureId) =>
+    gate === 'householdSync' ? shareOk : gate === 'pantry' ? pantryOk : true;
   return (
-    <TwoPaneLayout
-      testID="recipes-layout"
-      primary={<MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.list}>{list}</MaxWidthContainer>}
-      secondary={
-        selectedId ? (
-          <RecipeDetail
-            key={selectedId}
-            id={selectedId}
-            categories={categories}
-            onChange={reload}
-            onDeleted={() => {
-              setSelectedId(null);
-              reload();
-            }}
-          />
-        ) : null
-      }
-      placeholder={<Text style={styles.empty}>Select a recipe to see it here.</Text>}
-    />
+    <ScrollView contentContainerStyle={styles.scroll} testID="recipes-home">
+      <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
+        <View style={styles.actions}>
+          {ACTIONS.filter((a) => allowed(a.gate)).map((a) => (
+            <Pressable
+              key={a.testID}
+              accessibilityRole="button"
+              accessibilityHint={a.hint}
+              style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+              onPress={() => router.push(a.href)}
+              testID={a.testID}>
+              <Text style={styles.label}>{a.label}</Text>
+              <Text style={styles.hint}>{a.hint}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </MaxWidthContainer>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  importLink: { marginHorizontal: 12, marginTop: 10, minHeight: 44, justifyContent: 'center' },
-  importLinkText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
-  search: {
-    margin: 12,
-    marginBottom: 0,
-    minHeight: 44,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.input,
-    color: colors.text,
-  },
-  list: { padding: 12, paddingBottom: 96, gap: 10 },
-  empty: { textAlign: 'center', color: colors.muted, marginTop: 40 },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardSelected: { borderColor: colors.primary },
-  title: { fontSize: 17, fontWeight: '600', color: colors.text },
-  meta: { marginTop: 4, color: colors.muted },
-  tags: { marginTop: 6, color: colors.primary, fontSize: 13 },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 24,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    minHeight: 48,
+  scroll: { padding: 16, flexGrow: 1 },
+  actions: { gap: 12 },
+  button: {
+    minHeight: 64,
     justifyContent: 'center',
-    borderRadius: 28,
-    elevation: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
   },
-  fabText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
+  pressed: { borderColor: colors.primary },
+  label: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  hint: { color: colors.muted, marginTop: 4 },
 });

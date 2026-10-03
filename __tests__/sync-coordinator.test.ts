@@ -21,7 +21,6 @@ function collections(kv: KeyValueStore): SyncCollections {
     meal_plan_entries: col('meals'),
     shopping_items: col('shopping'),
     barcode_items: col('barcodes'),
-    receipt_aliases: col('receipt-aliases'),
   };
 }
 

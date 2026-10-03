@@ -1,7 +1,6 @@
-import { SEED_RECIPES } from '@/data/seed';
+import { SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { createMealPlanStore } from '@/storage/meal-plan';
 import { createPantryStore } from '@/storage/pantry';
-import { createReceiptAliasStore } from '@/storage/receipt-aliases';
 import { createRecipeStore, type KeyValueStore } from '@/storage/recipes';
 import { createCollection, type Collection, type StoredRecord } from '@/storage/kv';
 import { setIdentity } from '@/storage/identity';
@@ -49,7 +48,6 @@ function device() {
     meal_plan_entries: c(plan.collections.entries),
     shopping_items: c(plan.collections.items),
     barcode_items: c(createCollection<StoredRecord>(kv, 'barcodes', (v) => v as StoredRecord)),
-    receipt_aliases: c(createReceiptAliasStore(kv).collection),
   };
   return { kv, recipes, plan, pantry, collections };
 }
@@ -66,7 +64,7 @@ describe('household sync (spec #25)', () => {
     const bob = device();
 
     // Alice used the app offline/solo first.
-    const solo = await alice.recipes.save({ ...SEED_RECIPES[0] }, at('2026-10-01T10:00:00Z'));
+    const solo = await alice.recipes.save({ ...SAMPLE_RECIPES[0] }, at('2026-10-01T10:00:00Z'));
     expect(solo.householdId).toBeUndefined();
     await alice.pantry.upsert('allulose', 1, 'cup', at('2026-10-01T10:00:00Z'));
 
@@ -137,7 +135,7 @@ describe('household sync (spec #25)', () => {
     setIdentity({ userId: 'alice', householdId: HH });
     const when = at('2026-10-03T08:00:00.000Z');
 
-    const recipe = await alice.recipes.save({ ...SEED_RECIPES[0] }, when);
+    const recipe = await alice.recipes.save({ ...SAMPLE_RECIPES[0] }, when);
     const category = await alice.recipes.addCategory('Dinner', when);
     const pantry = await alice.pantry.upsert('allulose', 1, 'cup', when);
     const plan = await alice.plan.addEntry('2026-10-05', recipe.id, 'dinner', when);

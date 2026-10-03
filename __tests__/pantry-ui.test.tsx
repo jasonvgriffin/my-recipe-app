@@ -51,18 +51,19 @@ describe('pantry screen (spec #21)', () => {
     expect(await screen.findByText('Nothing in the pantry yet.')).toBeTruthy();
   });
 
-  it('ranks seeded recipes by what is on hand', async () => {
+  it('has no "What can I cook" section any more (it moved to the Recipes tab)', async () => {
     renderPantry();
     await screen.findByText('Nothing in the pantry yet.');
-    fireEvent.press(screen.getByTestId('pantry-add-button'));
-    fireEvent.changeText(screen.getByTestId('pantry-name-input'), 'olive oil');
-    await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
-    await screen.findByText('olive oil');
+    expect(screen.queryByText(/What can I cook/)).toBeNull();
+    expect(screen.queryByTestId('pantry-suggestions')).toBeNull();
+    expect(screen.queryByTestId('scan-receipt-button')).toBeNull();
+  });
 
-    fireEvent.press(screen.getByTestId('pantry-show-ideas'));
-    expect(await screen.findByText('Lemon Herb Chicken Thighs')).toBeTruthy();
-    expect(screen.getByText(/of \d+ on hand/)).toBeTruthy();
-    expect(screen.queryByText('Allulose Vanilla Cheesecake Mousse')).toBeNull();
+  it('confirms an item a barcode scan just added', async () => {
+    const Pantry = require('@/app/(tabs)/pantry').default;
+    renderRouter({ index: Pantry }, { initialUrl: '/?added=Kerrygold%20Butter' });
+    expect(await screen.findByTestId('pantry-added-banner')).toBeTruthy();
+    expect(screen.getByText('Added Kerrygold Butter')).toBeTruthy();
   });
 
   it('stays quiet when the user hides pantry', async () => {
@@ -100,3 +101,33 @@ describe('pantry list filter and sort (spec #21)', () => {
   });
 });
 
+describe('What can I make with my existing pantry? (Recipes tab button)', () => {
+  function renderMatch() {
+    const Match = require('@/app/pantry-match').default;
+    const Recipe = require('@/app/recipe/[id]').default;
+    renderRouter({ index: Match, 'recipe/[id]': Recipe }, { initialUrl: '/' });
+  }
+
+  it('ranks recipes by what is on hand', async () => {
+    const { recipeStore } = require('@/storage/recipes') as typeof import('@/storage/recipes');
+    const { pantryStore } = require('@/storage/pantry') as typeof import('@/storage/pantry');
+    const { addSampleRecipes } = require('../test-helpers/sample-recipes');
+    await addSampleRecipes(recipeStore);
+    await pantryStore.saveDetails({ name: 'olive oil' });
+    renderMatch();
+    expect(await screen.findByText('Lemon Herb Chicken Thighs')).toBeTruthy();
+    expect(screen.getByText(/of \d+ on hand/)).toBeTruthy();
+    expect(screen.queryByText('Allulose Vanilla Cheesecake Mousse')).toBeNull();
+  });
+
+  it('explains gently when the pantry is empty', async () => {
+    renderMatch();
+    expect(await screen.findByTestId('pantry-match-empty')).toBeTruthy();
+  });
+
+  it('explains gently when the pantry is hidden in Settings', async () => {
+    await settingsStore.update({ features: { mealPlan: true, shopping: true, pantry: false } });
+    renderMatch();
+    expect(await screen.findByTestId('pantry-match-off')).toBeTruthy();
+  });
+});

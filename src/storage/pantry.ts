@@ -31,7 +31,7 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
     async upsert(name: string, quantity?: number, unit?: string, now: Date = new Date()): Promise<PantryItem> {
       const key = ingredientKey({ text: name });
       if (!key) throw new Error('Pantry item name is required.');
-      const existing = (await items.all()).find((p) => p.name === key);
+      const existing = (await items.all()).find((p) => sameName(p, key));
       const item: PantryItem = {
         ...existing,
         id: existing?.id ?? uuid(),
@@ -45,12 +45,15 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
     },
     /**
      * Add a scanned product (spec #27) or increment the existing item with the same barcode or name.
+     * The product name is kept as scanned ("Kerrygold Pure Irish Butter") so it is the item's title; brand is
+     * secondary. Matching (shopping skip, recipe ranking) normalizes names, so display case is fine.
      * `count` = number of packages scanned.
      */
     async addScanned(product: { barcode: string; name: string; brand?: string }, count = 1, now: Date = new Date()) {
       const key = ingredientKey({ text: product.name });
       const all = await items.all();
-      const existing = all.find((p) => p.barcode === product.barcode) ?? all.find((p) => p.name === key);
+      if (!key) throw new Error('Pantry item name is required.');
+      const existing = all.find((p) => p.barcode === product.barcode) ?? all.find((p) => sameName(p, key));
       const ts = now.toISOString();
       if (existing) {
         return items.save(
@@ -61,7 +64,7 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
       return items.save(
         {
           id: uuid(),
-          name: key,
+          name: product.name.trim(),
           brand: product.brand,
           barcode: product.barcode,
           quantity: count,
@@ -79,7 +82,7 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
     async saveDetails(draft: PantryWrite, now: Date = new Date()): Promise<PantryItem> {
       return writeItem(items, draft, 'replace', now);
     },
-    /** Add `quantity` (default 1) onto the item with this id or normalized name. Receipts and scans. */
+    /** Add `quantity` (default 1) onto the item with this id or normalized name. Scans. */
     async addQuantity(draft: PantryWrite, now: Date = new Date()): Promise<PantryItem> {
       return writeItem(items, draft, 'add', now);
     },
@@ -87,6 +90,11 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
     /** For the sync engine. */
     collection: items,
   };
+}
+
+/** Same item by normalized name (scanned items keep their display name, manual ones are stored normalized). */
+function sameName(item: PantryItem, key: string): boolean {
+  return ingredientKey({ text: item.name }) === key;
 }
 
 function clean(value: string | undefined): string | undefined {
@@ -121,7 +129,7 @@ async function writeItem(
   assertExpiry(expiresAt);
   const all = await items.all();
   const byId = draft.id ? all.find((item) => item.id === draft.id) : undefined;
-  const byName = all.find((item) => item.name === key && item.id !== byId?.id);
+  const byName = all.find((item) => sameName(item, key) && item.id !== byId?.id);
   if (byId && byName) throw new Error('You already have an item with that name.');
   const existing = byId ?? byName;
   const added = draft.quantity ?? 1;
@@ -130,7 +138,8 @@ async function writeItem(
   const next: PantryItem = {
     ...(existing ? slimPantryItem(existing) : {}),
     id: existing?.id ?? uuid(),
-    name: key,
+    // Keep a scanned item's display name when the form leaves it unchanged; typed names are normalized.
+    name: existing && draft.name.trim() === existing.name ? existing.name : key,
     createdAt: existing?.createdAt ?? ts,
     updatedAt: ts,
     brand: draft.brand ?? existing?.brand,

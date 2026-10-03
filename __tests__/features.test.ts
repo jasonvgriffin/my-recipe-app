@@ -1,4 +1,4 @@
-import { SEED_RECIPES } from '@/data/seed';
+import { addSampleRecipes, SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
 import { filterRecipes, setCooked, setRating } from '@/lib/recipe-utils';
 import { buildShoppingList, toggleItem } from '@/lib/shopping';
@@ -17,7 +17,7 @@ function memoryStore(): KeyValueStore & { data: Map<string, string> } {
 }
 
 const NOW = new Date('2026-10-02T12:00:00Z');
-const [chicken, mousse] = SEED_RECIPES;
+const [chicken, mousse] = SAMPLE_RECIPES;
 
 describe('schema migration', () => {
   it('upgrades a v1 recipe (no categories / cooked fields)', () => {
@@ -94,7 +94,7 @@ describe('cooked tracking + filters (spec #9, #10)', () => {
 describe('categories (spec #3)', () => {
   it('adds (deduped), renames and removes categories, unassigning recipes', async () => {
     const store = createRecipeStore(memoryStore());
-    await store.seedIfNeeded();
+    await addSampleRecipes(store);
     const breads = await store.addCategory('Breads');
     expect((await store.addCategory(' breads ')).id).toBe(breads.id);
     await store.save({ ...chicken, categoryIds: [breads.id] });
@@ -146,7 +146,7 @@ describe('meal plan + shopping list (spec #11, #12)', () => {
     await plan.addEntry('2026-10-10', mousse.id); // next week, excluded
     const entries = await plan.entriesForDates(days);
     expect(entries).toHaveLength(3);
-    const list = buildShoppingList('2026-09-28', days, entries, SEED_RECIPES, NOW);
+    const list = buildShoppingList('2026-09-28', days, entries, SAMPLE_RECIPES, NOW);
     expect(list.items).toHaveLength(chicken.ingredients.length + mousse.ingredients.length);
     const toggled = toggleItem(list, list.items[0].id, NOW);
     expect(toggled.items[0].checked).toBe(true);

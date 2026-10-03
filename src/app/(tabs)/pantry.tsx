@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,23 +12,20 @@ import {
 
 import { Chip } from '@/components/chip';
 import { FeatureLocked } from '@/components/feature-gate';
-import { MAX_CONTENT_WIDTH, MaxWidthContainer, TwoPaneLayout } from '@/components/layout';
+import { MAX_CONTENT_WIDTH, MaxWidthContainer } from '@/components/layout';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
-import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { formatQuantity } from '@/lib/ingredients';
 import {
   PANTRY_CATEGORIES,
   expiryState,
   filterSortPantry,
   pantryCategories,
-  rankRecipesByPantry,
   type PantrySort,
 } from '@/lib/pantry';
 import { colors } from '@/lib/theme';
 import { pantryStore } from '@/storage/pantry';
-import { recipeStore } from '@/storage/recipes';
-import type { PantryItem, Recipe } from '@/types/recipe';
+import type { PantryItem } from '@/types/recipe';
 
 interface Draft {
   id?: string;
@@ -50,27 +47,22 @@ function formatQty(quantity: number | undefined, unit: string | undefined): stri
 
 /**
  * Pantry tab (spec #21). Optional: hidden with Settings → Pantry, and gated with the pantry feature.
- * Compact: on-hand list, with a switch to recipe suggestions. Medium/expanded: list beside suggestions.
+ * One list of what's on hand. "What can I make?" lives on the Recipes tab (v1.0.1; `src/app/pantry-match.tsx`).
+ * A barcode scan returns here with `?added=<name>` and the item is confirmed at the top.
  */
 export default function PantryScreen() {
   const gate = useFeature('pantry');
   const visible = useFeatureVisible('pantry');
   const showBarcode = useFeatureVisible('barcodeScan');
-  const showReceipt = useFeatureVisible('receiptScan');
-  const { isTwoPane } = useWindowSizeClass();
+  const { added } = useLocalSearchParams<{ added?: string }>();
   const [items, setItems] = useState<PantryItem[] | null>(null);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [pane, setPane] = useState<'items' | 'ideas'>('items');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [sort, setSort] = useState<PantrySort>('name');
 
   const reload = useCallback(async () => {
-    await recipeStore.seedIfNeeded();
-    const [pantry, recs] = await Promise.all([pantryStore.list(), recipeStore.list()]);
-    setItems(pantry);
-    setRecipes(recs);
+    setItems(await pantryStore.list());
   }, []);
 
   useFocusEffect(
@@ -144,39 +136,17 @@ export default function PantryScreen() {
     await reload();
   }
 
-  const matches = rankRecipesByPantry(recipes, items).filter((match) => match.have > 0);
   const usedCategories = pantryCategories(items);
   const activeFilter = categoryFilter && usedCategories.includes(categoryFilter) ? categoryFilter : undefined;
   const shownItems = filterSortPantry(items, { category: activeFilter, sort });
 
-  const ideas = (
-    <ScrollView contentContainerStyle={styles.ideas} testID="pantry-suggestions">
-      <Text style={styles.heading}>What can I cook</Text>
-      {items.length === 0 ? (
-        <Text style={styles.muted}>Add what you have on hand to see recipes you can cook.</Text>
-      ) : matches.length === 0 ? (
-        <Text style={styles.muted}>No recipes use what’s on hand yet.</Text>
-      ) : (
-        matches.map((match) => (
-          <Pressable
-            key={match.recipe.id}
-            accessibilityRole="button"
-            style={styles.card}
-            testID={`pantry-suggestion-${match.recipe.id}`}
-            onPress={() => router.push({ pathname: '/recipe/[id]', params: { id: match.recipe.id } })}>
-            <Text style={styles.itemName}>{match.recipe.title}</Text>
-            <Text style={styles.muted}>
-              {match.have} of {match.total} on hand
-              {match.missing.length > 0 ? ` · missing ${match.missing.slice(0, 3).join(', ')}` : ''}
-            </Text>
-          </Pressable>
-        ))
-      )}
-    </ScrollView>
-  );
-
   const list = (
     <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled" testID="pantry-list">
+      {typeof added === 'string' && added ? (
+        <Text style={styles.added} testID="pantry-added-banner">
+          Added {added}
+        </Text>
+      ) : null}
       <View style={styles.actions}>
         {showBarcode ? (
           <Pressable
@@ -185,15 +155,6 @@ export default function PantryScreen() {
             testID="scan-barcode-button"
             onPress={() => router.push('/pantry/scan')}>
             <Text style={styles.secondaryBtnText}>Scan barcode</Text>
-          </Pressable>
-        ) : null}
-        {showReceipt ? (
-          <Pressable
-            accessibilityRole="button"
-            style={styles.secondaryBtn}
-            testID="scan-receipt-button"
-            onPress={() => router.push('/pantry/receipt')}>
-            <Text style={styles.secondaryBtnText}>Scan receipt</Text>
           </Pressable>
         ) : null}
       </View>
@@ -345,7 +306,6 @@ export default function PantryScreen() {
                 expiresAt: item.expiresAt ?? '',
                 brand: item.brand ?? '',
               });
-              setPane('items');
             }}>
             <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.muted}>
@@ -364,42 +324,10 @@ export default function PantryScreen() {
     </ScrollView>
   );
 
-  const showItems = isTwoPane || pane === 'items';
-
   return (
-    <TwoPaneLayout
-      testID="pantry-layout"
-      primary={
-        <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.list}>
-          <View style={styles.fill}>
-            {!isTwoPane ? (
-              <View style={styles.segment}>
-                <Pressable
-                  accessibilityRole="button"
-                  testID="pantry-show-items"
-                  style={[styles.segmentBtn, pane === 'items' && styles.segmentOn]}
-                  onPress={() => setPane('items')}>
-                  <Text style={pane === 'items' ? styles.segmentTextOn : styles.segmentText}>On hand</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  testID="pantry-show-ideas"
-                  style={[styles.segmentBtn, pane === 'ideas' && styles.segmentOn]}
-                  onPress={() => setPane('ideas')}>
-                  <Text style={pane === 'ideas' ? styles.segmentTextOn : styles.segmentText}>What can I cook</Text>
-                </Pressable>
-              </View>
-            ) : null}
-            {showItems ? list : ideas}
-          </View>
-        </MaxWidthContainer>
-      }
-      secondary={
-        <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.text}>
-          {ideas}
-        </MaxWidthContainer>
-      }
-    />
+    <View style={styles.fill} testID="pantry-layout">
+      <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.list}>{list}</MaxWidthContainer>
+    </View>
   );
 }
 
@@ -407,7 +335,6 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.background },
   list: { padding: 16, gap: 10, paddingBottom: 32 },
-  ideas: { padding: 16, gap: 10 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   form: { gap: 8, backgroundColor: colors.card, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border },
   heading: { color: colors.text, fontSize: 18, fontWeight: '700' },
@@ -428,6 +355,7 @@ const styles = StyleSheet.create({
   itemName: { color: colors.text, fontSize: 16, fontWeight: '600' },
   muted: { color: colors.muted, marginTop: 2 },
   expiry: { color: colors.primary, marginTop: 2 },
+  added: { color: colors.primary, fontWeight: '700', fontSize: 16 },
   error: { color: colors.danger, marginTop: 2 },
   primaryBtn: {
     backgroundColor: colors.primary,
@@ -458,9 +386,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.danger,
   },
   dangerBtnText: { color: colors.background, fontWeight: '700' },
-  segment: { flexDirection: 'row', gap: 8, padding: 12, paddingBottom: 0 },
-  segmentBtn: { flex: 1, minHeight: 44, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
-  segmentOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  segmentText: { color: colors.muted, fontWeight: '600' },
-  segmentTextOn: { color: colors.primaryText, fontWeight: '700' },
 });

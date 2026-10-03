@@ -1,5 +1,5 @@
 import { createCookSession, parseCookDeepLink, runCookCommand, type CookResult } from '@/cooking';
-import { SEED_RECIPES } from '@/data/seed';
+import { SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import type { KeyValueStore } from '@/storage/kv';
 import type { Recipe } from '@/types/recipe';
 
@@ -12,7 +12,7 @@ function memoryStore(): KeyValueStore {
   };
 }
 
-const chicken = SEED_RECIPES[0]; // 4 steps; step 4 "Roast 35–40 minutes ..."
+const chicken = SAMPLE_RECIPES[0]; // 4 steps; step 4 "Roast 35–40 minutes ..."
 const recipes = new Map<string, Recipe>([[chicken.id, chicken]]);
 let clock = new Date('2026-10-02T18:00:00Z');
 const deps = (kv: KeyValueStore) => ({ getRecipe: async (id: string) => recipes.get(id), kv, now: () => clock });

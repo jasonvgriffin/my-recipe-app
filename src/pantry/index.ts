@@ -1,4 +1,4 @@
-/** Pantry features (spec #21 pantry, #26 receipt scanning, #27 barcode scanning). */
+/** Pantry features (spec #21 pantry, #27 barcode scanning — pantry and shopping list). */
 import { canUse } from '@/entitlements';
 import { uuid } from '@/lib/ids';
 import { createCollection, defaultStore } from '@/storage/kv';

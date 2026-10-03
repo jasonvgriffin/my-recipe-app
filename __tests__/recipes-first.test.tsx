@@ -15,7 +15,9 @@ const routes = () => ({
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
   '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
   'pantry/scan': require('@/app/pantry/scan').default,
-  'pantry/receipt': require('@/app/pantry/receipt').default,
+  'shopping/scan': require('@/app/shopping/scan').default,
+  recipes: require('@/app/recipes').default,
+  'pantry-match': require('@/app/pantry-match').default,
   add: require('@/app/add').default,
   'recipe/[id]': require('@/app/recipe/[id]/index').default,
   'recipe/[id]/edit': require('@/app/recipe/[id]/edit').default,
@@ -43,6 +45,19 @@ describe('recipes-first', () => {
     expect(await screen.findByTestId('add-recipe-button')).toBeTruthy();
     expect(screen).toHavePathname('/');
     expect(screen.queryByText(/sign in/i)).toBeNull();
+    // v1.0.1: five clear buttons and no sample recipes.
+    for (const id of ['home-search', 'home-existing', 'home-share', 'add-recipe-button', 'home-pantry-match'])
+      expect(screen.getByTestId(id)).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('home-existing')));
+    expect(await screen.findByText(/No recipes yet/)).toBeTruthy();
+  });
+
+  it('pantry match explains gently when the pantry is hidden', async () => {
+    await settingsStore.update({ features: { mealPlan: false, shopping: false, pantry: false } });
+    renderRouter(routes(), { initialUrl: '/' });
+    await act(async () => fireEvent.press(await screen.findByTestId('home-pantry-match')));
+    expect(await screen.findByTestId('pantry-match-off')).toBeTruthy();
+    expect(screen.queryByText(/buy|upgrade|subscribe/i)).toBeNull();
   });
 
   it('full recipe workflow with all optional features hidden', async () => {
@@ -61,7 +76,8 @@ describe('recipes-first', () => {
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Layer\nBake 30 minutes');
     await act(async () => fireEvent.press(screen.getByText('Save recipe')));
 
-    // Back on the list → open it → detail has recipe actions but no meal-plan cross-link
+    // Back on the Recipes tab → Existing Recipes → open it → detail has recipe actions but no meal-plan cross-link
+    await act(async () => fireEvent.press(await screen.findByTestId('home-existing')));
     const item = await screen.findByText('Zucchini Lasagna');
     await act(async () => fireEvent.press(item));
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();

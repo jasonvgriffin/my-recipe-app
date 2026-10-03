@@ -4,7 +4,6 @@ import { mealPlanStore } from '@/storage/meal-plan';
 import { pantryStore } from '@/storage/pantry';
 import { barcodeItems } from '@/pantry';
 import { recipeStore } from '@/storage/recipes';
-import { receiptAliasStore } from '@/storage/receipt-aliases';
 
 import type { SyncCollections } from './types';
 
@@ -52,6 +51,5 @@ export function appSyncCollections(): SyncCollections {
     meal_plan_entries: c(mealPlanStore.collections.entries),
     shopping_items: c(mealPlanStore.collections.items),
     barcode_items: c(barcodeItems),
-    receipt_aliases: c(receiptAliasStore.collection),
   };
 }

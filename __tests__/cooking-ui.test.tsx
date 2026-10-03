@@ -5,7 +5,7 @@ import { renderRouter } from 'expo-router/testing-library';
 import { Alert } from 'react-native';
 
 import { RecipeDetail } from '@/components/recipe-detail';
-import { SEED_RECIPES } from '@/data/seed';
+import { addSampleRecipes, SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { createRecipe } from '@/lib/recipe-utils';
 import { barcodeItems } from '@/pantry';
 import { recipeStore } from '@/storage/recipes';
@@ -21,8 +21,8 @@ beforeEach(async () => {
 
 describe('cooking mode UI (spec #19, #15, #24)', () => {
   it('keeps the screen awake, then releases the lock when the setting is off', async () => {
-    await recipeStore.seedIfNeeded();
-    const r = (await recipeStore.list()).find((x) => x.title === SEED_RECIPES[0].title)!;
+    await addSampleRecipes(recipeStore);
+    const r = (await recipeStore.list()).find((x) => x.title === SAMPLE_RECIPES[0].title)!;
     const Cook = require('@/app/cook/[action]').default;
     const ui = renderRouter({ 'cook/[action]': Cook }, { initialUrl: `/cook/${r.id}` });
     expect(await screen.findByText(r.steps[0].text)).toBeTruthy();
@@ -94,8 +94,8 @@ describe('cooking mode UI (spec #19, #15, #24)', () => {
 describe('recipe units and scaling (spec #16)', () => {
   it('converts from the settings default, overrides per recipe, and scales servings', async () => {
     await settingsStore.update({ unitSystem: 'metric' });
-    await recipeStore.seedIfNeeded();
-    const r = (await recipeStore.list()).find((x) => x.title === SEED_RECIPES[0].title)!;
+    await addSampleRecipes(recipeStore);
+    const r = (await recipeStore.list()).find((x) => x.title === SAMPLE_RECIPES[0].title)!;
     renderRouter({ index: () => <RecipeDetail id={r.id} /> }, { initialUrl: '/' });
     expect(await screen.findByText(/454 g green beans/)).toBeTruthy();
 
@@ -112,8 +112,8 @@ describe('recipe units and scaling (spec #16)', () => {
   });
 
   it('starts a step timer from the recipe with a notification', async () => {
-    await recipeStore.seedIfNeeded();
-    const r = (await recipeStore.list()).find((x) => x.title === SEED_RECIPES[0].title)!;
+    await addSampleRecipes(recipeStore);
+    const r = (await recipeStore.list()).find((x) => x.title === SAMPLE_RECIPES[0].title)!;
     renderRouter({ index: () => <RecipeDetail id={r.id} /> }, { initialUrl: '/' });
     await screen.findByTestId('step-timer-3');
     await act(async () => fireEvent.press(screen.getByTestId('step-timer-3')));

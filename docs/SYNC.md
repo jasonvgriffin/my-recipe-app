@@ -25,7 +25,7 @@ UI screens ──> stores (src/storage/*: recipeStore, mealPlanStore, pantryStor
   `createdBy?` (auth user id), `createdAt`, `updatedAt`, `deletedAt?` (tombstone).
 - **Identity:** `src/storage/identity.ts` holds `{ userId, householdId }`; new local writes are stamped with it.
 - **Synced tables:** `recipes`, `categories`, `pantry_items`, `meal_plan_entries`, `shopping_items` (each
-  shopping item is its own row so two people can check items concurrently), `barcode_items`, `receipt_aliases`.
+  shopping item is its own row so two people can check items concurrently), `barcode_items`. (`receipt_aliases` exists in the database from an applied migration but is no longer synced: receipt scanning was removed in v1.0.1.)
   Settings and the cook-with-me session stay per device.
 
 ## Sync algorithm (`createSyncEngine(...).syncOnce()`)
@@ -117,7 +117,7 @@ Supabase env vars absent, the screen explains that recipes still work on this de
 
 Status phases: solo, pending, syncing, synced, offline, error (`syncStatusLabel`). Last-write-wins is unchanged
 (`updatedAt`, including tombstones). Every synced table — recipes, categories, pantry, meal plan, shopping items,
-and barcode/receipt product aliases (`barcode_items`) — round-trips `household_id` + `created_by`.
+and barcode product names (`barcode_items`) — round-trips `household_id` + `created_by`.
 
 ## What exists
 

@@ -199,7 +199,10 @@ export function isCategory(value: unknown): value is Category {
 
 /** Item on hand in the pantry (spec #21). */
 export interface PantryItem extends SyncMeta {
-  /** Normalized ingredient name used for matching, e.g. "almond flour". */
+  /**
+   * Item title. Typed items are stored normalized ("almond flour"); scanned items keep the product name as
+   * scanned. Matching always compares `ingredientKey(name)`.
+   */
   name: string;
   /** Optional — unknown quantity is left unset (never stored as 0 to mean "some"). */
   quantity?: number;

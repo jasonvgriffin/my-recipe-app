@@ -5,7 +5,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 
-import { SEED_RECIPES } from '@/data/seed';
+import { addSampleRecipes, SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { LocalFreeEntitlements, NoEntitlements, featureGate, type FeatureId } from '@/entitlements';
 import { setCooked, setRating } from '@/lib/recipe-utils';
 import { recipeStore } from '@/storage/recipes';
@@ -25,6 +25,7 @@ const routes = () => ({
   '(tabs)/meal-plan': require('@/app/(tabs)/meal-plan').default,
   '(tabs)/shopping': require('@/app/(tabs)/shopping').default,
   add: require('@/app/add').default,
+  recipes: require('@/app/recipes').default,
   'recipe/[id]': require('@/app/recipe/[id]').default,
   'cook/[action]': require('@/app/cook/[action]').default,
   organize: require('@/app/organize').default,
@@ -63,7 +64,7 @@ afterEach(() => {
 
 describe('categories (spec #3)', () => {
   it('creates, renames, deletes and assigns a category, then filters by it', async () => {
-    await recipeStore.seedIfNeeded();
+    await addSampleRecipes(recipeStore);
     renderRouter(routes(), { initialUrl: '/organize' });
     expect(await screen.findByTestId('organize-screen')).toBeTruthy();
 
@@ -89,10 +90,10 @@ describe('categories (spec #3)', () => {
     await act(async () => fireEvent.press(assign));
     expect((await recipeStore.get(chicken.id))?.categoryIds).toEqual([breakfast.id]);
 
-    await act(async () => router.push('/'));
+    await act(async () => router.push('/recipes'));
     await screen.findByTestId(`filter-category-${breakfast.id}`);
     fireEvent.press(screen.getByTestId(`filter-category-${breakfast.id}`));
-    await waitFor(() => expect(screen.queryByText(SEED_RECIPES[1].title)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(SAMPLE_RECIPES[1].title)).toBeNull());
     expect(screen.getByTestId(`recipe-item-${chicken.id}`)).toBeTruthy();
 
     await act(async () => router.push('/organize'));
@@ -103,8 +104,8 @@ describe('categories (spec #3)', () => {
   });
 
   it('assigns a new category from the add form and saves it on the recipe', async () => {
-    renderRouter(routes(), { initialUrl: '/' });
-    const addButton = await screen.findByTestId('add-recipe-button');
+    renderRouter(routes(), { initialUrl: '/recipes' });
+    const addButton = await screen.findByTestId('list-add-recipe-button');
     await act(async () => fireEvent.press(addButton));
     await screen.findByText('Save recipe');
     fireEvent.changeText(screen.getByTestId('add-form-category-input'), 'Breads');
@@ -125,7 +126,7 @@ describe('categories (spec #3)', () => {
 
 describe('tags (spec #20)', () => {
   it('adds and removes a tag on a recipe, and renames or deletes it everywhere', async () => {
-    await recipeStore.seedIfNeeded();
+    await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
     renderRouter(routes(), { initialUrl: `/recipe/${chicken.id}` });
     fireEvent.changeText(await screen.findByTestId('add-tag-input'), 'Weeknight');
@@ -156,7 +157,7 @@ describe('tags (spec #20)', () => {
 
 describe('search, filters, cooked history and ratings (spec #8 #9 #10 #22)', () => {
   it('searches title, ingredients, notes and tags, and combines filters', async () => {
-    await recipeStore.seedIfNeeded();
+    await addSampleRecipes(recipeStore);
     const breakfast = await recipeStore.addCategory('Breakfast');
     const chicken = await byTitle('Lemon');
     const mousse = await byTitle('Allulose');
@@ -168,7 +169,7 @@ describe('search, filters, cooked history and ratings (spec #8 #9 #10 #22)', () 
     );
     await recipeStore.save(setRating(mousse, 2));
 
-    renderRouter(routes(), { initialUrl: '/' });
+    renderRouter(routes(), { initialUrl: '/recipes' });
     await screen.findByTestId(`recipe-item-${chicken.id}`);
 
     fireEvent.changeText(screen.getByTestId('search-input'), 'side salad');
@@ -202,13 +203,13 @@ describe('search, filters, cooked history and ratings (spec #8 #9 #10 #22)', () 
   });
 
   it('uses the configurable cooked-recently window', async () => {
-    await recipeStore.seedIfNeeded();
+    await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
     const mousse = await byTitle('Allulose');
     await recipeStore.save(setCooked(chicken, true, new Date(Date.now() - 10 * 86_400_000)));
     await recipeStore.save(setCooked(mousse, true, new Date(Date.now() - 2 * 86_400_000)));
 
-    renderRouter(routes(), { initialUrl: '/' });
+    renderRouter(routes(), { initialUrl: '/recipes' });
     await screen.findByTestId('filter-recent');
     fireEvent.press(screen.getByTestId('filter-recent'));
     await waitFor(() => {
@@ -225,7 +226,7 @@ describe('search, filters, cooked history and ratings (spec #8 #9 #10 #22)', () 
   });
 
   it('records last cooked and a history, and keeps both when unmarked', async () => {
-    await recipeStore.seedIfNeeded();
+    await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
     renderRouter(routes(), { initialUrl: `/recipe/${chicken.id}` });
     const cooked = await screen.findByTestId('cooked-toggle');
@@ -254,7 +255,7 @@ describe('search, filters, cooked history and ratings (spec #8 #9 #10 #22)', () 
   });
 
   it('rates from the detail, shows stars in the list, and sorts by rating', async () => {
-    await recipeStore.seedIfNeeded();
+    await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
     const mousse = await byTitle('Allulose');
     renderRouter(routes(), { initialUrl: `/recipe/${chicken.id}` });
@@ -267,7 +268,7 @@ describe('search, filters, cooked history and ratings (spec #8 #9 #10 #22)', () 
 
     await recipeStore.save(setRating(mousse, 2));
     const { router } = require('expo-router');
-    await act(async () => router.push('/'));
+    await act(async () => router.push('/recipes'));
     expect(await screen.findByTestId(`recipe-rating-${chicken.id}`)).toBeTruthy();
     fireEvent.press(screen.getByTestId('sort-rating'));
     await waitFor(() => {
@@ -303,14 +304,15 @@ describe('settings show/hide and locked organize features', () => {
     await waitFor(() => expect(screen.queryByText('Meal plan')).toBeNull());
     expect(screen.queryByText('Shopping list')).toBeNull();
     expect(screen.getByTestId('add-recipe-button')).toBeTruthy();
-    expect(screen.getByText('Cooked recently (30d)')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('home-existing')));
+    expect(await screen.findByText('Cooked recently (30d)')).toBeTruthy();
   });
 
   it('hides category, tag and rating controls when those features are locked', async () => {
     featureGate.setProvider(new NoEntitlements());
     featureGate.setConfig(premium('categories', 'tags', 'ratings'));
-    await recipeStore.seedIfNeeded();
-    renderRouter(routes(), { initialUrl: '/' });
+    await addSampleRecipes(recipeStore);
+    renderRouter(routes(), { initialUrl: '/recipes' });
     await screen.findByTestId('search-input');
     expect(screen.queryByTestId('organize-button')).toBeNull();
     expect(screen.queryByTestId('filter-rating-5')).toBeNull();
@@ -341,14 +343,14 @@ describe('expanded width', () => {
   });
 
   it('keeps search and filters next to the open recipe', async () => {
-    await recipeStore.seedIfNeeded();
+    await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
-    renderRouter(routes(), { initialUrl: '/' });
+    renderRouter(routes(), { initialUrl: '/recipes' });
     expect(await screen.findByTestId('recipes-layout-dual')).toBeTruthy();
     expect(screen.getByTestId('recipe-filters')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId(`recipe-item-${chicken.id}`)));
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
-    expect(screen).toHavePathname('/');
+    expect(screen).toHavePathname('/recipes');
     const detail = within(screen.getByTestId('recipe-detail'));
     expect(detail.getByTestId('detail-rating')).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('search-input'), 'no-such-recipe');

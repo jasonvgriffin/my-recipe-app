@@ -31,7 +31,6 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
   const [servingsText, setServingsText] = useState('');
 
   const load = useCallback(async () => {
-    await recipeStore.seedIfNeeded();
     const [dayEntries, all] = await Promise.all([mealPlanStore.entriesForDates([date]), recipeStore.list()]);
     setEntries(dayEntries);
     setRecipes(all);

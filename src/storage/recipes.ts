@@ -1,15 +1,16 @@
-import { SEED_RECIPES } from '@/data/seed';
 import { uuid } from '@/lib/ids';
 import { isCategory, migrateRecipe, withSyncDefaults, type Category, type Recipe } from '@/types/recipe';
 
 import { createCollection, defaultStore, type KeyValueStore } from './kv';
+import { isUntouchedLegacySample } from './legacy-samples';
 
 export type { KeyValueStore } from './kv';
 
 /** Key kept at v1 on purpose: records are upgraded in place by `migrateRecipe`. */
 export const RECIPES_STORAGE_KEY = 'my-recipe-app/recipes/v1';
 export const CATEGORIES_STORAGE_KEY = 'my-recipe-app/categories/v1';
-const SEEDED_KEY = 'my-recipe-app/seeded/v1';
+/** Set once untouched v1.0.0 sample recipes have been removed (see `legacy-samples.ts`). */
+const SAMPLES_REMOVED_KEY = 'my-recipe-app/samples-removed/v1';
 
 /** Recipe + category repository backed by a key-value store (AsyncStorage by default). */
 export function createRecipeStore(store: KeyValueStore = defaultStore) {
@@ -17,26 +18,31 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
   const categories = createCollection<Category>(store, CATEGORIES_STORAGE_KEY, (v) =>
     isCategory(v) ? withSyncDefaults(v) : undefined,
   );
-  let seeding: Promise<void> | undefined;
+  let cleaning: Promise<number> | undefined;
 
   return {
     /**
-     * Insert sample recipes once, on first launch. Each device gets fresh UUIDs so seeds never collide
-     * across households when synced (spec #25).
+     * No sample recipes are seeded (v1.0.1). Old installs got two samples on first launch; delete them once,
+     * only while untouched (`isUntouchedLegacySample`) — user recipes and edited samples are never removed.
+     * Coalesced so overlapping screen reloads run it once. Returns how many were removed.
      */
-    seedIfNeeded(seed: Recipe[] = SEED_RECIPES, now: Date = new Date()): Promise<void> {
-      // Coalesce overlapping calls: each save fires a data-change event, and screens that reload on
-      // that event call this again while the first seed is still writing (which used to duplicate samples).
-      if (!seeding) {
-        seeding = (async () => {
-          if (await store.getItem(SEEDED_KEY)) return;
-          for (const r of seed) await recipes.save({ ...r, id: uuid() }, now);
-          await store.setItem(SEEDED_KEY, '1');
+    removeUntouchedSamples(now: Date = new Date()): Promise<number> {
+      if (!cleaning) {
+        cleaning = (async () => {
+          if (await store.getItem(SAMPLES_REMOVED_KEY)) return 0;
+          let removed = 0;
+          for (const r of await recipes.all()) {
+            if (!isUntouchedLegacySample(r)) continue;
+            await recipes.remove(r.id, now);
+            removed++;
+          }
+          await store.setItem(SAMPLES_REMOVED_KEY, '1');
+          return removed;
         })().finally(() => {
-          seeding = undefined;
+          cleaning = undefined;
         });
       }
-      return seeding;
+      return cleaning;
     },
 
     /** All recipes, newest first. */

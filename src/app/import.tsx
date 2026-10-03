@@ -24,7 +24,9 @@ import { PREFERRED_SWEETENER } from '@/types/recipe';
 
 /**
  * Paste a link or recipe text, or receive an Android share / deep link (spec #1).
- * Every path calls importRecipe. The result is shown as a draft until the user saves it.
+ * Every path calls importRecipe. "Import link" saves the recipe straight away (v1.0.1, Jason: no
+ * Save / Save-and-edit choice); pasted text, shares and deep links are shown as a draft until the user saves.
+ * A link that is already in your recipes still shows "Already in your recipes" instead of saving.
  */
 export default function ImportScreen() {
   return (
@@ -110,11 +112,31 @@ function ImportBody() {
     };
   }, [params.incoming, preview]);
 
-  async function commit(andEdit: boolean) {
-    if (!pending) return;
+  /** "Import link": check (errors / duplicate exactly as the draft path), then save with no extra prompt. */
+  async function importLinkNow(input: RecipeImportInput) {
     setBusy(true);
     setError(null);
-    const result = await importRecipe(pending);
+    setDraft(null);
+    setPending(input);
+    const checked = await importRecipe(input, { dryRun: true });
+    if (!checked.ok) {
+      setBusy(false);
+      setError({ code: checked.code, message: importErrorMessage(checked.code, checked.errors) });
+      return;
+    }
+    if (checked.status === 'duplicate') {
+      setBusy(false);
+      setDraft(checked);
+      return;
+    }
+    await commit(false, input);
+  }
+
+  async function commit(andEdit: boolean, input: RecipeImportInput | null = pending) {
+    if (!input) return;
+    setBusy(true);
+    setError(null);
+    const result = await importRecipe(input);
     if (!result.ok) {
       setBusy(false);
       setError({ code: result.code, message: importErrorMessage(result.code, result.errors) });
@@ -168,7 +190,7 @@ function ImportBody() {
               setError({ code: 'invalid_input', message: 'Paste a recipe link first.' });
               return;
             }
-            void preview({ kind: 'url', url: trimmed, source: { channel: 'app-link' } });
+            void importLinkNow({ kind: 'url', url: trimmed, source: { channel: 'app-link' } });
           }}>
           <Text style={styles.buttonText}>Import link</Text>
         </Pressable>

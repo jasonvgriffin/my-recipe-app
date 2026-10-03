@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useHouseholdSync } from '@/hooks/use-household-sync';
 import { colors, navigationTheme } from '@/lib/theme';
 import { configureStepTimerNotifications } from '@/notifications/step-timers';
+import { recipeStore } from '@/storage/recipes';
 
 function HouseholdSyncHost() {
   useHouseholdSync();
@@ -14,6 +15,8 @@ function HouseholdSyncHost() {
 export default function RootLayout() {
   useEffect(() => {
     configureStepTimerNotifications();
+    // No sample recipes any more (v1.0.1): drop untouched v1.0.0 samples from old installs, once.
+    recipeStore.removeUntouchedSamples().catch(() => undefined);
   }, []);
   return (
     <ThemeProvider value={navigationTheme}>
@@ -36,7 +39,9 @@ export default function RootLayout() {
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="household" options={{ title: 'Household' }} />
         <Stack.Screen name="pantry/scan" options={{ title: 'Scan barcode' }} />
-        <Stack.Screen name="pantry/receipt" options={{ title: 'Scan receipt' }} />
+        <Stack.Screen name="shopping/scan" options={{ title: 'Scan barcode' }} />
+        <Stack.Screen name="recipes" options={{ title: 'Existing Recipes' }} />
+        <Stack.Screen name="pantry-match" options={{ title: 'What can I make?' }} />
       </Stack>
     </ThemeProvider>
   );

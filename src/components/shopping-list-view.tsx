@@ -18,6 +18,10 @@ export interface ShoppingListViewProps {
   onAddManual: () => void;
   onClearChecked: () => void;
   onGroceryRun: () => void;
+  /** Barcode scan entry point (shown when barcodeScan is visible); the scanner adds the product name. */
+  onScan?: () => void;
+  /** Product name just added by a scan, confirmed at the top. */
+  added?: string;
 }
 
 /** Shopping list for one chosen week (spec #12). The parent owns persistence. */
@@ -35,6 +39,8 @@ export function ShoppingListView({
   onAddManual,
   onClearChecked,
   onGroceryRun,
+  onScan,
+  added,
 }: ShoppingListViewProps) {
   const checked = list?.items.some((i) => i.checked) ?? false;
   return (
@@ -73,6 +79,11 @@ export function ShoppingListView({
           <Text style={styles.secondaryText}>Grocery run</Text>
         </Pressable>
       ) : null}
+      {added ? (
+        <Text style={styles.added} testID="shopping-added-banner">
+          Added {added}
+        </Text>
+      ) : null}
       <View style={styles.manualRow}>
         <TextInput
           value={manualText}
@@ -86,6 +97,16 @@ export function ShoppingListView({
         <Pressable accessibilityRole="button" onPress={onAddManual} style={styles.addBtn} testID="add-manual">
           <Text style={styles.addBtnText}>Add</Text>
         </Pressable>
+        {onScan ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Scan barcode"
+            onPress={onScan}
+            style={styles.addBtn}
+            testID="shopping-scan-button">
+            <Text style={styles.addBtnText}>Scan</Text>
+          </Pressable>
+        ) : null}
       </View>
       {checked ? (
         <Pressable accessibilityRole="button" onPress={onClearChecked} style={styles.clear} testID="clear-checked">
@@ -119,6 +140,7 @@ export function ShoppingListView({
 }
 
 const styles = StyleSheet.create({
+  added: { color: colors.primary, fontWeight: '700', fontSize: 16, marginHorizontal: 12, marginTop: 8 },
   fill: { flex: 1, padding: 12 },
   nav: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   navBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },

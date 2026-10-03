@@ -1,4 +1,4 @@
-import { SEED_RECIPES } from '@/data/seed';
+import { SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { convertIngredient, formatIngredient, parseIngredient, scaleIngredient } from '@/lib/ingredients';
 import { rankRecipesByPantry } from '@/lib/pantry';
 import { createRecipe, filterRecipes, setRating, sortRecipes } from '@/lib/recipe-utils';
@@ -47,14 +47,14 @@ describe('step timers (spec #15)', () => {
   it('formats durations and detects them when recipes are created', () => {
     expect(formatDuration(4500)).toBe('1:15:00');
     expect(formatDuration(90)).toBe('1:30');
-    expect(SEED_RECIPES[0].steps[3].durationSeconds).toBe(2400);
+    expect(SAMPLE_RECIPES[0].steps[3].durationSeconds).toBe(2400);
   });
 });
 
 describe('recipe migration', () => {
   it('migrates v2 recipes (string steps) and drops legacy nutrition fields', () => {
     const v2 = {
-      ...SEED_RECIPES[0],
+      ...SAMPLE_RECIPES[0],
       schemaVersion: 2,
       steps: ['Bake 10 minutes'],
       carbsPerServing: 5,
@@ -70,7 +70,7 @@ describe('recipe migration', () => {
 
 describe('ratings + tags (spec #20, #22)', () => {
   it('sorts and filters by rating and tags', () => {
-    const [a, b] = SEED_RECIPES;
+    const [a, b] = SAMPLE_RECIPES;
     const rated = [setRating(a, 3), setRating(b, 5)];
     expect(sortRecipes(rated, 'rating').map((r) => r.rating)).toEqual([5, 3]);
     expect(filterRecipes(rated, { minRating: 4 })).toHaveLength(1);
