@@ -3,12 +3,13 @@ import { canUse } from '@/entitlements';
 import { generateId } from '@/lib/recipe-utils';
 import { createCollection, defaultStore } from '@/storage/kv';
 import { pantryStore } from '@/storage/pantry';
-import type { PantryItem } from '@/types/recipe';
+import { settingsStore } from '@/storage/settings';
 
 import { createBarcodeLookup, type BarcodeItem } from './barcodeLookup';
+import { createPantryMatcher } from './match';
 
 export * from './barcodeLookup';
-export { isInPantry } from './isInPantry';
+export { createPantryMatcher, ingredientIsInPantry, type PantryMatcher, type PantryMatcherDeps } from './match';
 
 export const BARCODE_ITEMS_STORAGE_KEY = 'my-recipe-app/barcode-items/v1';
 
@@ -23,15 +24,6 @@ export const barcodeItems = createCollection<BarcodeItem>(defaultStore, BARCODE_
   isBarcodeItem(v) ? v : undefined,
 );
 
-/**
- * Pantry rows the shopping list should skip (spec #21).
- * Empty when the pantry feature is gated off, so a locked pantry never changes the list.
- */
-export async function pantryItemsForShopping(): Promise<PantryItem[]> {
-  if (!canUse('pantry')) return [];
-  return pantryStore.list();
-}
-
 /** App-wide lookup bound to on-device storage + global fetch. */
 export const barcodeLookup = createBarcodeLookup({
   items: barcodeItems,
@@ -41,3 +33,21 @@ export const barcodeLookup = createBarcodeLookup({
     return { status: res.status, json: res.status === 200 ? await res.json() : undefined };
   },
 });
+
+/**
+ * On-hand check used by the shopping list and grocery run.
+ * Returns false when the pantry feature is gated off or hidden in Settings, so a locked or hidden
+ * pantry never changes what you buy.
+ */
+export const pantryMatcher = createPantryMatcher({
+  list: async () => ((await settingsStore.get()).features.pantry ? pantryStore.list() : []),
+  canUsePantry: () => canUse('pantry'),
+});
+
+/**
+ * Async, storage-bound check (respects gate + Settings). For a pure check against a pantry list,
+ * import `isInPantry` from `@/pantry/isInPantry`.
+ */
+export function isInPantry(ingredient: string): Promise<boolean> {
+  return pantryMatcher.isInPantry(ingredient);
+}

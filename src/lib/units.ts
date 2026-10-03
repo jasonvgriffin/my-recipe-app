@@ -108,6 +108,18 @@ export function convertAmount(
   return { quantity, unit: unitId };
 }
 
+/**
+ * Which unit system to display. A recipe override wins; otherwise the app default
+ * (`'original'` means amounts as written).
+ */
+export function effectiveUnitSystem(
+  recipe: { unitSystem?: UnitSystem | 'original' } | undefined,
+  settings: { unitSystem: UnitSystem | 'original' },
+): UnitSystem | 'original' {
+  const chosen = recipe?.unitSystem ?? settings.unitSystem;
+  return chosen === 'metric' || chosen === 'imperial' ? chosen : 'original';
+}
+
 /** Round to a kitchen-friendly precision. */
 export function roundNice(v: number): number {
   if (v >= 100) return Math.round(v);

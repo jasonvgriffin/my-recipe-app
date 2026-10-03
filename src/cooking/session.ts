@@ -46,6 +46,11 @@ export interface CurrentStep {
   isLast: boolean;
   /** Timer for this step, with seconds remaining at the time of the call. */
   timer?: StepTimer & { remainingSeconds: number };
+  /**
+   * Every timer in the session (one per step). Several steps can count down at once (spec #15).
+   * Remaining time is computed at the moment of the call.
+   */
+  activeTimers?: (StepTimer & { remainingSeconds: number })[];
 }
 
 export type CookErrorCode = 'no_session' | 'recipe_not_found' | 'no_steps' | 'no_timer_for_step' | 'feature_locked';
@@ -102,7 +107,11 @@ export function createCookSession({ getRecipe, kv, now = () => new Date(), canUs
 
   function view(recipe: Recipe, state: CookSessionState): CurrentStep {
     const step = recipe.steps[state.stepIndex];
-    const timer = [...state.timers].reverse().find((t) => t.stepIndex === state.stepIndex);
+    const activeTimers = state.timers.map((t) => ({
+      ...t,
+      remainingSeconds: Math.max(0, Math.round((Date.parse(t.endsAt) - now().getTime()) / 1000)),
+    }));
+    const timer = [...activeTimers].reverse().find((t) => t.stepIndex === state.stepIndex);
     const out: CurrentStep = {
       recipeId: recipe.id,
       title: recipe.title,
@@ -115,10 +124,8 @@ export function createCookSession({ getRecipe, kv, now = () => new Date(), canUs
     if (step.durationSeconds) out.durationSeconds = step.durationSeconds;
     const ings = ingredientsForStep(step.text, recipe.ingredients);
     if (ings.length) out.ingredientsForStep = ings;
-    if (timer) {
-      const remaining = Math.max(0, Math.round((Date.parse(timer.endsAt) - now().getTime()) / 1000));
-      out.timer = { ...timer, remainingSeconds: remaining };
-    }
+    if (activeTimers.length) out.activeTimers = activeTimers;
+    if (timer) out.timer = timer;
     return out;
   }
 
@@ -191,20 +198,26 @@ export function createCookSession({ getRecipe, kv, now = () => new Date(), canUs
       return { ok: true, event: 'current', step: view(a.recipe, a.state) };
     },
     /**
-     * Start the current step's timer (uses its durationSeconds unless overridden). Records the timer in
-     * state; the UI layer schedules the local notification (expo-notifications) for `endsAt`.
+     * Start a step timer (uses that step's durationSeconds unless overridden). Records `{ startedAt, endsAt }`
+     * in state. One timer per step; timers on other steps keep running (spec #15). Does not move the
+     * current step when `forStepIndex` is passed. The UI layer schedules the local notification for `endsAt`.
      */
-    async startStepTimer(durationSeconds?: number): Promise<CookResult> {
+    async startStepTimer(durationSeconds?: number, forStepIndex?: number): Promise<CookResult> {
       if (!canUse('timers')) return { ok: false, code: 'feature_locked', message: 'Step timers are not available.' };
       const a = await active();
       if (isErr(a)) return a;
-      const secs = durationSeconds ?? a.recipe.steps[a.state.stepIndex].durationSeconds;
-      if (!secs) return { ok: false, code: 'no_timer_for_step', message: 'This step has no time. Say how long.' };
+      const index =
+        forStepIndex === undefined
+          ? a.state.stepIndex
+          : Math.min(Math.max(0, Math.floor(forStepIndex)), a.recipe.steps.length - 1);
+      const secs = durationSeconds ?? a.recipe.steps[index].durationSeconds;
+      if (!secs || secs <= 0)
+        return { ok: false, code: 'no_timer_for_step', message: 'This step has no time. Say how long.' };
       const start = now();
       a.state.timers = [
-        ...a.state.timers.filter((t) => t.stepIndex !== a.state.stepIndex),
+        ...a.state.timers.filter((t) => t.stepIndex !== index),
         {
-          stepIndex: a.state.stepIndex,
+          stepIndex: index,
           durationSeconds: secs,
           startedAt: start.toISOString(),
           endsAt: new Date(start.getTime() + secs * 1000).toISOString(),

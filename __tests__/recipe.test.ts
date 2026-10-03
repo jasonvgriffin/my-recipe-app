@@ -51,9 +51,12 @@ describe('recipe utils', () => {
     expect(isRecipe(r)).toBe(true);
   });
 
-  it('searches by title, tag and ingredient', () => {
+  it('searches title, ingredients, notes and tags (spec #8)', () => {
+    const withNotes = { ...SEED_RECIPES[0], notes: 'serve with a side salad' };
+    expect(searchRecipes([withNotes, SEED_RECIPES[1]], 'side salad')).toHaveLength(1);
     expect(searchRecipes(SEED_RECIPES, 'chicken')).toHaveLength(1);
-    expect(searchRecipes(SEED_RECIPES, 'dessert')).toHaveLength(1);
+    expect(searchRecipes(SEED_RECIPES, 'thyme')).toHaveLength(1);
+    expect(searchRecipes(SEED_RECIPES, 'no-bake')).toHaveLength(1);
     expect(searchRecipes(SEED_RECIPES, 'allulose')).toHaveLength(1);
     expect(searchRecipes(SEED_RECIPES, '')).toHaveLength(2);
   });

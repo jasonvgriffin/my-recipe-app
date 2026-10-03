@@ -1,99 +1,141 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
+import { OptionalFeature } from '@/components/optional-feature';
+import { PantryOnHand } from '@/components/pantry-on-hand';
+import { ShoppingListView } from '@/components/shopping-list-view';
 import { useFeatureVisible } from '@/hooks/use-feature';
-import { startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
-import { buildShoppingList, toggleItem } from '@/lib/shopping';
-import { colors } from '@/lib/theme';
+import { addDays, startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
+import {
+  addManualItem,
+  clearChecked,
+  collectIngredientKeys,
+  compileWeekShoppingList,
+  emptyShoppingList,
+  toggleItem,
+} from '@/lib/shopping';
+import { pantryMatcher } from '@/pantry';
 import { mealPlanStore } from '@/storage/meal-plan';
-import { pantryStore } from '@/storage/pantry';
 import { recipeStore } from '@/storage/recipes';
-import type { ShoppingList } from '@/types/meal-plan';
+import type { IsoDate, ShoppingList } from '@/types/meal-plan';
 
 /**
- * Shopping list tab (spec #12): compiled from this week's meal plan, with check-off.
- * TODO(spec #23): medium/expanded → TwoPaneLayout (shopping list + pantry, spec #21).
- * TODO(spec #12): pick which week, merge quantities, add manual items, clear checked.
+ * Shopping list (spec #12, #23). Compiled from a chosen week, with manual lines and check-off.
+ * Expanded width shows what is already on hand beside the list. Pantry skip goes through `pantryMatcher` (`isInPantry` rules; off when the pantry is locked or hidden).
  */
 export default function ShoppingScreen() {
-  const weekStart = toIsoDate(startOfWeek(new Date()));
+  return (
+    <OptionalFeature id="shoppingList" hiddenLabel="Shopping list is hidden.">
+      <ShoppingBody />
+    </OptionalFeature>
+  );
+}
+
+function ShoppingBody() {
+  const showGrocery = useFeatureVisible('groceryRun');
+  const showPantry = useFeatureVisible('pantry');
+  const [weekStart, setWeekStart] = useState<IsoDate>(() => toIsoDate(startOfWeek(new Date())));
   const [list, setList] = useState<ShoppingList | undefined>();
-  // Spec #21: skip pantry items only when pantry is allowed and the user hasn't hidden it.
-  const skipPantry = useFeatureVisible('pantry');
+  const [mealCount, setMealCount] = useState(0);
+  const [manualText, setManualText] = useState('');
+
+  const load = useCallback(async () => {
+    const [stored, entries] = await Promise.all([
+      mealPlanStore.getShoppingList(weekStart),
+      mealPlanStore.entriesForDates(weekDates(weekStart)),
+    ]);
+    setList(stored);
+    setMealCount(entries.length);
+  }, [weekStart]);
 
   useFocusEffect(
     useCallback(() => {
-      mealPlanStore.getShoppingList(weekStart).then(setList);
-    }, [weekStart]),
+      let active = true;
+      load().catch(() => {
+        if (!active) return;
+      });
+      return () => {
+        active = false;
+      };
+    }, [load]),
   );
 
-  async function compile() {
+  async function build() {
     const days = weekDates(weekStart);
-    const [entries, recipes, pantry] = await Promise.all([
-      mealPlanStore.entriesForDates(days),
-      recipeStore.list(),
-      skipPantry ? pantryStore.list() : Promise.resolve([]),
-    ]);
-    const next = buildShoppingList(weekStart, days, entries, recipes, new Date(), { pantry });
+    const [entries, recipes] = await Promise.all([mealPlanStore.entriesForDates(days), recipeStore.list()]);
+    const skip = await pantryMatcher.skipKeys(collectIngredientKeys(entries, recipes, days));
+    const previous = await mealPlanStore.getShoppingList(weekStart);
+    const next = compileWeekShoppingList(weekStart, entries, recipes, previous, (key) => skip.has(key));
     await mealPlanStore.saveShoppingList(next);
     setList(next);
+    setMealCount(entries.length);
+  }
+
+  async function persist(next: ShoppingList) {
+    setList(next.items.length === 0 ? undefined : next);
+    await mealPlanStore.saveShoppingList(next);
+    if (next.items.length === 0) setList(undefined);
   }
 
   async function toggle(id: string) {
     if (!list) return;
-    const next = toggleItem(list, id);
-    setList(next);
-    await mealPlanStore.saveShoppingList(next);
+    await persist(toggleItem(list, id));
+  }
+
+  async function addManual() {
+    const base = list ?? emptyShoppingList(weekStart);
+    const next = addManualItem(base, manualText);
+    if (next === base) return;
+    setManualText('');
+    await persist(next);
+  }
+
+  async function clearDone() {
+    if (!list) return;
+    await persist(clearChecked(list));
+  }
+
+  const listPane = (
+    <ShoppingListView
+      weekStart={weekStart}
+      mealCount={mealCount}
+      list={list}
+      manualText={manualText}
+      onManualText={setManualText}
+      showGroceryRun={showGrocery}
+      onPrevWeek={() => setWeekStart((w) => addDays(w, -7))}
+      onNextWeek={() => setWeekStart((w) => addDays(w, 7))}
+      onBuild={build}
+      onToggle={toggle}
+      onAddManual={addManual}
+      onClearChecked={clearDone}
+      onGroceryRun={() => router.push({ pathname: '/grocery-run', params: { weekStart } })}
+    />
+  );
+
+  const primary = <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.list}>{listPane}</MaxWidthContainer>;
+
+  if (!showPantry) {
+    // No pantry pane at any width when the pantry is hidden — no empty pane, no prompt.
+    return (
+      <View style={styles.fill} testID="shopping-layout-single">
+        {primary}
+      </View>
+    );
   }
 
   return (
-    <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.list}>
-      <View style={styles.container}>
-        <Pressable style={styles.button} onPress={compile}>
-          <Text style={styles.buttonText}>
-            {list ? 'Rebuild from this week’s plan' : 'Build from this week’s plan'}
-          </Text>
-        </Pressable>
-        <FlatList
-          data={list?.items ?? []}
-          keyExtractor={(i) => i.id}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <Text style={styles.empty}>
-              {list ? 'No ingredients — plan some recipes for this week first.' : 'No list yet for this week.'}
-            </Text>
-          }
-          renderItem={({ item }) => (
-            <Pressable style={styles.item} onPress={() => toggle(item.id)}>
-              <Text style={styles.check}>{item.checked ? '☑' : '☐'}</Text>
-              <Text style={[styles.itemText, item.checked && styles.checked]}>{item.text}</Text>
-            </Pressable>
-          )}
-        />
-      </View>
-    </MaxWidthContainer>
+    <TwoPaneLayout
+      testID="shopping-layout"
+      primary={primary}
+      secondary={<PantryOnHand />}
+      placeholder={<View />}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 12 },
-  button: { backgroundColor: colors.primary, padding: 12, borderRadius: 8, alignItems: 'center' },
-  buttonText: { color: colors.primaryText, fontWeight: '700' },
-  list: { paddingVertical: 12, gap: 6 },
-  empty: { color: colors.muted, textAlign: 'center', marginTop: 32 },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.card,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  check: { color: colors.primary, fontSize: 20 },
-  itemText: { color: colors.text, fontSize: 16, flex: 1 },
-  checked: { color: colors.muted, textDecorationLine: 'line-through' },
+  fill: { flex: 1 },
 });
