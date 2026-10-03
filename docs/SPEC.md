@@ -33,6 +33,7 @@
 >   the gate allows it AND the user hasn't hidden it.
 > - **Core recipe CRUD / view / search is never gated** (recipes-first). Locked features disappear quietly;
 >   deep links to them show a neutral message.
+> - `mcpAccess` is the future remote MCP server's own switch (checked server-side; no in-app UI).
 > - New optional feature = new `FeatureId` + registry/config row + gated entry points + a test.
 > - **Acceptance:** flipping features to premium with no entitlement hides/locks their entry points and the
 >   recipe workflow still works — `__tests__/entitlements.test.tsx`.

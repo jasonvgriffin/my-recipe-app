@@ -56,6 +56,11 @@ describe('feature gate', () => {
     }
   });
 
+  it('registers mcpAccess (future MCP server paywall switch), free in v1', () => {
+    expect(DEFAULT_FEATURE_CONFIG.mcpAccess).toEqual({ tier: 'free', enabled: true });
+    expect(canUse('mcpAccess')).toBe(true);
+  });
+
   it('premium without entitlement is locked; granting it unlocks; kill switch beats entitlement', () => {
     const gate = createFeatureGate({
       config: { pantry: { tier: 'premium', enabled: true } },
