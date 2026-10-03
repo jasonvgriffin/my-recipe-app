@@ -15,7 +15,7 @@ the pantry tracks item names and quantities only, and barcode scans use Open Foo
 **Release policy:** v1.0.0 = ALL SPEC items 1–27 complete (#17 removed). The first published APK is v1.0.0. Until then CI only
 uploads APK _artifacts_ on each push/PR (to keep builds green); a GitHub Release is created only by pushing a
 `v*` tag (or a manual `publish` workflow run) — Eve/Jason decide when.
-Household sync on Supabase (#25) **is** in v1 (project live, migrations applied); the remote MCP server is Phase 3.
+Household sync on Supabase (#25) **is** in v1 (project live, migrations applied); the remote MCP server (SPEC #28) is **also in v1.0** (approved by Jason, Oct 3 2026; see docs/MCP.md).
 
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
@@ -69,7 +69,7 @@ Suggested PR order (each small, with tests; update the status table in SPEC.md):
 - [ ] Optional: move storage to `expo-sqlite` if recipe count / querying needs grow
 - [ ] Production signing keystore in GitHub secrets (needed before v1.0.0 so updates install over each other)
 
-## Phase 3 — AI-friendly (after v1)
+## Phase 3 — AI-friendly (MCP server pulled into v1.0, Oct 3 2026)
 
 Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes, and see them in the app.
 
@@ -80,7 +80,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
 2. **Share sheet**
    - Share a recipe out as Markdown/text (expo-sharing / RN `Share`).
    - Receive shared text/URLs into the app as a draft recipe (Android intent filter via config plugin).
-3. **Remote MCP server** (separate repo or `server/` package; TypeScript) — "Hey AI, send this recipe to my
+3. **Remote MCP server** — ✅ built in v1.0: `src/mcp/` + `supabase/functions/mcp/` (docs/MCP.md) — "Hey AI, send this recipe to my
    recipe app". Its write tools call the same `importRecipe` (`kind: 'structured'`) from `src/import/` with
    server-side `ImportDeps`, so validation, the allulose-only rule and URL dedupe are identical to the app.
    - Tools: `add_recipe`, `update_recipe`, `search_recipes`, `get_recipe`, `list_tags`
@@ -96,7 +96,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
      (`src/entitlements`), checked server-side per request, so it can be made premium later.
    - **Per-user rate limits** on the MCP server (per account/token, with sensible burst + daily caps and
      429 responses) so nobody can hammer it for free.
-   - MCP server work itself is a later phase; don't start it without Jason's OK.
+   - Jason approved the MCP server for v1.0 on Oct 3 2026. Hosting: Supabase Edge Functions (free).
    - Hosting options: Cloudflare Workers + D1, Fly.io/Render + Postgres, Supabase (Postgres + Edge Functions).
 4. **Sync backend**
    - The app keeps working offline (local store is the source of truth on device).

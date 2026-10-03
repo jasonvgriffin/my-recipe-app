@@ -57,3 +57,4 @@ dist-apk/
 # supabase CLI local state
 supabase/.temp/
 supabase/.branches/
+.deploy/

@@ -259,3 +259,39 @@ export function toggleItem(list: ShoppingList, itemId: string, now: Date = new D
     updatedAt: now.toISOString(),
   };
 }
+
+/** Assemble a week's list view from its stored item rows (undefined when the week has none). */
+export function shoppingListFromItems(weekStart: IsoDate, allItems: readonly ShoppingListItem[]): ShoppingList | undefined {
+  const weekItems = allItems.filter((i) => i.weekStart === weekStart);
+  if (weekItems.length === 0) return undefined;
+  const times = weekItems.map((i) => i.updatedAt).sort();
+  return {
+    id: `week-${weekStart}`,
+    weekStart,
+    items: [...weekItems].sort((a, b) => a.createdAt.localeCompare(b.createdAt)), // stable: keeps compile order
+    createdAt: weekItems.map((i) => i.createdAt).sort()[0],
+    updatedAt: times[times.length - 1],
+  };
+}
+
+const sameItemContent = (a: ShoppingListItem, b: ShoppingListItem) =>
+  a.text === b.text &&
+  a.checked === b.checked &&
+  a.name === b.name &&
+  a.aisle === b.aisle &&
+  a.recipeIds.join() === b.recipeIds.join();
+
+/** Minimal writes to store `list`: changed/new items to save, and ids of that week's items to tombstone. */
+export function shoppingListChanges(
+  list: ShoppingList,
+  storedItems: readonly ShoppingListItem[],
+): { save: ShoppingListItem[]; remove: string[] } {
+  const existing = new Map(storedItems.filter((i) => i.weekStart === list.weekStart).map((i) => [i.id, i] as const));
+  const save: ShoppingListItem[] = [];
+  for (const item of list.items) {
+    const prev = existing.get(item.id);
+    existing.delete(item.id);
+    if (!prev || !sameItemContent(prev, item)) save.push({ ...item, weekStart: list.weekStart });
+  }
+  return { save, remove: [...existing.keys()] };
+}

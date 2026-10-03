@@ -1,0 +1,8 @@
+# Supabase CLI config (only what this repo deploys). Project ref is passed on the command line / in CI.
+project_id = "my-recipe-app"
+
+[functions.mcp]
+# The MCP server does its own OAuth (docs/MCP.md); discovery and token endpoints must be reachable without a
+# Supabase JWT, so the gateway's JWT check is off for this function.
+verify_jwt = false
+import_map = "./functions/mcp/deno.json"

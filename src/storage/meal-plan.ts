@@ -1,4 +1,5 @@
 import { uuid } from '@/lib/ids';
+import { shoppingListChanges, shoppingListFromItems } from '@/lib/shopping';
 import {
   isMealPlanEntry,
   isShoppingListItem,
@@ -14,13 +15,6 @@ import { createCollection, defaultStore, type KeyValueStore } from './kv';
 
 export const MEAL_PLAN_STORAGE_KEY = 'my-recipe-app/meal-plan/v1';
 export const SHOPPING_ITEMS_STORAGE_KEY = 'my-recipe-app/shopping-items/v1';
-
-const sameContent = (a: ShoppingListItem, b: ShoppingListItem) =>
-  a.text === b.text &&
-  a.checked === b.checked &&
-  a.name === b.name &&
-  a.aisle === b.aisle &&
-  a.recipeIds.join() === b.recipeIds.join();
 
 /** Meal plan (spec #11) + shopping list items (spec #12) — each entry/item is its own synced record (#25). */
 export function createMealPlanStore(store: KeyValueStore = defaultStore) {
@@ -77,28 +71,13 @@ export function createMealPlanStore(store: KeyValueStore = defaultStore) {
 
     /** Assemble the list view for a week from its item rows. */
     async getShoppingList(weekStart: IsoDate): Promise<ShoppingList | undefined> {
-      const weekItems = (await items.all()).filter((i) => i.weekStart === weekStart);
-      if (weekItems.length === 0) return undefined;
-      const times = weekItems.map((i) => i.updatedAt).sort();
-      return {
-        id: `week-${weekStart}`,
-        weekStart,
-        items: weekItems.sort((a, b) => a.createdAt.localeCompare(b.createdAt)), // stable: keeps compile order
-        createdAt: weekItems.map((i) => i.createdAt).sort()[0],
-        updatedAt: times[times.length - 1],
-      };
+      return shoppingListFromItems(weekStart, await items.all());
     },
     /** Write only changed items (minimal sync churn); tombstone items of that week no longer in the list. */
     async saveShoppingList(list: ShoppingList, now: Date = new Date()): Promise<void> {
-      const existing = new Map(
-        (await items.all()).filter((i) => i.weekStart === list.weekStart).map((i) => [i.id, i] as const),
-      );
-      for (const item of list.items) {
-        const prev = existing.get(item.id);
-        existing.delete(item.id);
-        if (!prev || !sameContent(prev, item)) await items.save({ ...item, weekStart: list.weekStart }, now);
-      }
-      for (const stale of existing.values()) await items.remove(stale.id, now);
+      const { save, remove } = shoppingListChanges(list, await items.all());
+      for (const item of save) await items.save(item, now);
+      for (const id of remove) await items.remove(id, now);
     },
     /** For the sync engine. */
     collections: { entries, items },

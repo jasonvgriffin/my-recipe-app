@@ -5,7 +5,7 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*', 'android/*', 'ios/*'],
+    ignores: ['dist/*', 'android/*', 'ios/*', 'supabase/functions/**'],
   },
   {
     // The import pipeline, cook-with-me session and sync engine must stay UI-free and storage-agnostic so a future MCP server / sync worker
@@ -17,6 +17,7 @@ module.exports = defineConfig([
       'src/pantry/**/*.ts',
       'src/receipts/**/*.ts',
       'src/entitlements/**/*.ts',
+      'src/mcp/**/*.ts',
     ],
     ignores: ['src/import/index.ts', 'src/import/app-deps.ts', 'src/cooking/index.ts', 'src/sync/index.ts', 'src/sync/supabase.ts', 'src/pantry/index.ts'],
     rules: {

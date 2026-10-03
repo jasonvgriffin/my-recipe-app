@@ -9,7 +9,7 @@ Every entry point must call it — never write imported recipes to storage direc
 | Paste / dictate text                                                | ✅ same screen                      | `{ kind: 'text', text, source: { channel: 'app-text' } }`                   |
 | Deep link `myrecipeapp://import?url=…` / `?text=…`                  | ✅ route shows a draft              | `parseImportDeepLink(link)`                                                 |
 | Android share sheet → app (SEND `text/plain`)                       | ✅ `expo-sharing` + `+native-intent` | `shareTextToImportInput(sharedText)`                                        |
-| **Future MCP server** ("Hey AI, send this recipe to my recipe app") | later phase                         | `{ kind: 'structured', recipe, source: { channel: 'mcp', label: 'Grok' } }` |
+| **MCP server** ("Hey AI, send this recipe to my recipe app") | `add_recipe` tool (src/mcp/tools.ts) | `{ kind: 'structured', recipe, source: { channel: 'mcp', label: 'Grok' } }` |
 | Future sync / JSON file import                                      | later phase                         | `{ kind: 'structured', …, source: { channel: 'sync' \| 'file' } }`          |
 
 The module has **no UI dependencies** (no React / react-native imports, enforced by ESLint) so it can be reused

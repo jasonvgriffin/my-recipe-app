@@ -36,7 +36,7 @@ Android first; iOS later from the **same codebase**.
 - [`docs/IMPORT_API.md`](docs/IMPORT_API.md) is the recipe import contract (see "Import pipeline" below).
 - [`docs/COOK_API.md`](docs/COOK_API.md) — cook-with-me session contract; [`docs/SYNC.md`](docs/SYNC.md) —
   household sync on Supabase.
-- [`docs/PLAN.md`](docs/PLAN.md) is the phased roadmap (the remote MCP server is a later phase).
+- [`docs/PLAN.md`](docs/PLAN.md) is the phased roadmap (the remote MCP server, SPEC #28, is in v1.0; see docs/MCP.md).
 
 ## Stack
 
@@ -151,7 +151,7 @@ to my recipe app"). So:
   Inject storage/network/clock through `ImportDeps`.
 - Changing the contract (`src/import/types.ts`) requires updating `docs/IMPORT_API.md` and `__tests__/import.test.ts`.
 - Don't rely on the global `URL` class in shared code (RN's is a partial polyfill); use `src/import/url.ts`.
-- MCP server work itself is a later phase — don't start it without Jason's OK.
+- The MCP server (`src/mcp/`, `supabase/functions/mcp/`, docs/MCP.md) is in v1.0. Its tools must reuse the app modules (importRecipe, recipe/shopping/meal-plan libs). Never add a parallel implementation.
 
 ## Signing & secrets
 
