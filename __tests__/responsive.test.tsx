@@ -85,6 +85,9 @@ describe.each([
     await render(<RecipeDetail id={first.id} />);
     expect(await screen.findAllByText(first.title)).toHaveLength(1);
     expect(screen.getByText('Ingredients')).toBeTruthy();
+    expect(screen.getByTestId('detail-rating')).toBeTruthy();
+    expect(screen.getByTestId('cooked-toggle')).toBeTruthy();
+    expect(screen.getByTestId('add-tag-input')).toBeTruthy();
   });
 
   it('Recipes tab: list-detail in expanded, navigation in compact', async () => {
@@ -92,6 +95,10 @@ describe.each([
     const RecipeRoute = require('@/app/recipe/[id]').default;
     renderRouter({ index: RecipesTab, 'recipe/[id]': RecipeRoute }, { initialUrl: '/' });
     await screen.findByText(SEED_RECIPES[1].title);
+    expect(screen.getByTestId('search-input')).toBeTruthy();
+    expect(screen.getByTestId('recipe-filters')).toBeTruthy();
+    expect(screen.getByTestId('filter-cooked')).toBeTruthy();
+    expect(screen.getByTestId('filter-recent')).toBeTruthy();
     const { recipeStore } = require('@/storage/recipes');
     const target = (await recipeStore.list()).find((r: { title: string }) => r.title === SEED_RECIPES[1].title);
     const item = screen.getByTestId(`recipe-item-${target.id}`);
@@ -112,6 +119,8 @@ describe.each([
     ['(tabs)/meal-plan', 'Nothing planned'],
     ['(tabs)/shopping', 'No list yet for this week.'],
     ['add', 'Save recipe'],
+    ['settings', 'Optional features'],
+    ['organize', 'Categories'],
   ])('%s renders (width-capped)', async (route, text) => {
     const Screen = require(`@/app/${route}`).default;
     renderRouter({ index: Screen }, { initialUrl: '/' });

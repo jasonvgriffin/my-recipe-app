@@ -1,13 +1,15 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { CategoryChips } from '@/components/category-chips';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH } from '@/components/layout';
+import { StarRating } from '@/components/star-rating';
 import { useFeature } from '@/hooks/use-feature';
 import { createRecipe, parseLines, parseTags } from '@/lib/recipe-utils';
 import { colors } from '@/lib/theme';
 import { recipeStore } from '@/storage/recipes';
-import { PREFERRED_SWEETENER, validateRecipeInput, type RecipeInput } from '@/types/recipe';
+import { PREFERRED_SWEETENER, validateRecipeInput, type Category, type RecipeInput } from '@/types/recipe';
 
 export default function AddRecipeScreen() {
   const [title, setTitle] = useState('');
@@ -15,10 +17,38 @@ export default function AddRecipeScreen() {
   const [steps, setSteps] = useState('');
   const [tags, setTags] = useState('low-carb, diabetic-friendly');
   const tagsAvailable = useFeature('tags').available;
+  const categoriesOn = useFeature('categories').available;
+  const ratingsOn = useFeature('ratings').available;
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState('');
+  const [rating, setRatingValue] = useState<number | undefined>();
   const [servings, setServings] = useState('4');
   const [carbs, setCarbs] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!categoriesOn) return;
+      let active = true;
+      recipeStore.listCategories().then((list) => {
+        if (active) setCategories(list);
+      });
+      return () => {
+        active = false;
+      };
+    }, [categoriesOn]),
+  );
+
+  async function createCategory() {
+    const name = newCategory.trim();
+    if (!name) return;
+    const created = await recipeStore.addCategory(name);
+    setCategories(await recipeStore.listCategories());
+    setCategoryIds((ids) => (ids.includes(created.id) ? ids : [...ids, created.id]));
+    setNewCategory('');
+  }
 
   async function onSave() {
     const input: RecipeInput = {
@@ -26,6 +56,8 @@ export default function AddRecipeScreen() {
       ingredients: parseLines(ingredients).map((text) => ({ text })),
       steps: parseLines(steps).map((text) => ({ text })),
       tags: tagsAvailable ? parseTags(tags) : [],
+      categoryIds: categoriesOn ? categoryIds : undefined,
+      rating: ratingsOn ? rating : undefined,
       servings: Number(servings),
       nutrition: { netCarbsG: carbs.trim() === '' ? undefined : Number(carbs), source: 'manual' },
     };
@@ -75,7 +107,43 @@ export default function AddRecipeScreen() {
             placeholder={'Preheat oven to 400°F\nRoast 25 minutes'}
           />
         </Field>
-        {/* TODO(spec #1,#3,#4,#6,#17,#22): link import, category picker, photo, notes, full nutrition, rating. */}
+        {/* TODO(spec #1,#4,#6,#17): link import, photo, notes, full nutrition. */}
+        {categoriesOn ? (
+          <Field label="Categories">
+            {categories.length > 0 ? (
+              <CategoryChips
+                categories={categories}
+                selectedIds={categoryIds}
+                testIDPrefix="add-category"
+                onToggle={(id) =>
+                  setCategoryIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
+                }
+              />
+            ) : null}
+            <View style={styles.categoryAdd}>
+              <TextInput
+                placeholderTextColor={colors.placeholder}
+                style={[styles.input, styles.flex]}
+                value={newCategory}
+                onChangeText={setNewCategory}
+                placeholder="New category"
+                testID="add-form-category-input"
+              />
+              <Pressable
+                accessibilityRole="button"
+                onPress={createCategory}
+                style={styles.smallButton}
+                testID="add-form-category-button">
+                <Text style={styles.smallButtonText}>Add</Text>
+              </Pressable>
+            </View>
+          </Field>
+        ) : null}
+        {ratingsOn ? (
+          <Field label="Rating">
+            <StarRating value={rating} onChange={setRatingValue} testID="add-rating" />
+          </Field>
+        ) : null}
         {tagsAvailable ? (
           <Field label="Tags (comma separated)">
             <TextInput
@@ -151,6 +219,16 @@ const styles = StyleSheet.create({
   multiline: { minHeight: 110, textAlignVertical: 'top' },
   row: { flexDirection: 'row', gap: 12 },
   flex: { flex: 1 },
+  categoryAdd: { flexDirection: 'row', gap: 8, marginTop: 8, alignItems: 'center' },
+  smallButton: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallButtonText: { color: colors.primaryText, fontWeight: '700' },
   hint: { color: colors.muted, marginBottom: 8 },
   error: { color: colors.danger, marginBottom: 4 },
   button: {
