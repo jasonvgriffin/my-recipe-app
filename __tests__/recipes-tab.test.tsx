@@ -138,6 +138,19 @@ describe('Recipes tab categories (v1.0.5)', () => {
     fireEvent.changeText(screen.getByTestId('new-category-input'), 'Snacks');
     // Typing a category name must keep Add recipe on screen (v1.0.9).
     expect(screen.getByTestId('list-add-recipe-button')).toHaveTextContent('Add recipe');
+    // The name field shrinks so Add and Cancel keep their natural width at 360dp (v1.0.9).
+    const { StyleSheet } = require('react-native');
+    const field = StyleSheet.flatten(screen.getByTestId('new-category-input').props.style);
+    expect(field.flexGrow).toBe(1);
+    expect(field.flexShrink).toBe(1);
+    expect(field.minWidth).toBe(0);
+    const addBtn = StyleSheet.flatten(screen.getByTestId('save-new-category').props.style);
+    const cancelBtn = StyleSheet.flatten(screen.getByTestId('cancel-new-category').props.style);
+    expect(addBtn.flexGrow).toBe(0);
+    expect(addBtn.flexShrink).toBe(0);
+    expect(cancelBtn.flexGrow).toBe(0);
+    expect(cancelBtn.flexShrink).toBe(0);
+    expect(screen.getByTestId('cancel-new-category')).toHaveTextContent('Cancel');
     await act(async () => fireEvent.press(screen.getByTestId('save-new-category')));
     expect(await screen.findByText('Snacks')).toBeTruthy();
     expect((await recipeStore.listCategories()).map((c) => c.name)).toEqual(['Brunch', 'Lunch', 'Dinner', 'Snacks']);

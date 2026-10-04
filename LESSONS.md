@@ -34,6 +34,8 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - **Classic artwork has to fill the safe circle.** The yellow bowl was drawn smaller than the other launcher icons. Scale the adaptive foreground and the legacy icon up with the others, and check a side-by-side render.
 - **Hooks stay above any early return.** `RecipeList` called `useRef` after `if (!recipes) return`. The hook count changed once recipes loaded and every screen that mounts the list crashed with “Rendered more hooks than during the previous render.”
 - **Check contrast on the real page background, not only pure white.** The light background is `#F5F7F5`. A shade that clears 3.11:1 on `#FFFFFF` can fall under 3:1 there. Amber and Lime were darkened a step (`#C1810A`, `#58A018`) so they still clear 3:1 on that surface.
+- **A flex row of a text field plus buttons clips at 360dp unless the field can shrink.** Set `flexGrow: 1`, `flexShrink: 1`, and `minWidth: 0` on the input, and leave Add and Cancel at their natural width (`flexShrink: 0`). `minWidth: auto` on a web input keeps the placeholder width and pushes Cancel off the card.
+- **The raised + clearance is the measured rise, plus a margin.** `marginTop: -29` is not the whole overlap. On the rendered bar the circle top sits 36dp above the bar, and 32dp of padding left Add recipe under it. `TAB_PLUS_CLEARANCE` is that rise plus 16dp, on every tab's scroll padding. Scrolling a focused field to the center parks the next control on the +.
 
 ## Process
 - **Cloud agents: put Node on `/usr/local/bin`.** (2026-10-04) Login shells skip `~/.bashrc`, so nvm is invisible after install. Expo web binds IPv6 `localhost` (`::1`); `127.0.0.1:8081` does not connect. Open `http://localhost:8081`.

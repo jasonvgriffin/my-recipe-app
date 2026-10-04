@@ -33,7 +33,7 @@ Full rule: top of docs/SPEC.md.
   black on white). Inputs use `colors.input` + `placeholderTextColor={colors.placeholder}`.
 - Edge-to-edge: stack screens sit in `SystemNavFrame`, which pads the viewport by the safe-area bottom inset
   (so `useBottomInset()` is 0 there and padding is not doubled). Bottom-tab scenes already end above the in-flow
-  tab bar; `useBottomInset()` there is `TAB_PLUS_CLEARANCE` (32dp) so content clears the raised +. The nav rail
+  tab bar; `useBottomInset()` there is `TAB_PLUS_CLEARANCE` (the + rises 36dp above the bar, plus 16dp margin) so the last control can scroll clear of the raised +. The nav rail
   (expanded) gets the safe-area inset.
 
 ## 2. Foldables & large screens (spec #23)

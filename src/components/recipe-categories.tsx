@@ -247,7 +247,7 @@ export function RecipeCategories({
                 setAdding(null);
                 setError(null);
               }}
-              style={styles.iconBtn}
+              style={styles.cancelBtn}
               testID="cancel-new-category">
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
@@ -308,9 +308,11 @@ const useStyles = makeStyles((colors) => ({
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
   actionStack: { flexDirection: 'column', alignItems: 'stretch' },
   actionSlot: { flex: 1, alignSelf: 'stretch' },
-  addForm: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch' },
+  addForm: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch', minWidth: 0 },
   input: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
     minHeight: 44,
     borderWidth: 1,
     borderColor: colors.border,
@@ -321,10 +323,20 @@ const useStyles = makeStyles((colors) => ({
     fontSize: 16,
   },
   smallBtn: {
+    flexGrow: 0,
+    flexShrink: 0,
     minHeight: 44,
     paddingHorizontal: 14,
     borderRadius: 8,
     backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtn: {
+    flexGrow: 0,
+    flexShrink: 0,
+    minHeight: 44,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },

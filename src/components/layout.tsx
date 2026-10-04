@@ -30,17 +30,24 @@ export const BottomBarCoversInsetProvider = BottomBarCoversInsetContext.Provider
 const FrameClearsInsetContext = createContext(false);
 
 /**
- * Extra padding inside bottom-tab scenes. The tab bar is in normal flow (not absolute), so the scene
- * already ends above it. This only clears the raised center + button (~29dp overlap).
+ * How far the raised center + extends above the tab bar. The circle's `marginTop` is −29, and on the
+ * rendered bar the circle top sits 36dp above the bar top (the slot is shorter than the circle).
  */
-export const TAB_PLUS_CLEARANCE = 32;
+export const TAB_PLUS_RAISE = 36;
+/** Extra gap so the last control is not flush against the raised +. */
+export const TAB_PLUS_MARGIN = 16;
+/**
+ * Extra padding inside bottom-tab scenes. The tab bar is in normal flow (not absolute), so the scene
+ * already ends above it. This clears the raised center + (the raise, plus a margin).
+ */
+export const TAB_PLUS_CLEARANCE = TAB_PLUS_RAISE + TAB_PLUS_MARGIN;
 
 /**
  * Extra bottom space for scroll content and floating buttons (v1.0.3, extended in v1.0.8).
  *
- * - Inside a bottom tab bar: `TAB_PLUS_CLEARANCE` only. Do not add the bar height or the system inset —
- *   the bar is already in flow, and adding them lifts absolute controls (the recipe selection bar) far
- *   above the bar.
+ * - Inside a bottom tab bar: `TAB_PLUS_CLEARANCE` only (the raise above the bar, plus a margin). Do not
+ *   add the bar height or the system inset — the bar is already in flow, and adding them lifts absolute
+ *   controls (the recipe selection bar) far above the bar.
  * - Inside `SystemNavFrame`: 0. The frame already ends the viewport above the system navigation bar, so
  *   scroll padding must not add that inset again.
  * - Otherwise: the safe-area bottom inset (stack screens rendered without the frame, and the side rail).
@@ -79,7 +86,7 @@ export function SystemNavFrame({ children }: { children: ReactNode }) {
  * (60→80dp bar, 22→29dp icons, 10→13sp labels, 44→58dp +). v1.0.9: icons are 24dp so the labels have room.
  * The bar adds the safe-area bottom inset so it stays clear of the gesture pill / 3-button nav bar. The bar is
  * in normal flow; tab scenes add `TAB_PLUS_CLEARANCE` (`useBottomInset`) so content and floating buttons clear
- * the raised +, not the whole bar.
+ * the raised + (how far it rises above the bar, plus a margin), not the whole bar.
  */
 export const TAB_BAR = { height: 80, icon: 24, label: 13, plus: 58, plusIcon: 31 } as const;
 
@@ -218,6 +225,33 @@ export function focusedTextInput(): Measurable | null {
   return null;
 }
 
+type WebNode = Measurable & {
+  parentElement?: WebNode | null;
+  scrollTop?: number;
+  scrollHeight?: number;
+  clientHeight?: number;
+  scrollIntoView?: (opts?: { block?: 'nearest' }) => void;
+  getBoundingClientRect?: () => { top: number; bottom: number; height: number };
+};
+
+function scrollableParent(node: WebNode): WebNode | null {
+  let current = node.parentElement ?? null;
+  while (current) {
+    const style = typeof getComputedStyle === 'function' ? getComputedStyle(current as unknown as Element) : null;
+    const overflow = style?.overflowY ?? '';
+    const scrollHeight = current.scrollHeight ?? 0;
+    const clientHeight = current.clientHeight ?? 0;
+    if ((overflow === 'auto' || overflow === 'scroll') && scrollHeight > clientHeight + 1) return current;
+    current = current.parentElement ?? null;
+  }
+  return null;
+}
+
+/**
+ * Keep the focused field on screen. On web, if the rest of the scroll content fits under the field, scroll
+ * to the end so the bottom padding (`TAB_PLUS_CLEARANCE`) puts the last control above the raised +.
+ * Centering the field would park that control on the +.
+ */
 function scrollFocusedIntoView(scroll: ScrollView | null) {
   const input = focusedTextInput();
   if (!input) return;
@@ -227,14 +261,42 @@ function scrollFocusedIntoView(scroll: ScrollView | null) {
     if (node) {
       input.measureLayout(
         node,
-        (_x, y) => scroll.scrollTo({ y: Math.max(0, y - 24), animated: true }),
+        (_x, y) => scroll.scrollTo({ y: Math.max(0, y - TAB_PLUS_CLEARANCE), animated: true }),
         () => undefined,
       );
       return;
     }
   }
-  const webEl = input as Measurable & { scrollIntoView?: (opts?: { block?: 'center' }) => void };
-  if (typeof webEl.scrollIntoView === 'function') webEl.scrollIntoView({ block: 'center' });
+  const webEl = input as WebNode;
+  const scroller = scrollableParent(webEl);
+  if (typeof webEl.scrollIntoView === 'function') webEl.scrollIntoView({ block: 'nearest' });
+  if (!scroller || typeof scroller.scrollTop !== 'number' || typeof scroller.getBoundingClientRect !== 'function') return;
+  const elRect = webEl.getBoundingClientRect?.();
+  const scRect = scroller.getBoundingClientRect?.();
+  if (!elRect || !scRect) return;
+  const below = (scroller.scrollHeight ?? 0) - scroller.scrollTop - (elRect.bottom - scRect.top);
+  if (below <= scRect.height) {
+    scroller.scrollTop = scroller.scrollHeight ?? scroller.scrollTop;
+    return;
+  }
+  const overlap = elRect.bottom - (scRect.bottom - TAB_PLUS_CLEARANCE);
+  if (overlap > 0) scroller.scrollTop += overlap;
+}
+
+function subscribeWebFocus(onScroll: () => void): () => void {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return () => undefined;
+  const run = () => requestAnimationFrame(onScroll);
+  document.addEventListener('focusin', run);
+  if (typeof window !== 'undefined') window.addEventListener('resize', run);
+  const viewport = (typeof window !== 'undefined'
+    ? (window as unknown as { visualViewport?: EventTarget }).visualViewport
+    : undefined);
+  viewport?.addEventListener('resize', run);
+  return () => {
+    document.removeEventListener('focusin', run);
+    if (typeof window !== 'undefined') window.removeEventListener('resize', run);
+    viewport?.removeEventListener('resize', run);
+  };
 }
 
 function withKeyboardPadding(style: ScrollViewProps['contentContainerStyle'], keyboard: number) {
@@ -263,12 +325,7 @@ export const KeyboardAwareScrollView = forwardRef<ScrollView, ScrollViewProps>(f
     });
     return () => sub.remove();
   }, []);
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    const onFocus = () => requestAnimationFrame(() => scrollFocusedIntoView(inner.current));
-    document.addEventListener('focusin', onFocus);
-    return () => document.removeEventListener('focusin', onFocus);
-  }, []);
+  useEffect(() => subscribeWebFocus(() => scrollFocusedIntoView(inner.current)), []);
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
@@ -290,12 +347,7 @@ export function KeyboardAwareFlatList<T>({ contentContainerStyle, ...rest }: Fla
     });
     return () => sub.remove();
   }, []);
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    const onFocus = () => requestAnimationFrame(() => scrollFocusedIntoView(inner.current as unknown as ScrollView));
-    document.addEventListener('focusin', onFocus);
-    return () => document.removeEventListener('focusin', onFocus);
-  }, []);
+  useEffect(() => subscribeWebFocus(() => scrollFocusedIntoView(inner.current as unknown as ScrollView)), []);
   return (
     <FlatList
       keyboardShouldPersistTaps="handled"
