@@ -50,7 +50,7 @@ export interface McpServerDeps {
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type, Accept, Mcp-Protocol-Version, Mcp-Session-Id, Last-Event-ID',
   'Access-Control-Expose-Headers': 'WWW-Authenticate, Retry-After, Mcp-Session-Id',
 };
@@ -217,6 +217,13 @@ export function createMcpHandler(deps: McpServerDeps) {
       if (req.method === 'POST' && path === '/consent/verify') return await consentVerify(req);
       if (path === '' || path === '/' || path === '/mcp') {
         if (req.method === 'POST') return await mcp(req);
+        // Every unauthenticated request gets the 401 challenge, not just POST: rmcp-based clients (Grok's connector,
+        // Oct 3 2026 logs) probe discovery with a bare GET on the server URL and only read `resource_metadata` from a
+        // 401. A 405 there sends them to the root RFC 9728 URL, which the supabase.co gateway rejects (no apikey).
+        const bearer = (req.headers.get('authorization') ?? '').match(/^Bearer\s+(.+)$/i)?.[1];
+        if (!bearer) return unauthorized('Sign in required.');
+        if (!(await deps.auth.getUser(bearer))) return unauthorized('Token is invalid or expired.');
+        // Authenticated GET (SSE stream) / DELETE (session end): stateless JSON-only server, so 405 per the spec.
         return json({ error: 'method_not_allowed', error_description: 'Use POST (Streamable HTTP, JSON responses).' }, 405, { Allow: 'POST' });
       }
       return json({ error: 'not_found' }, 404);

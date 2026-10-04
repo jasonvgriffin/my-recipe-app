@@ -118,7 +118,15 @@ describe('MCP server: OAuth discovery and auth', () => {
     expect(res.status).toBe(401);
     expect(res.headers.get('www-authenticate')).toContain(`resource_metadata="${RESOURCE}/.well-known/oauth-protected-resource"`);
     expect(res.headers.get('access-control-expose-headers')).toContain('WWW-Authenticate');
-    expect((await s.call('', { method: 'GET' })).status).toBe(405);
+    // Discovery probe with a bare GET (rmcp / Grok): 401 + resource_metadata, never 405.
+    for (const method of ['GET', 'DELETE']) {
+      const probe = await s.call('', { method, headers: { 'mcp-protocol-version': '2024-11-05' } });
+      expect(probe.status).toBe(401);
+      expect(probe.headers.get('www-authenticate')).toContain(`resource_metadata="${RESOURCE}/.well-known/oauth-protected-resource"`);
+    }
+    expect((await s.call('', { method: 'GET', headers: { authorization: 'Bearer nope' } })).status).toBe(401);
+    // Authenticated GET (SSE stream) is not offered: stateless JSON server.
+    expect((await s.call('', { method: 'GET', headers: { authorization: `Bearer ${OAUTH_TOKEN}` } })).status).toBe(405);
     expect((await s.call('/consent/send', { method: 'OPTIONS' })).headers.get('access-control-allow-origin')).toBe('*');
   });
 

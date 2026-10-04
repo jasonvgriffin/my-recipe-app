@@ -87,6 +87,11 @@ control stays on the phone: the cook session lives on the device, and assistants
     household check, then approves the Supabase authorization and ends the consent session)
   - `POST <server>`: MCP Streamable HTTP, JSON responses, stateless. Unauthenticated calls get 401 with
     `WWW-Authenticate: Bearer resource_metadata="…"`
+  - `GET` / `DELETE <server>` without a valid token: the same 401 challenge (405 only once authenticated; no SSE
+    stream). Grok's connector (rmcp) probes discovery with a bare GET on the server URL and reads
+    `resource_metadata` only from a 401. The old 405 sent it to the root RFC 9728 URL
+    `https://<ref>.supabase.co/.well-known/oauth-protected-resource/functions/v1/mcp`, which the Supabase
+    gateway rejects (401, no apikey), so Grok said "Connection failed" (Oct 3 2026).
 - Hosting: Supabase Edge Functions on the free plan (500k invocations/month). Nothing here costs money.
 
 ## Deploying
