@@ -413,7 +413,7 @@ const useStyles = makeStyles((colors) => ({
     minHeight: 44,
   },
   row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  flex: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
   wrap: { flexWrap: 'wrap' },
   notes: { minHeight: 64, textAlignVertical: 'top' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
