@@ -110,11 +110,13 @@ export async function importRecipeWith(
   }
 
   // 5. Normalize (resolve category names → ids) and save.
+  // v1.0.5: imports default to Uncategorized. A web page's own `recipeCategory` ("Main Course", …) is NOT turned
+  // into a category; only a structured import (AI assistant / MCP) that names one sets it — the first name only,
+  // since a recipe has one category.
   const categoryIds: string[] = [];
-  if (!options.dryRun) {
-    for (const name of draft.categories) {
-      if (name.trim()) categoryIds.push((await deps.store.addCategory(name, deps.now())).id);
-    }
+  const categoryName = input.kind === 'structured' ? draft.categories.find((name) => name.trim()) : undefined;
+  if (!options.dryRun && categoryName) {
+    categoryIds.push((await deps.store.addCategory(categoryName, deps.now())).id);
   }
   const { input: recipeInput, warnings } = draftToRecipeInput(draft, effectiveSource, categoryIds);
   const now = deps.now();
@@ -130,7 +132,8 @@ export async function importRecipeWith(
       cookHistory: existing.cookHistory ?? [],
       notes: recipe.notes ?? existing.notes,
       photoUri: recipe.photoUri ?? existing.photoUri,
-      categoryIds: [...new Set([...existing.categoryIds, ...recipe.categoryIds])],
+      // Keep the category the user chose; only an uncategorized recipe takes the import's.
+      categoryIds: existing.categoryIds.length ? existing.categoryIds : recipe.categoryIds,
     };
     status = 'updated';
   }

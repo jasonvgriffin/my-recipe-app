@@ -5,6 +5,9 @@ import { formatShortDate } from '@/lib/dates';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import type { IsoDate, ShoppingList } from '@/types/meal-plan';
 
+/** Placeholder of the add-item box (v1.0.5, Jason's exact wording). */
+export const SHOPPING_ADD_PLACEHOLDER = 'Type here & press Add';
+
 export interface ShoppingListViewProps {
   weekStart: IsoDate;
   mealCount: number;
@@ -20,8 +23,8 @@ export interface ShoppingListViewProps {
   onClearChecked: () => void;
   onGroceryRun: () => void;
   /**
-   * Barcode scan entry point (shown when barcodeScan is visible): a full-width outlined “Scan Item” button
-   * with “or” below it, above the manual add row. The scanner adds the product name.
+   * Barcode scan entry point (shown when barcodeScan is visible): a full-width outlined “Scan Item” button, the
+   * first one under “or” (below the type-and-Add row, v1.0.5). The scanner adds the product name.
    */
   onScan?: () => void;
   /** Product name just added by a scan, confirmed at the top. */
@@ -78,49 +81,57 @@ export function ShoppingListView({
           <Text style={styles.navText}>›</Text>
         </Pressable>
       </View>
-      <Pressable accessibilityRole="button" onPress={onBuild} style={styles.primary} testID="build-list">
-        <Text style={styles.primaryText}>{list ? 'Rebuild from this week’s plan' : 'Build from this week’s plan'}</Text>
-      </Pressable>
-      {showGroceryRun ? (
-        <Pressable accessibilityRole="button" onPress={onGroceryRun} style={styles.secondary} testID="grocery-run-button">
-          <Text style={styles.secondaryText}>Shopping List</Text>
-        </Pressable>
-      ) : null}
-      {added ? (
-        <Text style={styles.added} testID="shopping-added-banner">
-          Added {added}
-        </Text>
-      ) : null}
-      {onScan ? (
-        <>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Scan Item"
-            accessibilityHint="Scan a barcode to add the product to this list"
-            onPress={onScan}
-            style={styles.secondary}
-            testID="shopping-scan-button">
-            <Text style={styles.secondaryText}>Scan Item</Text>
-          </Pressable>
-          <Text style={styles.or} testID="shopping-scan-or">
-            or
-          </Text>
-        </>
-      ) : null}
-      <View style={[styles.manualRow, onScan ? styles.manualRowAfterOr : null]}>
+      {/* v1.0.5 (Jason): type-and-Add first, then “or”, then Scan Item / Build from Meal Plan / View Shopping List. */}
+      <View style={styles.manualRow}>
         <TextInput
           value={manualText}
           onChangeText={onManualText}
-          placeholder="Add an item (e.g. 2 tbsp allulose)"
+          placeholder={SHOPPING_ADD_PLACEHOLDER}
           placeholderTextColor={colors.placeholder}
           style={styles.input}
+          accessibilityLabel="Add an item to the shopping list"
           testID="manual-input"
           onSubmitEditing={onAddManual}
+          returnKeyType="done"
         />
         <Pressable accessibilityRole="button" onPress={onAddManual} style={styles.addBtn} testID="add-manual">
           <Text style={styles.addBtnText}>Add</Text>
         </Pressable>
       </View>
+      {added ? (
+        <Text style={styles.added} testID="shopping-added-banner">
+          Added {added}
+        </Text>
+      ) : null}
+      <Text style={styles.or} testID="shopping-scan-or">
+        or
+      </Text>
+      {onScan ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Scan Item"
+          accessibilityHint="Scan a barcode to add the product to this list"
+          onPress={onScan}
+          style={styles.secondary}
+          testID="shopping-scan-button">
+          <Text style={styles.secondaryText}>Scan Item</Text>
+        </Pressable>
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint={
+          list ? 'Rebuilds this week’s list from your meal plan, keeping items you added' : 'Builds this week’s list from your meal plan'
+        }
+        onPress={onBuild}
+        style={styles.secondary}
+        testID="build-list">
+        <Text style={styles.secondaryText}>Build from Meal Plan</Text>
+      </Pressable>
+      {showGroceryRun ? (
+        <Pressable accessibilityRole="button" onPress={onGroceryRun} style={styles.primary} testID="grocery-run-button">
+          <Text style={styles.primaryText}>View Shopping List</Text>
+        </Pressable>
+      ) : null}
       {checked ? (
         <Pressable accessibilityRole="button" onPress={onClearChecked} style={styles.clear} testID="clear-checked">
           <Text style={styles.clearText}>Clear checked</Text>
@@ -153,7 +164,7 @@ export function ShoppingListView({
 }
 
 const useStyles = makeStyles((colors) => ({
-  added: { color: colors.primary, fontWeight: '700', fontSize: 16, marginHorizontal: 12, marginTop: 8 },
+  added: { color: colors.primary, fontWeight: '700', fontSize: 16, marginTop: 8 },
   fill: { flex: 1, padding: 12 },
   nav: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   navBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
@@ -163,6 +174,7 @@ const useStyles = makeStyles((colors) => ({
   meta: { color: colors.muted, fontSize: 13 },
   primary: {
     minHeight: 44,
+    marginTop: 8,
     backgroundColor: colors.primary,
     borderRadius: 8,
     alignItems: 'center',
@@ -181,8 +193,7 @@ const useStyles = makeStyles((colors) => ({
   },
   secondaryText: { color: colors.primary, fontWeight: '700' },
   or: { color: colors.muted, textAlign: 'center', marginTop: 8 },
-  manualRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  manualRowAfterOr: { marginTop: 4 },
+  manualRow: { flexDirection: 'row', gap: 8 },
   input: {
     flex: 1,
     minHeight: 44,

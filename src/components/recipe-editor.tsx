@@ -1,7 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
+import { CategoryChips } from '@/components/category-chips';
 import { useBottomInset } from '@/components/layout';
+import { TagEditor } from '@/components/tag-editor';
 import { useFeature } from '@/hooks/use-feature';
 import { deleteLocalPhoto, PhotoPermissionError, pickRecipePhoto } from '@/lib/photos';
 import {
@@ -15,7 +17,8 @@ import {
 } from '@/lib/recipe-edit';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
-import { PREFERRED_SWEETENER, type Recipe } from '@/types/recipe';
+import { parseTags } from '@/lib/recipe-utils';
+import { PREFERRED_SWEETENER, type Category, type Recipe } from '@/types/recipe';
 
 /** Full recipe editor: title, notes, ingredients (add/delete/reorder/substitute), steps with timers (spec #2, #4, #6, #7). */
 export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (recipe: Recipe) => void }) {
@@ -23,6 +26,20 @@ export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (re
   const styles = useStyles();
   const colors = useColors();
   const photos = useFeature('photos').available;
+  const categoriesOn = useFeature('categories').available;
+  const tagsOn = useFeature('tags').available;
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    if (!categoriesOn) return;
+    let active = true;
+    void recipeStore.listCategories().then((list) => {
+      if (active) setCategories(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, [categoriesOn]);
   const [state, setState] = useState<RecipeEditorState>(() => recipeToEditorState(recipe));
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -101,6 +118,29 @@ export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (re
             <SmallButton label="Choose photo" onPress={() => choosePhoto('library')} testID="choose-photo-button" />
             {state.photoUri ? <SmallButton label="Remove" onPress={removePhoto} testID="remove-photo-button" /> : null}
           </View>
+        </Field>
+      ) : null}
+      {categoriesOn ? (
+        <Field label="Category">
+          <CategoryChips
+            single
+            categories={categories}
+            selectedIds={state.categoryIds ?? recipe.categoryIds}
+            onToggle={(id) => patch({ categoryIds: id ? [id] : [] })}
+            testIDPrefix="edit-category"
+          />
+        </Field>
+      ) : null}
+      {tagsOn ? (
+        <Field label="Tags">
+          <TagEditor
+            tags={state.tags ?? recipe.tags}
+            onAdd={(text) => {
+              const current = state.tags ?? recipe.tags;
+              patch({ tags: [...new Set([...current, ...parseTags(text)])] });
+            }}
+            onRemove={(tag) => patch({ tags: (state.tags ?? recipe.tags).filter((t) => t !== tag) })}
+          />
         </Field>
       ) : null}
       <Text style={styles.section}>Ingredients</Text>

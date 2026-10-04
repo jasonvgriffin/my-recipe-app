@@ -10,7 +10,7 @@ import { ACCENTS, THEME_MODES, buildColors, contrastRatio, resolveScheme, type C
 import { createSettingsStore, settingsStore, SETTINGS_STORAGE_KEY } from '@/storage/settings';
 import { DEFAULT_SETTINGS } from '@/types/recipe';
 
-jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.4' } } }));
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.5' } } }));
 
 const routes = () => ({
   _layout: require('@/app/_layout').default,

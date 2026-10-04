@@ -105,13 +105,24 @@ describe('barcode camera (spec #27)', () => {
     ]);
   });
 
-  it('shopping list: full-width Scan Item button, then “or”, then the Add an item row', async () => {
+  it('shopping list (v1.0.5): the Add an item row first, then “or”, then Scan Item, Build from Meal Plan, View Shopping List', async () => {
     renderScan('/shopping');
     const scan = await screen.findByTestId('shopping-scan-button');
     expect(scan).toHaveTextContent('Scan Item');
     expect(screen.getByTestId('shopping-scan-or')).toHaveTextContent('or');
+    expect(screen.getByTestId('manual-input').props.placeholder).toBe('Type here & press Add');
+    expect(screen.getByTestId('build-list')).toHaveTextContent('Build from Meal Plan');
+    expect(screen.getByTestId('grocery-run-button')).toHaveTextContent('View Shopping List');
     const tree = JSON.stringify(screen.toJSON());
-    const order = ['shopping-scan-button', 'shopping-scan-or', 'manual-input', 'add-manual'].map((id) =>
+    const order = [
+      'week-label',
+      'manual-input',
+      'add-manual',
+      'shopping-scan-or',
+      'shopping-scan-button',
+      'build-list',
+      'grocery-run-button',
+    ].map((id) =>
       tree.indexOf(`"testID":"${id}"`),
     );
     expect(order.every((i) => i >= 0)).toBe(true);

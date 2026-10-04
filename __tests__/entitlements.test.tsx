@@ -287,7 +287,8 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     renderRouter(routes(), { initialUrl: '/shopping' });
     expect(await screen.findByTestId('build-list')).toBeTruthy();
     expect(screen.queryByTestId('shopping-scan-button')).toBeNull();
-    expect(screen.queryByTestId('shopping-scan-or')).toBeNull(); // no dangling “or”
+    // v1.0.5: “or” sits between the Add row and the buttons; Build from Meal Plan still follows it.
+    expect(screen.getByTestId('shopping-scan-or')).toBeTruthy();
     expect(screen.getByTestId('manual-input')).toBeTruthy();
   });
 

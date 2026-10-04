@@ -21,6 +21,9 @@ export interface RecipeEditorState {
   servings: string;
   sourceUrl: string;
   photoUri?: string;
+  /** v1.0.5: the recipe's category ([] = Uncategorized) and tags are edited here too. Missing = keep original. */
+  categoryIds?: string[];
+  tags?: string[];
   ingredients: IngredientDraft[];
   steps: StepDraft[];
 }
@@ -39,6 +42,8 @@ export function recipeToEditorState(recipe: Recipe): RecipeEditorState {
     servings: String(recipe.servings),
     sourceUrl: recipe.sourceUrl ?? '',
     photoUri: recipe.photoUri,
+    categoryIds: [...recipe.categoryIds],
+    tags: [...recipe.tags],
     ingredients: recipe.ingredients.length
       ? recipe.ingredients.map((i) => ({ text: i.text, substitutionNote: i.substitutionNote ?? '' }))
       : [{ text: '', substitutionNote: '' }],
@@ -95,9 +100,9 @@ export function editorStateToInput(
     notes: state.notes.trim() || undefined,
     ingredients,
     steps,
-    tags: original.tags,
+    tags: state.tags ?? original.tags,
     servings: Number(state.servings),
-    categoryIds: original.categoryIds,
+    categoryIds: state.categoryIds ?? original.categoryIds,
     photoUri: state.photoUri,
     sourceUrl: sourceUrl || undefined,
     rating: original.rating,

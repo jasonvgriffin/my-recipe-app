@@ -1,5 +1,6 @@
 import {
   RECIPE_SCHEMA_VERSION,
+  type Category,
   type Ingredient,
   type Recipe,
   type RecipeInput,
@@ -168,11 +169,50 @@ export function removeRecipeTag(recipe: Recipe, tag: string, now: Date = new Dat
   return { ...recipe, tags: recipe.tags.filter((x) => x !== t), updatedAt: now.toISOString() };
 }
 
-/** Assign or unassign a single category (spec #3). */
-export function toggleRecipeCategory(recipe: Recipe, categoryId: string, now: Date = new Date()): Recipe {
-  const has = recipe.categoryIds.includes(categoryId);
-  const categoryIds = has ? recipe.categoryIds.filter((id) => id !== categoryId) : [...recipe.categoryIds, categoryId];
+/** Set the recipe's one category (v1.0.5), or none (`undefined` = Uncategorized). */
+export function setRecipeCategory(recipe: Recipe, categoryId: string | undefined, now: Date = new Date()): Recipe {
+  const categoryIds = categoryId ? [categoryId] : [];
+  if (categoryIds.length === recipe.categoryIds.length && categoryIds.every((id, i) => recipe.categoryIds[i] === id))
+    return recipe;
   return { ...recipe, categoryIds, updatedAt: now.toISOString() };
+}
+
+/** The category shown/selected for a recipe: its first id that still exists, else undefined (Uncategorized). */
+export function primaryCategoryId(recipe: Pick<Recipe, 'categoryIds'>, categories: Pick<Category, 'id'>[]): string | undefined {
+  return recipe.categoryIds.find((id) => categories.some((c) => c.id === id));
+}
+
+/** Display order: `sortOrder` ascending (missing = last), then name. */
+export function sortCategories<T extends Pick<Category, 'name' | 'sortOrder'>>(categories: T[]): T[] {
+  const order = (c: T) => (typeof c.sortOrder === 'number' ? c.sortOrder : Number.POSITIVE_INFINITY);
+  return [...categories].sort((a, b) => {
+    const d = order(a) - order(b);
+    return (Number.isNaN(d) ? 0 : d) || a.name.localeCompare(b.name);
+  });
+}
+
+export interface RecipeCategoryGroup {
+  category: Category;
+  recipes: Recipe[];
+}
+
+/**
+ * Recipes tab grouping (v1.0.5): one group per category (in `categories` order, empty ones included) and the
+ * recipes without an existing category in `uncategorized`. A recipe in several categories appears in each.
+ * Recipe order inside a group follows the input order (sort first).
+ */
+export function groupRecipesByCategory(
+  recipes: Recipe[],
+  categories: Category[],
+): { groups: RecipeCategoryGroup[]; uncategorized: Recipe[] } {
+  const known = new Set(categories.map((c) => c.id));
+  return {
+    groups: categories.map((category) => ({
+      category,
+      recipes: recipes.filter((r) => r.categoryIds.includes(category.id)),
+    })),
+    uncategorized: recipes.filter((r) => !r.categoryIds.some((id) => known.has(id))),
+  };
 }
 
 /** List browse state for the Recipes tab (spec #8, #9, #20, #22). */
@@ -224,6 +264,26 @@ export function isBrowseFiltered(browse: RecipeBrowse): boolean {
     browse.tags.length ||
     browse.minRating !== undefined,
   );
+}
+
+/**
+ * Are any "Advanced search" options (v1.0.5 filter sheet) away from their defaults? Drives the dot on the filter
+ * button. Keyword is the search box (not in the sheet) and does not count.
+ */
+export function isAdvancedSearchActive(browse: RecipeBrowse): boolean {
+  return Boolean(
+    browse.cooked !== undefined ||
+    browse.recent ||
+    browse.categoryId ||
+    browse.tags.length ||
+    browse.minRating !== undefined ||
+    browse.sort !== DEFAULT_BROWSE.sort,
+  );
+}
+
+/** Reset the Advanced search options, keeping the typed keyword. */
+export function resetAdvancedSearch(browse: RecipeBrowse): RecipeBrowse {
+  return { ...DEFAULT_BROWSE, keyword: browse.keyword };
 }
 
 /** Rating sort is hidden when ratings are unavailable; fall back to newest. */

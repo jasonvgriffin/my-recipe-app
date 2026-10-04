@@ -12,7 +12,7 @@ import { makeStyles, useColors } from '@/hooks/use-theme';
 /**
  * Bottom sheet raised by the center “+” tab button (v1.0.2, like Cronometer's add menu): a 3-column grid of
  * round icon buttons. Items come from `src/lib/add-menu.ts`; anything locked or hidden in Settings is left
- * out, and a partial last row is centered (v1.0.3). Tapping outside the sheet or Android back closes it.
+ * out, and a partial last row is centered (v1.0.3). Labels wrap instead of truncating (v1.0.5). Tapping outside the sheet or Android back closes it.
  */
 export function AddMenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const styles = useStyles();
@@ -57,7 +57,8 @@ export function AddMenuSheet({ visible, onClose }: { visible: boolean; onClose: 
                 <View style={styles.circle}>
                   <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={28} color={colors.accent} />
                 </View>
-                <Text style={styles.label} numberOfLines={2}>
+                {/* v1.0.5: never truncate (“Add to Shopping Li…”): labels wrap to as many lines as they need. */}
+                <Text style={styles.label}>
                   {item.label}
                 </Text>
               </Pressable>
@@ -105,5 +106,5 @@ const useStyles = makeStyles((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: { color: colors.text, fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  label: { color: colors.text, fontSize: 13, lineHeight: 17, fontWeight: '600', textAlign: 'center', alignSelf: 'stretch' },
 }));

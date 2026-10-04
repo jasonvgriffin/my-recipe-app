@@ -125,11 +125,17 @@ describe.each([
     const RecipesTab = require('@/app/recipes').default;
     const RecipeRoute = require('@/app/recipe/[id]/index').default;
     renderRouter({ index: RecipesTab, 'recipe/[id]': RecipeRoute }, { initialUrl: '/' });
-    await screen.findByText(SAMPLE_RECIPES[1].title);
-    expect(screen.getByTestId('search-input')).toBeTruthy();
-    expect(screen.getByTestId('recipe-filters')).toBeTruthy();
+    // v1.0.5: search row + categories; filters live in the Advanced search sheet.
+    expect(await screen.findByTestId('search-input')).toBeTruthy();
+    expect(screen.getByTestId('advanced-search-button')).toBeTruthy();
+    expect(screen.queryByTestId('recipe-filters')).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId('advanced-search-button')));
     expect(screen.getByTestId('filter-cooked')).toBeTruthy();
     expect(screen.getByTestId('filter-recent')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('advanced-search-done')));
+    const uncategorized = await screen.findByTestId('category-header-uncategorized');
+    await act(async () => fireEvent.press(uncategorized));
+    await screen.findByText(SAMPLE_RECIPES[1].title);
     const target = (await recipeStore.list()).find((r: { title: string }) => r.title === SAMPLE_RECIPES[1].title);
     const item = screen.getByTestId(`recipe-item-${target.id}`);
     if (width >= 600) {
@@ -150,7 +156,6 @@ describe.each([
     ['(tabs)/shopping', 'No list yet for this week.'],
     ['add', 'Save recipe'],
     ['settings', 'Optional features'],
-    ['organize', 'Categories'],
   ])('%s renders (width-capped)', async (route, text) => {
     const Screen = require(`@/app/${route}`).default;
     renderRouter({ index: Screen }, { initialUrl: '/' });

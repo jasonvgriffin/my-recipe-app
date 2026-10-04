@@ -58,6 +58,10 @@ data jsonb` + query columns (`recipes.title`, `meal_plan_entries.date/recipe_id`
 - **RLS everywhere:** members can select/insert/update only rows of households they belong to; no client hard
   deletes (tombstones only); membership changes only via the RPCs; owners can remove members, members can leave.
 - Realtime publication added for the synced tables (optional use).
+- v1.0.5 (`20261004000000_recipe_categories.sql`): `categories.sort_order` (Recipes tab order) and
+  `recipes.category_ids text[]` (GIN-indexed) mirror `data.sortOrder` / `data.categoryIds`, kept by BEFORE
+  INSERT/UPDATE triggers (clients send nothing new; older app versions stay correct). Existing rows were backfilled
+  without touching `server_updated_at`. No new tables, so RLS is unchanged.
 - The migration was smoke-tested in PGlite (Postgres WASM) with stubbed `auth` schema: household create/join,
   cross-household isolation, stale-write rejection, author immutability, delete blocking.
 
