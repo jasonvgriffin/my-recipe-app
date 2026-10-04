@@ -331,9 +331,10 @@ const useStyles = makeStyles((colors) => ({
   or: { color: colors.muted, textAlign: 'center', marginTop: 8 },
   manualRow: { flexDirection: 'row', gap: 8 },
   detailsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  qtyInput: { flex: 0, width: 150 },
+  qtyInput: { flexGrow: 0, flexBasis: 150, flexShrink: 0, width: 150, minWidth: 0 },
   input: {
     flex: 1,
+    minWidth: 0,
     minHeight: 44,
     borderWidth: 1,
     borderColor: colors.border,

@@ -50,7 +50,12 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 
 ### Verification
 - Verify UI from real renders or screenshots at a small width (360dp) and a default width, never from layout math. Reviewers sign off only from screenshots. (Recipe app 1.0.8: labels passed the math but were truncated on the phone.)
+- **Open every screenshot before signing off.** A file can exist and still be an error overlay. (Recipe app 1.0.9: all 12 keyboard shots and the add-menu shots were a red `currentlyFocusedInput` error, and they were attached anyway.)
+- **A web render does not prove text fits on a phone.** Keep `allowFontScaling={false}` on tab labels, or capture on Android at a font scale above 1. Shrink-to-fit at the default web font size still truncates when Samsung scales the font. (Recipe app 1.0.9.)
 - Include reviewer checklists in the build prompt up front, so one agent run is enough and no fix-up run is needed.
+
+### Platform APIs
+- **Guard platform-specific React Native APIs with `typeof` before calling them.** `TextInput.State.currentlyFocusedInput` is missing on react-native-web, and calling it throws on every focus. The web build is what produces the screenshots, so an unguarded native API fails the review renders. Fall back (`currentlyFocusedField`, then `document.activeElement` on web). (Recipe app 1.0.9.)
 
 ### Layout
 - Text never truncates: shrink-to-fit plus removing padding come before shortening labels.

@@ -313,9 +313,13 @@ describe('bottom bar (v1.0.9)', () => {
     const shopping = screen.getByTestId('tab-shopping');
     const label = within(meal).getByText('Meal Plan');
     expect(label.props.numberOfLines).toBe(1);
+    expect(label.props.allowFontScaling).toBe(false);
     expect(label.props.adjustsFontSizeToFit).toBe(true);
     expect(label.props.minimumFontScale).toBe(0.85);
-    expect(within(shopping).getByText('Shopping').props.adjustsFontSizeToFit).toBe(true);
+    const shoppingLabel = within(shopping).getByText('Shopping');
+    expect(shoppingLabel.props.adjustsFontSizeToFit).toBe(true);
+    expect(shoppingLabel.props.allowFontScaling).toBe(false);
+    expect(meal.props.accessibilityRole).toBe('tab');
     const { StyleSheet } = require('react-native');
     for (const tab of [meal, shopping, screen.getByTestId('tab-recipes'), screen.getByTestId('tab-more')]) {
       const flat = StyleSheet.flatten(tab.props.style);

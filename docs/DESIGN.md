@@ -131,7 +131,7 @@ Read this before any UI change. Tokens live in `src/lib/theme.ts`. Screens read 
 
 - On-color rule: dark on Amber and Lime, white on the other ten. The center + glyph uses that on-color.
 - `accent` / `accentText` are aliases of `primary` / `primaryText`. Do not introduce a second accent color.
-- Badges stay `#E53935` with white text (`badge` / `badgeText`) in every accent and mode. A white `badgeRing` keeps a badge visible when Red is selected.
+- Badges stay `#E53935` with white text (`badge` / `badgeText`) in every accent and mode. A white `badgeRing` keeps a badge visible when Red is selected. The advanced-search dot uses that fill and ring, plus a `colors.card` halo, so the red center still reads on a Red accent button.
 - Switches stay green. Trash icons go neutral while Red is selected (`dangerIcon`).
 
 ### Always use theme tokens
@@ -149,7 +149,7 @@ Do not ellipsize tab or button labels. Shrink to fit (`adjustsFontSizeToFit`, `m
 | Bar height | 80dp, plus the safe-area inset |
 | Icons | 24dp |
 | Labels | 13sp, shrink-to-fit down to 0.85, one line, no horizontal item padding |
-| Center + | 58dp circle, 31dp glyph, filled with the main accent |
+| Center + | 52dp circle (`plus`); the raised bottom-bar style overrides that to 58dp. 31dp glyph, filled with the main accent |
 
 The + slot is only as wide as the button (58dp, `flexGrow`/`flexShrink` 0, `flexBasis` 58). Do not use the `flex: 0` shorthand: on web it is flex-basis 0% and the slot collapses, so the circle overlaps Shopping. A custom `tabBarButton` has to apply the `style` prop the navigator passes, or the inner padding is dropped. The width itself lives on `tabBarItemStyle` (the outer item).
 

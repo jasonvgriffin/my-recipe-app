@@ -189,28 +189,66 @@ export function useKeyboardHeight(): number {
   return height;
 }
 
+type FocusState = {
+  currentlyFocusedInput?: () => Measurable | null;
+  currentlyFocusedField?: () => Measurable | null;
+};
+
+/**
+ * The focused field, without calling APIs the platform doesn't have.
+ * react-native-web's `TextInput.State` has no `currentlyFocusedInput`; calling it throws on every focus.
+ * Fall through to `currentlyFocusedField`, then to `document.activeElement` on web.
+ */
+export function focusedTextInput(): Measurable | null {
+  const state = (TextInput as unknown as { State?: FocusState }).State;
+  if (state && typeof state.currentlyFocusedInput === 'function') {
+    const input = state.currentlyFocusedInput();
+    if (input) return input;
+  }
+  if (state && typeof state.currentlyFocusedField === 'function') {
+    const field = state.currentlyFocusedField();
+    if (field) return field;
+  }
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    const el = document.activeElement as (Measurable & { tagName?: string; isContentEditable?: boolean }) | null;
+    if (!el || el.tagName === 'BODY') return null;
+    const tag = el.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable) return el;
+  }
+  return null;
+}
+
 function scrollFocusedIntoView(scroll: ScrollView | null) {
-  const input = TextInput.State.currentlyFocusedInput() as Measurable | null;
-  const node = scroll ? findNodeHandle(scroll) : null;
-  if (!scroll || !input || !node || typeof input.measureLayout !== 'function') return;
-  input.measureLayout(
-    node,
-    (_x, y) => scroll.scrollTo({ y: Math.max(0, y - 24), animated: true }),
-    () => undefined,
-  );
+  const input = focusedTextInput();
+  if (!input) return;
+  // findNodeHandle throws on web ("not supported"). Scroll the DOM node instead.
+  if (Platform.OS !== 'web' && scroll && typeof input.measureLayout === 'function' && typeof findNodeHandle === 'function') {
+    const node = findNodeHandle(scroll);
+    if (node) {
+      input.measureLayout(
+        node,
+        (_x, y) => scroll.scrollTo({ y: Math.max(0, y - 24), animated: true }),
+        () => undefined,
+      );
+      return;
+    }
+  }
+  const webEl = input as Measurable & { scrollIntoView?: (opts?: { block?: 'center' }) => void };
+  if (typeof webEl.scrollIntoView === 'function') webEl.scrollIntoView({ block: 'center' });
 }
 
 function withKeyboardPadding(style: ScrollViewProps['contentContainerStyle'], keyboard: number) {
-  if (keyboard <= 0) return style;
+  // Android already shrinks the window (`softwareKeyboardLayoutMode: "resize"`). Extra padding stacks on that.
+  if (Platform.OS === 'android' || keyboard <= 0) return style;
   const flat = StyleSheet.flatten(style) ?? {};
   const base = typeof flat.paddingBottom === 'number' ? flat.paddingBottom : 0;
   return [style, { paddingBottom: base + keyboard }];
 }
 
 /**
- * ScrollView that keeps the focused TextInput above the keyboard (v1.0.9). Android also sets
- * `softwareKeyboardLayoutMode: "resize"` so the window shrinks; the extra padding lets the field scroll
- * clear of the keyboard. iOS adds the keyboard inset. Web scrolls the focused field on focusin.
+ * ScrollView that keeps the focused TextInput above the keyboard (v1.0.9). Android relies on
+ * `softwareKeyboardLayoutMode: "resize"` and does not add keyboard padding on top of that. iOS adds the
+ * keyboard inset. Web scrolls the focused field on focusin.
  */
 export const KeyboardAwareScrollView = forwardRef<ScrollView, ScrollViewProps>(function KeyboardAwareScrollView(
   { contentContainerStyle, ...rest },

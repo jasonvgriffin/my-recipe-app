@@ -231,7 +231,11 @@ export function RecipeList() {
         style={[styles.filterBtn, advancedActive && styles.filterBtnActive]}
         testID="advanced-search-button">
         <Ionicons name="options-outline" size={22} color={advancedActive ? colors.primaryText : colors.primary} />
-        {advancedActive ? <View style={styles.filterDot} testID="advanced-search-indicator" /> : null}
+        {advancedActive ? (
+          <View style={styles.filterDotHalo} testID="advanced-search-indicator">
+            <View style={styles.filterDot} />
+          </View>
+        ) : null}
       </Pressable>
     </View>
   );
@@ -429,16 +433,26 @@ const useStyles = makeStyles((colors) => ({
     justifyContent: 'center',
   },
   filterBtnActive: { backgroundColor: colors.primary },
-  filterDot: {
+  // Card halo, then the white badge ring, then the red fill. On the Red accent the fill matches the
+  // button, so the halo is what keeps the dot from disappearing into it.
+  filterDotHalo: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.badge,
+    top: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 2,
-    borderColor: colors.badgeRing,
+    borderColor: colors.card,
+    backgroundColor: colors.badgeRing,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.badge,
   },
   filtersOn: { marginHorizontal: 12, marginTop: 8, minHeight: 32, justifyContent: 'center' },
   filtersOnText: { color: colors.primary, fontWeight: '600' },

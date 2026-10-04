@@ -1,8 +1,57 @@
 /**
- * v1.0.9 regression checks: keyboard resize, and every TextInput screen uses keyboard avoidance.
+ * v1.0.9 regression checks: keyboard resize, focused-input lookup, and every TextInput screen uses keyboard avoidance.
  */
+import { Platform, TextInput } from 'react-native';
+
+import { focusedTextInput } from '@/components/layout';
+
+type FocusState = {
+  currentlyFocusedInput?: (() => unknown) | undefined;
+  currentlyFocusedField?: (() => unknown) | undefined;
+};
+
+function focusState(): FocusState {
+  const input = TextInput as { State?: FocusState };
+  if (!input.State) input.State = {};
+  return input.State;
+}
+
 const { readFileSync } = jest.requireActual('fs') as { readFileSync: (path: string, encoding: string) => string };
 const { join } = jest.requireActual('path') as { join: (...parts: string[]) => string };
+
+describe('focusedTextInput', () => {
+  const saved = { ...focusState() };
+  const savedOs = Platform.OS;
+
+  afterEach(() => {
+    const state = focusState();
+    state.currentlyFocusedInput = saved.currentlyFocusedInput;
+    state.currentlyFocusedField = saved.currentlyFocusedField;
+    Platform.OS = savedOs;
+    // @ts-expect-error test double
+    delete global.document;
+  });
+
+  it('does not call a missing currentlyFocusedInput (that throw is the web crash)', () => {
+    const state = focusState();
+    state.currentlyFocusedInput = undefined;
+    const field = { id: 'field' };
+    state.currentlyFocusedField = () => field;
+    expect(focusedTextInput()).toBe(field);
+  });
+
+  it('uses document.activeElement on web when both State helpers are missing', () => {
+    Platform.OS = 'web';
+    const state = focusState();
+    state.currentlyFocusedInput = undefined;
+    state.currentlyFocusedField = undefined;
+    const el = { tagName: 'INPUT', id: 'active' };
+    const body = { tagName: 'BODY' };
+    // @ts-expect-error test double
+    global.document = { activeElement: el, body };
+    expect(focusedTextInput()).toBe(el);
+  });
+});
 
 describe('v1.0.9 keyboard', () => {
   it('Android resizes the window when the software keyboard opens', () => {

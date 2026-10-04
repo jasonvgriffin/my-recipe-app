@@ -34,6 +34,7 @@ function TabIcon({ name, color }: { name: keyof typeof Ionicons.glyphMap; color:
 function TabLabel({ color, children }: { color: string; children: string }) {
   return (
     <Text
+      allowFontScaling={false}
       numberOfLines={1}
       adjustsFontSizeToFit
       minimumFontScale={TAB_LABEL_MIN_SCALE}
@@ -58,7 +59,7 @@ type SlotButtonProps = {
 function TabSlotButton(props: SlotButtonProps) {
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole="tab"
       accessibilityLabel={props.accessibilityLabel ?? props['aria-label']}
       accessibilityState={{ selected: !!props['aria-selected'] }}
       onPress={props.onPress}

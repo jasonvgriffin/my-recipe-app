@@ -113,7 +113,7 @@ follow the Recipes-are-the-core rule above.
 
 ## v1.0.2 UI changes (Jason, Oct 3 2026)
 
-- **Cronometer-style bottom bar:** Recipes · Meal Plan · large orange **+** in the center · Shopping · More
+- **Cronometer-style bottom bar:** Recipes · Meal Plan · large accent **+** in the center · Shopping · More
   (`src/app/(tabs)/_layout.tsx`). More (`src/app/(tabs)/more.tsx`) lists Pantry, Household and Settings. Optional
   tabs hidden in Settings or locked by the gate drop out; the + button and More always stay.
 - **+ add sheet** (`src/components/add-menu-sheet.tsx`, items in `src/lib/add-menu.ts`): 3-column grid of round icon
