@@ -111,6 +111,12 @@ export function RecipeList() {
     if (ok && !sharePdfMode) stopSelecting();
   }
 
+  async function printPicked(all: Recipe[]) {
+    const chosen = all.filter((r) => picked.has(r.id));
+    if (chosen.length === 0) return;
+    await pdf.printPdf(chosen);
+  }
+
   function openRecipe(id: string) {
     if (selecting) {
       togglePicked(id);
@@ -319,19 +325,32 @@ export function RecipeList() {
         />
       )}
       {selecting && pdf.available ? (
-        <Pressable
-          style={[styles.fab, { bottom: 24 + bottomInset }, (picked.size === 0 || pdf.busy) && styles.fabDisabled]}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: picked.size === 0 || pdf.busy }}
-          disabled={picked.size === 0 || pdf.busy}
-          onPress={() => void sharePicked(recipes)}
-          testID="pdf-share-button">
-          {pdf.busy ? (
-            <ActivityIndicator color={colors.primaryText} />
-          ) : (
-            <Text style={styles.fabText}>Share PDF{picked.size > 0 ? ` (${picked.size})` : ''}</Text>
-          )}
-        </Pressable>
+        <View style={[styles.fabRow, { bottom: 24 + bottomInset }]}>
+          <Pressable
+            style={[styles.fab, styles.fabSecondary, (picked.size === 0 || pdf.busy) && styles.fabDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel="Print"
+            accessibilityState={{ disabled: picked.size === 0 || pdf.busy }}
+            disabled={picked.size === 0 || pdf.busy}
+            onPress={() => void printPicked(recipes)}
+            testID="pdf-print-button">
+            <Ionicons name="print-outline" size={20} color={colors.primary} />
+            <Text style={styles.fabSecondaryText}>Print</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.fab, (picked.size === 0 || pdf.busy) && styles.fabDisabled]}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: picked.size === 0 || pdf.busy }}
+            disabled={picked.size === 0 || pdf.busy}
+            onPress={() => void sharePicked(recipes)}
+            testID="pdf-share-button">
+            {pdf.busy ? (
+              <ActivityIndicator color={colors.primaryText} />
+            ) : (
+              <Text style={styles.fabText}>Share PDF{picked.size > 0 ? ` (${picked.size})` : ''}</Text>
+            )}
+          </Pressable>
+        </View>
       ) : null}
       <AdvancedSearchSheet
         visible={advancedOpen}
@@ -433,10 +452,11 @@ const useStyles = makeStyles((colors) => ({
     borderRadius: 24,
   },
   addRecipeText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
+  fabRow: { position: 'absolute', right: 16, bottom: 24, flexDirection: 'row', gap: 10 },
   fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
     minHeight: 48,
@@ -445,6 +465,8 @@ const useStyles = makeStyles((colors) => ({
     elevation: 4,
   },
   fabText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
+  fabSecondary: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.primary },
+  fabSecondaryText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
   fabDisabled: { opacity: 0.5 },
   selectBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 8 },
   selectHint: { flex: 1, color: colors.muted },

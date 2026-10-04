@@ -1,12 +1,23 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { useBottomInset } from '@/components/layout';
 import { formatShortDate } from '@/lib/dates';
 import { makeStyles, useColors } from '@/hooks/use-theme';
-import type { IsoDate, ShoppingList } from '@/types/meal-plan';
+import type { IsoDate, ShoppingList, ShoppingListItem } from '@/types/meal-plan';
 
 /** Placeholder of the add-item box (v1.0.5, Jason's exact wording). */
 export const SHOPPING_ADD_PLACEHOLDER = 'Type here & press Add';
+/** v1.0.7 optional fields (plain labels, no example text). */
+export const SHOPPING_QTY_PLACEHOLDER = 'Quantity (optional)';
+export const SHOPPING_NOTES_PLACEHOLDER = 'Notes (optional)';
+
+export interface ShoppingItemEdit {
+  text: string;
+  quantity: string;
+  notes: string;
+}
 
 export interface ShoppingListViewProps {
   weekStart: IsoDate;
@@ -14,6 +25,13 @@ export interface ShoppingListViewProps {
   list: ShoppingList | undefined;
   manualText: string;
   onManualText: (text: string) => void;
+  /** v1.0.7: optional quantity / notes for the item being added. */
+  manualQuantity: string;
+  onManualQuantity: (text: string) => void;
+  manualNotes: string;
+  onManualNotes: (text: string) => void;
+  /** v1.0.7: save an edited line (quantity / notes; text for lines you added). */
+  onEditItem: (id: string, edit: ShoppingItemEdit) => void;
   showGroceryRun: boolean;
   onPrevWeek: () => void;
   onNextWeek: () => void;
@@ -38,6 +56,11 @@ export function ShoppingListView({
   list,
   manualText,
   onManualText,
+  manualQuantity,
+  onManualQuantity,
+  manualNotes,
+  onManualNotes,
+  onEditItem,
   showGroceryRun,
   onPrevWeek,
   onNextWeek,
@@ -53,6 +76,18 @@ export function ShoppingListView({
   const styles = useStyles();
   const colors = useColors();
   const checked = list?.items.some((i) => i.checked) ?? false;
+  const [editing, setEditing] = useState<{ id: string } & ShoppingItemEdit | null>(null);
+
+  function startEdit(item: ShoppingListItem) {
+    setEditing({ id: item.id, text: item.text, quantity: item.quantity ?? '', notes: item.notes ?? '' });
+  }
+
+  function saveEdit() {
+    if (!editing) return;
+    const { id, ...edit } = editing;
+    onEditItem(id, edit);
+    setEditing(null);
+  }
   return (
     <View style={styles.fill}>
       <View style={styles.nav}>
@@ -97,6 +132,29 @@ export function ShoppingListView({
         <Pressable accessibilityRole="button" onPress={onAddManual} style={styles.addBtn} testID="add-manual">
           <Text style={styles.addBtnText}>Add</Text>
         </Pressable>
+      </View>
+      <View style={styles.detailsRow}>
+        <TextInput
+          value={manualQuantity}
+          onChangeText={onManualQuantity}
+          placeholder={SHOPPING_QTY_PLACEHOLDER}
+          placeholderTextColor={colors.placeholder}
+          style={[styles.input, styles.qtyInput]}
+          accessibilityLabel="Quantity (optional)"
+          testID="manual-quantity"
+          returnKeyType="next"
+        />
+        <TextInput
+          value={manualNotes}
+          onChangeText={onManualNotes}
+          placeholder={SHOPPING_NOTES_PLACEHOLDER}
+          placeholderTextColor={colors.placeholder}
+          style={styles.input}
+          accessibilityLabel="Notes (optional)"
+          testID="manual-notes"
+          onSubmitEditing={onAddManual}
+          returnKeyType="done"
+        />
       </View>
       {added ? (
         <Text style={styles.added} testID="shopping-added-banner">
@@ -143,21 +201,85 @@ export function ShoppingListView({
             {list ? 'No ingredients — plan some recipes for this week first.' : 'No list yet for this week.'}
           </Text>
         ) : null}
-        {list?.items.map((item) => (
-          <Pressable
-            key={item.id}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: item.checked }}
-            onPress={() => onToggle(item.id)}
-            style={styles.item}
-            testID={`shop-item-${item.id}`}>
-            <Text style={styles.check}>{item.checked ? '☑' : '☐'}</Text>
-            <View style={styles.itemBody}>
-              <Text style={[styles.itemText, item.checked && styles.checked]}>{item.text}</Text>
-              {item.recipeIds.length === 0 ? <Text style={styles.manual}>Added by you</Text> : null}
+        {list?.items.map((item) =>
+          editing?.id === item.id ? (
+            <View key={item.id} style={[styles.item, styles.editBox]} testID={`shop-edit-${item.id}`}>
+              {item.recipeIds.length === 0 ? (
+                <TextInput
+                  value={editing.text}
+                  onChangeText={(text) => setEditing({ ...editing, text })}
+                  placeholder="Item"
+                  placeholderTextColor={colors.placeholder}
+                  style={styles.input}
+                  accessibilityLabel="Item"
+                  testID="shop-edit-text"
+                />
+              ) : (
+                <Text style={styles.itemText}>{item.text}</Text>
+              )}
+              <TextInput
+                value={editing.quantity}
+                onChangeText={(quantity) => setEditing({ ...editing, quantity })}
+                placeholder={SHOPPING_QTY_PLACEHOLDER}
+                placeholderTextColor={colors.placeholder}
+                style={styles.input}
+                accessibilityLabel="Quantity (optional)"
+                testID="shop-edit-quantity"
+              />
+              <TextInput
+                value={editing.notes}
+                onChangeText={(notes) => setEditing({ ...editing, notes })}
+                placeholder={SHOPPING_NOTES_PLACEHOLDER}
+                placeholderTextColor={colors.placeholder}
+                style={styles.input}
+                accessibilityLabel="Notes (optional)"
+                testID="shop-edit-notes"
+                multiline
+              />
+              <View style={styles.editActions}>
+                <Pressable accessibilityRole="button" onPress={() => setEditing(null)} style={styles.editCancel} testID="shop-edit-cancel">
+                  <Text style={styles.secondaryText}>Cancel</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={saveEdit} style={styles.editSave} testID="shop-edit-save">
+                  <Text style={styles.primaryText}>Save</Text>
+                </Pressable>
+              </View>
             </View>
-          </Pressable>
-        ))}
+          ) : (
+            <View key={item.id} style={styles.item}>
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: item.checked }}
+                onPress={() => onToggle(item.id)}
+                style={styles.itemToggle}
+                testID={`shop-item-${item.id}`}>
+                <Text style={styles.check}>{item.checked ? '☑' : '☐'}</Text>
+                <View style={styles.itemBody}>
+                  <Text style={[styles.itemText, item.checked && styles.checked]}>{item.text}</Text>
+                  {item.quantity ? (
+                    <Text style={styles.detail} testID={`shop-item-qty-${item.id}`}>
+                      Qty: {item.quantity}
+                    </Text>
+                  ) : null}
+                  {item.notes ? (
+                    <Text style={styles.detail} testID={`shop-item-notes-${item.id}`}>
+                      {item.notes}
+                    </Text>
+                  ) : null}
+                  {item.recipeIds.length === 0 ? <Text style={styles.manual}>Added by you</Text> : null}
+                </View>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Edit ${item.text}`}
+                onPress={() => startEdit(item)}
+                style={styles.editBtn}
+                testID={`shop-item-edit-${item.id}`}>
+                <Ionicons name="create-outline" size={22} color={colors.primary} />
+              </Pressable>
+            </View>
+          ),
+        )}
       </ScrollView>
     </View>
   );
@@ -194,6 +316,8 @@ const useStyles = makeStyles((colors) => ({
   secondaryText: { color: colors.primary, fontWeight: '700' },
   or: { color: colors.muted, textAlign: 'center', marginTop: 8 },
   manualRow: { flexDirection: 'row', gap: 8 },
+  detailsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  qtyInput: { flex: 0, width: 150 },
   input: {
     flex: 1,
     minHeight: 44,
@@ -230,6 +354,28 @@ const useStyles = makeStyles((colors) => ({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  itemToggle: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  editBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  editBox: { flexDirection: 'column', alignItems: 'stretch', gap: 8 },
+  editActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
+  editCancel: {
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editSave: {
+    minHeight: 44,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detail: { color: colors.muted, fontSize: 14, marginTop: 2 },
   check: { color: colors.primary, fontSize: 20 },
   itemBody: { flex: 1 },
   itemText: { color: colors.text, fontSize: 16 },

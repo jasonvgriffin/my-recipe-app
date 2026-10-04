@@ -15,7 +15,7 @@ jest.mock('recipe-share', () => ({
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const plugin = require('../plugins/with-alternate-icons');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const ICONS: { id: string; background: string }[] = require('../assets/app-icons/icons.json');
+const ICONS: { id: string; label: string; background: string; design?: string }[] = require('../assets/app-icons/icons.json');
 const PKG = 'com.jasonvgriffin.myrecipeapp';
 const fs = jest.requireActual('fs');
 const os = jest.requireActual('os');
@@ -102,7 +102,10 @@ describe('with-alternate-icons config plugin', () => {
     for (const icon of ICONS.filter((i) => i.id !== 'default')) {
       const xml = fs.readFileSync(path.join(dir, `mipmap-anydpi-v26/ic_launcher_alt_${icon.id}.xml`), 'utf8');
       expect(xml).toContain(`@drawable/ic_launcher_alt_${icon.id}_foreground`);
-      expect(xml).toContain('@mipmap/ic_launcher_monochrome');
+      // v1.0.7: each design has its own themed-icon (monochrome) layer.
+      expect(xml).toContain(`@drawable/ic_launcher_alt_${icon.id}_monochrome`);
+      expect(fs.existsSync(path.join(dir, `drawable-xxxhdpi/ic_launcher_alt_${icon.id}_monochrome.png`))).toBe(true);
+      expect(fs.existsSync(path.join(dir, `mipmap-xxxhdpi/ic_launcher_alt_${icon.id}_round.png`))).toBe(true);
       expect(fs.existsSync(path.join(dir, `mipmap-anydpi-v26/ic_launcher_alt_${icon.id}_round.xml`))).toBe(true);
       expect(fs.existsSync(path.join(dir, `drawable-xxxhdpi/ic_launcher_alt_${icon.id}_foreground.png`))).toBe(true);
       expect(fs.existsSync(path.join(dir, `mipmap-xxxhdpi/ic_launcher_alt_${icon.id}.png`))).toBe(true);
@@ -121,6 +124,27 @@ describe('with-alternate-icons config plugin', () => {
     expect(ICONS[0]).toMatchObject({ id: 'default', background: '#16211A', bowl: '#FFD60A' });
     expect(ICONS.length).toBeGreaterThanOrEqual(6);
     for (const icon of ICONS) expect(fs.existsSync(path.join(ROOT, 'assets/app-icons', icon.id, 'preview.png'))).toBe(true);
+  });
+
+  it('v1.0.7: real designs — Classic stays default, two crossed spoons included, earlier alias ids kept, every resource present', () => {
+    expect(ICONS[0]).toMatchObject({ id: 'default', label: 'Classic' });
+    const labels = ICONS.map((i) => i.label);
+    expect(labels).toEqual(['Classic', 'Spoons', "Chef's Hat", 'Cookbook', 'Pot', 'Whisk', 'Fork & Knife']);
+    expect(new Set(labels).size).toBe(labels.length);
+    // Distinct designs, not color variants of one bowl.
+    const designs = ICONS.map((i) => i.design);
+    expect(new Set(designs).size).toBe(ICONS.length);
+    expect(designs).toContain('spoons');
+    // v1.0.6 alias ids are kept, so a phone using one of them keeps a launcher entry after the update.
+    for (const id of ['default', 'orange', 'navy', 'cream', 'red', 'green']) expect(ICONS.map((i) => i.id)).toContain(id);
+    const PNG_SIZES = { 'foreground.png': 432, 'monochrome.png': 432, 'legacy.png': 192, 'legacy_round.png': 192, 'preview.png': 160 };
+    for (const icon of ICONS.filter((i) => i.id !== 'default')) {
+      for (const [file, size] of Object.entries(PNG_SIZES)) {
+        const buf = fs.readFileSync(path.join(ROOT, 'assets/app-icons', icon.id, file));
+        // PNG IHDR: width/height at bytes 16..24.
+        expect([icon.id, file, buf.readUInt32BE(16), buf.readUInt32BE(20)]).toEqual([icon.id, file, size, size]);
+      }
+    }
   });
 });
 
@@ -149,7 +173,7 @@ describe('Settings → Appearance → App icon', () => {
     expect(picker).toBeTruthy();
     expect(screen.getByTestId('settings-app-icon-default').props.accessibilityState).toMatchObject({ selected: true });
     await act(async () => fireEvent.press(screen.getByTestId('settings-app-icon-navy')));
-    expect(alert).toHaveBeenCalledWith('Use the Midnight icon?', expect.stringMatching(/take a little while, or move the shortcut/), expect.any(Array));
+    expect(alert).toHaveBeenCalledWith("Use the Chef's Hat icon?", expect.stringMatching(/take a little while, or move the shortcut/), expect.any(Array));
     expect(mockNative.setAppIcon).toHaveBeenCalledWith('LauncherIconNavy', ICONS.map((i) => plugin.aliasSuffix(i.id)));
     expect(screen.getByTestId('settings-app-icon-navy').props.accessibilityState).toMatchObject({ selected: true });
     const { settingsStore } = require('@/storage/settings');

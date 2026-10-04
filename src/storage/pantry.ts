@@ -14,6 +14,10 @@ export interface PantryWrite {
   expiresAt?: string;
   brand?: string;
   barcode?: string;
+  /** v1.0.7: optional plain notes (blank clears on replace). */
+  notes?: string;
+  /** v1.0.7: keep `name` exactly as given (a reviewed barcode scan keeps the product name, e.g. "Peanut M&M's"). */
+  keepName?: boolean;
 }
 
 export const PANTRY_STORAGE_KEY = 'my-recipe-app/pantry/v1';
@@ -86,6 +90,15 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
     async addQuantity(draft: PantryWrite, now: Date = new Date()): Promise<PantryItem> {
       return writeItem(items, draft, 'add', now);
     },
+    /**
+     * v1.0.7 scan review: the item a scanned product would update (same barcode, else same name), so the Pantry
+     * opens it in the Edit form instead of saving straight away. Undefined → a new item.
+     */
+    async findScanned(product: { barcode: string; name: string }): Promise<PantryItem | undefined> {
+      const key = ingredientKey({ text: product.name });
+      const all = await items.all();
+      return all.find((p) => p.barcode === product.barcode) ?? (key ? all.find((p) => sameName(p, key)) : undefined);
+    },
     remove: (id: string) => items.remove(id),
     /** For the sync engine. */
     collection: items,
@@ -139,7 +152,7 @@ async function writeItem(
     ...(existing ? slimPantryItem(existing) : {}),
     id: existing?.id ?? uuid(),
     // Keep a scanned item's display name when the form leaves it unchanged; typed names are normalized.
-    name: existing && draft.name.trim() === existing.name ? existing.name : key,
+    name: draft.keepName ? draft.name.trim() : existing && draft.name.trim() === existing.name ? existing.name : key,
     createdAt: existing?.createdAt ?? ts,
     updatedAt: ts,
     brand: draft.brand ?? existing?.brand,
@@ -158,6 +171,10 @@ async function writeItem(
   if (expiresAt) next.expiresAt = expiresAt;
   else if (mode === 'replace') delete next.expiresAt;
   else if (existing?.expiresAt) next.expiresAt = existing.expiresAt;
+  const notes = clean(draft.notes);
+  if (notes) next.notes = notes;
+  else if (mode === 'replace') delete next.notes;
+  else if (existing?.notes) next.notes = existing.notes;
   return items.save(next, now);
 }
 

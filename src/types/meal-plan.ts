@@ -30,6 +30,10 @@ export interface ShoppingListItem extends SyncMeta {
   recipeIds: string[];
   /** Grocery aisle / category (spec #18). Omitted on older rows; inferred from the name when missing. */
   aisle?: string;
+  /** v1.0.7: optional quantity typed by the user (free text, e.g. "2" or "1 lb"). Absent on older rows. */
+  quantity?: string;
+  /** v1.0.7: optional plain notes shown under the item. Absent on older rows. */
+  notes?: string;
 }
 
 /** A shopping list for a planned week — a VIEW assembled from ShoppingListItem rows (not stored itself). */
@@ -52,6 +56,20 @@ export function isShoppingListItem(v: unknown): v is ShoppingListItem {
   if (typeof v !== 'object' || v === null) return false;
   const i = v as Record<string, unknown>;
   return typeof i.id === 'string' && typeof i.text === 'string' && typeof i.weekStart === 'string';
+}
+
+/**
+ * v1.0.7 load-time normalization (additive, no data loss): older rows have no `quantity`/`notes` and are kept as-is;
+ * non-string or blank values are dropped instead of failing the row.
+ */
+export function normalizeShoppingListItem<T extends ShoppingListItem>(item: T): T {
+  const next = { ...item };
+  for (const key of ['quantity', 'notes'] as const) {
+    const v: unknown = next[key];
+    if (typeof v === 'string' && v.trim()) next[key] = v.trim();
+    else delete next[key];
+  }
+  return next;
 }
 
 export function isShoppingList(v: unknown): v is ShoppingList {

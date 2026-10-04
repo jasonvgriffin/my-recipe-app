@@ -2,7 +2,7 @@
   "expo": {
     "name": "My Recipe App",
     "slug": "my-recipe-app",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "myrecipeapp",
@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.jasonvgriffin.myrecipeapp",
-      "versionCode": 7,
+      "versionCode": 8,
       "permissions": [
         "android.permission.VIBRATE"
       ],
@@ -84,7 +84,7 @@
       [
         "expo-notifications",
         {
-          "color": "#66BB6A",
+          "color": "#43A047",
           "defaultChannel": "step-timers"
         }
       ],

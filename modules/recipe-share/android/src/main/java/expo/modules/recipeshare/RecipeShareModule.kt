@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.core.content.FileProvider
+import android.app.Activity
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -28,10 +30,25 @@ class ShareOptions : Record {
   var mimeType: String? = null
 }
 
+class SaveDocumentOptions : Record {
+  @Field
+  var fileUri: String? = null
+
+  @Field
+  var fileName: String? = null
+
+  @Field
+  var mimeType: String? = null
+}
+
 /** Android ACTION_SEND chooser that can carry recipe text, a photo, or both (spec #14). */
 class RecipeShareModule : Module() {
   private val context
     get() = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+
+  // v1.0.7 "Save backup as…": the pending ACTION_CREATE_DOCUMENT request (one at a time).
+  private var pendingSave: Promise? = null
+  private var pendingSaveSource: File? = null
 
   override fun definition() = ModuleDefinition {
     Name("RecipeShare")
@@ -66,6 +83,19 @@ class RecipeShareModule : Module() {
         )
       }
       target
+    }
+
+    // v1.0.7: single-file "Save as" (Storage Access Framework ACTION_CREATE_DOCUMENT). The user picks Drive, Downloads
+    // or any provider and a file name; we copy the cache file into the returned document. Resolves the document
+    // URI, or null when cancelled. No storage permission needed.
+    AsyncFunction("saveDocumentAsync") { options: SaveDocumentOptions, promise: Promise ->
+      startSaveDocument(options, promise)
+    }
+
+    OnActivityResult { _, payload ->
+      if (payload.requestCode == SAVE_DOCUMENT_REQUEST) {
+        finishSaveDocument(payload.resultCode, payload.data?.data)
+      }
     }
 
     AsyncFunction("shareAsync") { options: ShareOptions ->
@@ -114,6 +144,64 @@ class RecipeShareModule : Module() {
       val chooser = Intent.createChooser(intent, title ?: "Share recipe")
       appContext.throwingActivity.startActivity(chooser)
     }
+  }
+
+  private fun startSaveDocument(options: SaveDocumentOptions, promise: Promise) {
+    if (pendingSave != null) {
+      promise.reject("ERR_SAVE_IN_PROGRESS", "Another save is already open.", null)
+      return
+    }
+    val uri = Uri.parse(options.fileUri ?: "")
+    val path = uri.path
+    if (uri.scheme != "file" || path == null) {
+      promise.reject("ERR_SAVE_FILE", "Backup must be a local file:// URI.", null)
+      return
+    }
+    val file = File(path)
+    try {
+      assertInsideAppStorage(file)
+    } catch (e: IllegalArgumentException) {
+      promise.reject("ERR_SAVE_FILE", e.message ?: "Backup file not found.", e)
+      return
+    }
+    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+      addCategory(Intent.CATEGORY_OPENABLE)
+      type = options.mimeType?.takeIf { it.isNotBlank() } ?: "application/octet-stream"
+      putExtra(Intent.EXTRA_TITLE, options.fileName?.takeIf { it.isNotBlank() } ?: file.name)
+    }
+    pendingSave = promise
+    pendingSaveSource = file
+    try {
+      appContext.throwingActivity.startActivityForResult(intent, SAVE_DOCUMENT_REQUEST)
+    } catch (e: Exception) {
+      pendingSave = null
+      pendingSaveSource = null
+      promise.reject("ERR_SAVE_PICKER", "Could not open the save dialog.", e)
+    }
+  }
+
+  private fun finishSaveDocument(resultCode: Int, target: Uri?) {
+    val promise = pendingSave ?: return
+    val source = pendingSaveSource
+    pendingSave = null
+    pendingSaveSource = null
+    if (resultCode != Activity.RESULT_OK || target == null || source == null) {
+      promise.resolve(null)
+      return
+    }
+    try {
+      // The document was just created (empty), so plain "w" is enough; some providers (e.g. Drive) reject "wt".
+      val out = context.contentResolver.openOutputStream(target, "w")
+        ?: throw IllegalStateException("Could not open the chosen file.")
+      out.use { stream -> source.inputStream().use { it.copyTo(stream) } }
+      promise.resolve(target.toString())
+    } catch (e: Exception) {
+      promise.reject("ERR_SAVE_WRITE", e.message ?: "Could not write the backup.", e)
+    }
+  }
+
+  companion object {
+    private const val SAVE_DOCUMENT_REQUEST = 0x5AFE
   }
 
   private fun assertInsideAppStorage(file: File) {

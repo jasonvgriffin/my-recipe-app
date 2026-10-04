@@ -7,8 +7,12 @@
  *   Only the default alias is enabled in the manifest, so a fresh install has exactly one launcher entry with the
  *   default icon (the app's own @mipmap/ic_launcher). The RecipeShare module's setAppIcon enables one alias and
  *   disables the others at runtime (PackageManager component state), never two at once.
- * - Icon resources for the alternates come from assets/app-icons/<id>/ (make-alt-icons.py): an adaptive icon
- *   (foreground PNG + background color + the app's monochrome layer) for API 26+, and legacy PNGs below that.
+ * - Icon resources for the alternates come from assets/app-icons/<id>/ (scripts/make-app-icons.py): an adaptive icon
+ *   (foreground PNG + background color + monochrome layer) for API 26+, and legacy PNGs below that.
+ * - v1.0.7: real designs (Spoons, Chef's Hat, Cookbook, Pot, Whisk, Fork & Knife) replace the color variants. Alias
+ *   ids (orange, navy, cream, red, green) are kept on purpose: Android remembers which alias a user enabled, and
+ *   removing that alias on update would leave the app with no launcher entry. New designs get new ids (teal).
+ *   Each icon has its own monochrome (themed icon) layer when assets/app-icons/<id>/monochrome.png exists.
  */
 const fs = require('fs');
 const path = require('path');
@@ -57,12 +61,13 @@ function applyAlternateIcons(manifest, packageName) {
   return manifest;
 }
 
-function adaptiveXml(id) {
+function adaptiveXml(id, ownMonochrome) {
+  const mono = ownMonochrome ? `@drawable/${res(id)}_monochrome` : '@mipmap/ic_launcher_monochrome';
   return `<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/${res(id)}_background"/>
     <foreground android:drawable="@drawable/${res(id)}_foreground"/>
-    <monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>
+    <monochrome android:drawable="${mono}"/>
 </adaptive-icon>
 `;
 }
@@ -81,8 +86,11 @@ function writeIconResources(projectRoot, resDir) {
     write(`drawable-xxxhdpi/${res(icon.id)}_foreground.png`, fs.readFileSync(path.join(src, 'foreground.png')));
     write(`mipmap-xxxhdpi/${res(icon.id)}.png`, fs.readFileSync(path.join(src, 'legacy.png')));
     write(`mipmap-xxxhdpi/${res(icon.id)}_round.png`, fs.readFileSync(path.join(src, 'legacy_round.png')));
-    write(`mipmap-anydpi-v26/${res(icon.id)}.xml`, adaptiveXml(icon.id));
-    write(`mipmap-anydpi-v26/${res(icon.id)}_round.xml`, adaptiveXml(icon.id));
+    const monoFile = path.join(src, 'monochrome.png');
+    const ownMono = fs.existsSync(monoFile);
+    if (ownMono) write(`drawable-xxxhdpi/${res(icon.id)}_monochrome.png`, fs.readFileSync(monoFile));
+    write(`mipmap-anydpi-v26/${res(icon.id)}.xml`, adaptiveXml(icon.id, ownMono));
+    write(`mipmap-anydpi-v26/${res(icon.id)}_round.xml`, adaptiveXml(icon.id, ownMono));
     colors.push(`    <color name="${res(icon.id)}_background">${icon.background}</color>`);
   }
   colors.push('</resources>', '');

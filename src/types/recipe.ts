@@ -236,6 +236,8 @@ export interface PantryItem extends SyncMeta {
   brand?: string;
   /** EAN/UPC of the product when added by barcode scan (spec #27) — lets a re-scan increment this item. */
   barcode?: string;
+  /** v1.0.7: optional plain notes. Absent on older items. */
+  notes?: string;
 }
 
 /**

@@ -53,7 +53,7 @@ Android first; iOS later from the **same codebase**.
 ```
 src/app/_layout.tsx           root Stack + dark navigation theme
 src/app/(tabs)/               bottom tabs (v1.0.2): index.tsx (Recipes), meal-plan.tsx, + (add-menu.tsx placeholder →
-                              components/add-menu-sheet.tsx), shopping.tsx, more.tsx (Pantry, Settings); pantry.tsx
+                              components/add-menu-sheet.tsx), shopping.tsx, more.tsx (Pantry, Settings, Contact Us); pantry.tsx
 src/app/add.tsx               add-recipe form (modal)
 src/app/recipe/[id].tsx       recipe detail (cooked toggle, plan for today, source link, delete)
 src/types/recipe.ts           Recipe (structured steps, parsed ingredients, rating, unitSystem),

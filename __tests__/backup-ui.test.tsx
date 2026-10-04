@@ -6,7 +6,7 @@ import { BACKUP_FORMAT, parseBackup } from '@/backup';
 
 const mockDevice = {
   shareBackup: jest.fn(),
-  saveBackupToFolder: jest.fn(),
+  saveBackupAs: jest.fn(),
   pickBackupFile: jest.fn(),
   restoreFromBackup: jest.fn(),
 };

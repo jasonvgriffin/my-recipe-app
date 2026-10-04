@@ -61,14 +61,16 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
   {
     id: 'green',
     label: 'Green',
-    dark: { primary: '#66BB6A', primaryText: '#0B1F0C', accent: '#FF8A3D', accentText: '#1F1206' },
-    light: { primary: '#2E7D32', primaryText: '#FFFFFF', accent: '#C2410C', accentText: '#FFFFFF' },
+    // v1.0.7 (Jason): deeper green (was #66BB6A / #2E7D32); still the original orange + button.
+    dark: { primary: '#43A047', primaryText: '#06170A', accent: '#FF8A3D', accentText: '#1F1206' },
+    light: { primary: '#1B5E20', primaryText: '#FFFFFF', accent: '#C2410C', accentText: '#FFFFFF' },
   },
   {
     id: 'orange',
     label: 'Orange',
-    dark: { primary: '#FF9E5E', primaryText: '#1F1206', accent: '#FF8A3D', accentText: '#1F1206' },
-    light: { primary: '#B54708', primaryText: '#FFFFFF', accent: '#B54708', accentText: '#FFFFFF' },
+    // v1.0.7: deeper orange (was #FF9E5E / #B54708).
+    dark: { primary: '#EF6C00', primaryText: '#1F1206', accent: '#EF6C00', accentText: '#1F1206' },
+    light: { primary: '#A84300', primaryText: '#FFFFFF', accent: '#A84300', accentText: '#FFFFFF' },
   },
   {
     id: 'blue',
@@ -79,8 +81,9 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
   {
     id: 'purple',
     label: 'Purple',
-    dark: { primary: '#B47CFF', primaryText: '#1E0A33', accent: '#B47CFF', accentText: '#1E0A33' }, // v1.0.5: was pastel #B39DDB
-    light: { primary: '#6A1B9A', primaryText: '#FFFFFF', accent: '#6A1B9A', accentText: '#FFFFFF' },
+    // v1.0.7: deeper purple (v1.0.6 #B47CFF / #6A1B9A; v1.0.5 was pastel #B39DDB).
+    dark: { primary: '#A36AFC', primaryText: '#1E0A33', accent: '#A36AFC', accentText: '#1E0A33' },
+    light: { primary: '#4A148C', primaryText: '#FFFFFF', accent: '#4A148C', accentText: '#FFFFFF' },
   },
   {
     id: 'red',
@@ -124,8 +127,9 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
   {
     id: 'lime',
     label: 'Lime',
-    dark: { primary: '#C6D93F', primaryText: '#1A1C00', accent: '#C6D93F', accentText: '#1A1C00' },
-    light: { primary: '#556300', primaryText: '#FFFFFF', accent: '#556300', accentText: '#FFFFFF' },
+    // v1.0.7: a truer, brighter lime green (hue ~88°, was yellowish #C6D93F / #556300).
+    dark: { primary: '#8BE02A', primaryText: '#142100', accent: '#8BE02A', accentText: '#142100' },
+    light: { primary: '#3F7A00', primaryText: '#FFFFFF', accent: '#3F7A00', accentText: '#FFFFFF' },
   },
   {
     id: 'slate',

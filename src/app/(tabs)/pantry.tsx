@@ -1,5 +1,5 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
@@ -27,9 +27,27 @@ interface Draft {
   category: string;
   expiresAt: string;
   brand: string;
+  notes: string;
+  /** Set when the form was opened by a barcode scan (v1.0.7 review-before-save). */
+  barcode?: string;
+  /** Keep the scanned product name as typed/reviewed instead of normalizing it. */
+  keepName?: boolean;
 }
 
-const EMPTY_DRAFT: Draft = { name: '', quantity: '', unit: '', category: '', expiresAt: '', brand: '' };
+const EMPTY_DRAFT: Draft = { name: '', quantity: '', unit: '', category: '', expiresAt: '', brand: '', notes: '' };
+
+function draftFor(item: PantryItem): Draft {
+  return {
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity === undefined ? '' : String(item.quantity),
+    unit: item.unit ?? '',
+    category: item.category ?? '',
+    expiresAt: item.expiresAt ?? '',
+    brand: item.brand ?? '',
+    notes: item.notes ?? '',
+  };
+}
 
 function formatQty(quantity: number | undefined, unit: string | undefined): string {
   if (quantity === undefined) return unit ? `some ${unit}` : 'on hand';
@@ -40,7 +58,8 @@ function formatQty(quantity: number | undefined, unit: string | undefined): stri
 /**
  * Pantry tab (spec #21). Optional: hidden with Settings → Pantry, and gated with the pantry feature.
  * One list of what's on hand. "What can I make?" lives on the Recipes tab (v1.0.1; `src/app/pantry-match.tsx`).
- * A barcode scan returns here with `?added=<name>` and the item is confirmed at the top.
+ * A barcode scan returns here with `?scan=…&scanBarcode=…&scanName=…&scanBrand=…` (v1.0.7) and opens the
+ * pre-filled Edit item form so you review it before saving.
  */
 export default function PantryScreen() {
   const bottomInset = useBottomInset();
@@ -49,16 +68,48 @@ export default function PantryScreen() {
   const gate = useFeature('pantry');
   const visible = useFeatureVisible('pantry');
   const showBarcode = useFeatureVisible('barcodeScan');
-  const { added } = useLocalSearchParams<{ added?: string }>();
+  const { added, scan, scanBarcode, scanName, scanBrand } = useLocalSearchParams<{
+    added?: string;
+    scan?: string;
+    scanBarcode?: string;
+    scanName?: string;
+    scanBrand?: string;
+  }>();
   const [items, setItems] = useState<PantryItem[] | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [sort, setSort] = useState<PantrySort>('name');
+  /** Name of a reviewed scan just saved (confirmed at the top like `?added=`). */
+  const [justAdded, setJustAdded] = useState<string | undefined>();
 
   const reload = useCallback(async () => {
     setItems(await pantryStore.list());
   }, []);
+
+  // v1.0.7: a barcode scan opens the pre-filled form for review instead of saving straight away. An existing item
+  // with the same barcode (or name) opens in Edit with one more package; otherwise a new item with the product name.
+  const handledScan = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (typeof scan !== 'string' || !scan || handledScan.current === scan) return;
+    if (typeof scanBarcode !== 'string' || typeof scanName !== 'string' || !scanName) return;
+    handledScan.current = scan;
+    const brand = typeof scanBrand === 'string' ? scanBrand : '';
+    void pantryStore.findScanned({ barcode: scanBarcode, name: scanName }).then((existing) => {
+      setJustAdded(undefined);
+      setError('');
+      if (existing) {
+        setDraft({
+          ...draftFor(existing),
+          quantity: String((existing.quantity ?? 0) + 1),
+          brand: existing.brand || brand,
+          barcode: scanBarcode,
+        });
+      } else {
+        setDraft({ ...EMPTY_DRAFT, name: scanName, brand, quantity: '1', unit: 'package', barcode: scanBarcode, keepName: true });
+      }
+    });
+  }, [scan, scanBarcode, scanName, scanBrand]);
 
   useFocusEffect(
     useCallback(() => {
@@ -117,7 +168,11 @@ export default function PantryScreen() {
         category: draft.category,
         expiresAt,
         brand: draft.brand,
+        notes: draft.notes,
+        ...(draft.barcode ? { barcode: draft.barcode } : {}),
+        ...(draft.keepName ? { keepName: true } : {}),
       });
+      if (draft.barcode) setJustAdded(draft.keepName ? name : (await pantryStore.findScanned({ barcode: draft.barcode, name }))?.name ?? name);
       setDraft(null);
       await reload();
     } catch (e) {
@@ -136,10 +191,10 @@ export default function PantryScreen() {
   const shownItems = filterSortPantry(items, { category: activeFilter, sort });
 
   const list = (
-    <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 32 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="pantry-list">
-      {typeof added === 'string' && added ? (
+    <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 48 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="pantry-list">
+      {justAdded || (typeof added === 'string' && added) ? (
         <Text style={styles.added} testID="pantry-added-banner">
-          Added {added}
+          Added {justAdded || added}
         </Text>
       ) : null}
       <View style={styles.actions}>
@@ -155,7 +210,14 @@ export default function PantryScreen() {
       </View>
       {draft ? (
         <View style={styles.form}>
-          <Text style={styles.heading}>{draft.id ? 'Edit item' : 'Add item'}</Text>
+          <Text style={styles.heading} testID="pantry-form-heading">
+            {draft.id || draft.barcode ? 'Edit item' : 'Add item'}
+          </Text>
+          {draft.barcode ? (
+            <Text style={styles.muted} testID="pantry-scan-review">
+              Scanned — check the details, then Save.
+            </Text>
+          ) : null}
           <TextInput
             testID="pantry-name-input"
             style={styles.input}
@@ -220,12 +282,22 @@ export default function PantryScreen() {
             placeholderTextColor={colors.placeholder}
             autoCapitalize="none"
           />
+          <TextInput
+            testID="pantry-notes-input"
+            style={[styles.input, styles.notes]}
+            value={draft.notes}
+            onChangeText={(notes) => setDraft({ ...draft, notes })}
+            placeholder="Notes (optional)"
+            placeholderTextColor={colors.placeholder}
+            accessibilityLabel="Notes (optional)"
+            multiline
+          />
           {error ? (
             <Text style={styles.error} testID="pantry-form-error">
               {error}
             </Text>
           ) : null}
-          <View style={styles.row}>
+          <View style={[styles.row, styles.wrap]} testID="pantry-form-actions">
             <Pressable accessibilityRole="button" style={styles.primaryBtn} testID="pantry-save-button" onPress={() => void save()}>
               <Text style={styles.primaryBtnText}>Save</Text>
             </Pressable>
@@ -292,15 +364,7 @@ export default function PantryScreen() {
             testID={`pantry-item-${item.id}`}
             onPress={() => {
               setError('');
-              setDraft({
-                id: item.id,
-                name: item.name,
-                quantity: item.quantity === undefined ? '' : String(item.quantity),
-                unit: item.unit ?? '',
-                category: item.category ?? '',
-                expiresAt: item.expiresAt ?? '',
-                brand: item.brand ?? '',
-              });
+              setDraft(draftFor(item));
             }}>
             <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.muted}>
@@ -311,6 +375,11 @@ export default function PantryScreen() {
             {item.expiresAt ? (
               <Text style={expiry === 'expired' ? styles.error : styles.expiry}>
                 {expiry === 'expired' ? 'Expired' : expiry === 'soon' ? 'Expires soon' : 'Expires'} {item.expiresAt}
+              </Text>
+            ) : null}
+            {item.notes ? (
+              <Text style={styles.muted} testID={`pantry-item-notes-${item.id}`}>
+                {item.notes}
               </Text>
             ) : null}
           </Pressable>
@@ -344,7 +413,9 @@ const useStyles = makeStyles((colors) => ({
     minHeight: 44,
   },
   row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  flex: { flex: 1 },
+  flex: { flex: 1, minWidth: 0 },
+  wrap: { flexWrap: 'wrap' },
+  notes: { minHeight: 64, textAlignVertical: 'top' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   card: { backgroundColor: colors.card, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border, minHeight: 44 },
   itemName: { color: colors.text, fontSize: 16, fontWeight: '600' },

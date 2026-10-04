@@ -21,7 +21,6 @@ import { isRemotePhoto } from '@/lib/photo-path';
 import { downloadRecipePhoto } from '@/lib/photos';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
-import { PREFERRED_SWEETENER } from '@/types/recipe';
 
 /**
  * Paste a link or recipe text, or receive an Android share / deep link (spec #1).
@@ -232,7 +231,6 @@ function ImportBody() {
           <Text style={styles.buttonText}>Import text</Text>
         </Pressable>
 
-        <Text style={styles.hint}>Sweetener rule: {PREFERRED_SWEETENER} only (no monk fruit).</Text>
         {busy ? <ActivityIndicator color={colors.primary} style={styles.spinner} /> : null}
         {error ? (
           <View style={styles.errorBox} testID="import-error">
@@ -328,7 +326,6 @@ const useStyles = makeStyles((colors) => ({
     marginBottom: 16,
   },
   secondaryText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
-  hint: { color: colors.muted, marginBottom: 8 },
   spinner: { marginVertical: 12 },
   errorBox: {
     borderWidth: 1,

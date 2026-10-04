@@ -11,11 +11,12 @@
  */
 import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import type { Collection } from '@/storage/kv';
+import { pickBrand, pickProductName, tidyProductName } from './product-name';
 import type { SyncMeta } from '@/types/sync';
 
 export const OFF_USER_AGENT = 'MyRecipeApp/1.0 (github.com/jasonvgriffin)';
 export const OFF_PRODUCT_URL = (barcode: string) =>
-  `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=code,product_name,brands`;
+  `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=code,product_name,product_name_en,abbreviated_product_name,generic_name,generic_name_en,categories,brands`;
 
 export interface BarcodeProduct {
   barcode: string;
@@ -78,9 +79,10 @@ export function parseOpenFoodFacts(barcode: string, json: unknown): BarcodeProdu
   const body = json as { status?: number; product?: Record<string, unknown> };
   const p = body.product;
   if (body.status !== 1 || !p) return undefined;
-  const name = typeof p.product_name === 'string' ? p.product_name.trim() : '';
+  // v1.0.7: specific product name over generic text ("Peanut M&M's", not "CHOCOLATE CANDIES"), title-cased.
+  const name = pickProductName(p);
   if (!name) return undefined;
-  const brand = typeof p.brands === 'string' ? p.brands.split(',')[0].trim() : '';
+  const brand = pickBrand(p);
   return brand ? { barcode, name, brand } : { barcode, name };
 }
 
@@ -110,7 +112,10 @@ export function createBarcodeLookup({
     );
   }
   const strip = (i: BarcodeItem): BarcodeProduct => {
-    const { barcode, name, brand } = i;
+    const { barcode, brand: rawBrand } = i;
+    // Names cached by older builds may be ALL CAPS; tidy them on the way out (user-typed names are kept).
+    const name = i.source === 'user' ? i.name : tidyProductName(i.name);
+    const brand = rawBrand && i.source !== 'user' ? tidyProductName(rawBrand) : rawBrand;
     return brand ? { barcode, name, brand } : { barcode, name };
   };
 

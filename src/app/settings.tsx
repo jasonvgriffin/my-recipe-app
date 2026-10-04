@@ -249,10 +249,13 @@ function AppIconPicker() {
               accessibilityLabel={`${icon.label} app icon`}
               accessibilityState={{ selected }}
               testID={`settings-app-icon-${icon.id}`}
-              style={[styles.accent, selected && { borderColor: colors.primary }]}
+              style={[styles.accent, styles.iconTile, selected && { borderColor: colors.primary }]}
               onPress={() => pick(icon.id)}>
               <Image source={icon.preview} style={styles.iconPreview} accessibilityIgnoresInvertColors />
-              <Text style={styles.accentLabel}>{icon.label}</Text>
+              {/* v1.0.7: one line, shrinks to fit — never breaks mid-word ("Midnigh/t"). */}
+              <Text style={styles.accentLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                {icon.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -312,6 +315,7 @@ const useStyles = makeStyles((colors) => ({
     backgroundColor: colors.card,
   },
   swatch: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  iconTile: { width: 100 },
   iconPreview: { width: 48, height: 48, borderRadius: 24 },
   accentLabel: { color: colors.text, fontSize: 13, fontWeight: '600' },
 }));

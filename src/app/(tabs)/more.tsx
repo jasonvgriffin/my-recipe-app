@@ -15,7 +15,7 @@ interface MoreRow {
 }
 
 /**
- * More tab: Pantry and Settings. Pantry is listed only when the gate allows it and Settings shows it. Settings is
+ * More tab: Pantry, Settings and Contact Us (v1.0.7). Pantry is listed only when the gate allows it and Settings shows it. Settings is
  * always here. (v1.0.6: Household was removed at Jason's request.)
  */
 export default function MoreScreen() {
@@ -37,10 +37,17 @@ export default function MoreScreen() {
       : []),
     {
       label: 'Settings',
-      hint: 'Appearance, units, optional features, AI assistants',
+      hint: 'Appearance, units, optional features, backup',
       icon: 'settings-outline',
       href: '/settings',
       testID: 'more-settings',
+    },
+    {
+      label: 'Contact Us',
+      hint: 'Report a bug or request a feature',
+      icon: 'mail-outline',
+      href: '/contact',
+      testID: 'more-contact',
     },
   ];
   return (
