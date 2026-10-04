@@ -292,8 +292,9 @@ const useStyles = makeStyles((colors) => ({
   unitText: { color: colors.text, fontWeight: '600' },
   unitTextOn: { color: colors.primaryText },
   accents: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // v1.0.5: 12 accents; equal-width tiles wrap into tidy rows.
   accent: {
-    minWidth: 72,
+    width: 76,
     minHeight: 44,
     alignItems: 'center',
     gap: 4,

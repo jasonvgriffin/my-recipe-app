@@ -198,5 +198,9 @@ follow the Recipes-are-the-core rule above.
   Cooked recently (14d), tags, Minimum rating, Sort Newest / A–Z / Rating / Last cooked) moved into a bottom sheet
   opened by the filter button next to the search box; the button fills and shows a dot when anything is non-default;
   Reset restores the defaults (keeps the typed search).
+- **More accent colors** (Settings → Appearance, `ACCENTS` in `src/lib/theme.ts`): Pink, Amber, Indigo, Brown, Lime,
+  Slate join Green, Orange, Blue, Purple, Red, Teal (12). Each has a light and a dark shade passing the palette contrast
+  tests (links ≥ 4.5:1 on background/card, text on filled buttons ≥ 4.5:1, + menu icons ≥ 3:1). Swatches are
+  equal-width tiles that wrap into rows.
 - **App icon:** the bowl is bright yellow `#FFD60A` (was green); steam, background, monochrome unchanged
   (`assets/icons/make-icons.py`).

@@ -63,9 +63,23 @@ describe('palettes', () => {
     expect(resolveScheme('dark', 'light')).toBe('dark');
   });
 
-  it('offers System / Light / Dark and six accents', () => {
+  it('offers System / Light / Dark and twelve accents (six more in v1.0.5)', () => {
     expect(THEME_MODES.map((m) => m.label)).toEqual(['System', 'Light', 'Dark']);
-    expect(ACCENTS.map((a) => a.label)).toEqual(['Green', 'Orange', 'Blue', 'Purple', 'Red', 'Teal']);
+    expect(ACCENTS.map((a) => a.label)).toEqual([
+      'Green',
+      'Orange',
+      'Blue',
+      'Purple',
+      'Red',
+      'Teal',
+      'Pink',
+      'Amber',
+      'Indigo',
+      'Brown',
+      'Lime',
+      'Slate',
+    ]);
+    expect(new Set(ACCENTS.flatMap((a) => [a.dark.primary, a.light.primary])).size).toBe(ACCENTS.length * 2);
   });
 });
 
@@ -112,6 +126,21 @@ describe('Settings → Appearance (UI)', () => {
     renderRouter(routes(), { initialUrl: '/settings' });
     expect(await screen.findByText('Appearance')).toBeTruthy();
     for (const a of ACCENTS) expect(screen.getByTestId(`settings-accent-${a.id}`)).toBeTruthy();
+  });
+
+  it('v1.0.5: picks one of the new accents (dark pink) and lays the 12 swatches out as equal-width wrapping tiles', async () => {
+    await settingsStore.update({ appearance: { themeMode: 'dark' } });
+    renderRouter(routes(), { initialUrl: '/settings' });
+    const pink = await screen.findByTestId('settings-accent-pink');
+    await act(async () => fireEvent.press(pink));
+    await waitFor(async () => expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'dark', accent: 'pink' }));
+    const widths = new Set(
+      ACCENTS.map((a) => StyleSheet.flatten(screen.getByTestId(`settings-accent-${a.id}`).props.style).width),
+    );
+    expect(widths.size).toBe(1);
+    expect(StyleSheet.flatten(screen.getByTestId('settings-accent-pink').props.style).borderColor).toBe(
+      buildColors('dark', 'pink').primary,
+    );
   });
 });
 

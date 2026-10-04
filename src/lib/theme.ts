@@ -30,7 +30,19 @@ export interface ThemeColors {
 
 export type ColorScheme = 'light' | 'dark';
 export type ThemeMode = 'system' | ColorScheme;
-export type AccentId = 'green' | 'orange' | 'blue' | 'purple' | 'red' | 'teal';
+export type AccentId =
+  | 'green'
+  | 'orange'
+  | 'blue'
+  | 'purple'
+  | 'red'
+  | 'teal'
+  | 'pink'
+  | 'amber'
+  | 'indigo'
+  | 'brown'
+  | 'lime'
+  | 'slate';
 
 export const THEME_MODES: readonly { id: ThemeMode; label: string }[] = [
   { id: 'system', label: 'System' },
@@ -81,6 +93,43 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
     label: 'Teal',
     dark: { primary: '#4DB6AC', primaryText: '#06201D', accent: '#4DB6AC', accentText: '#06201D' },
     light: { primary: '#00796B', primaryText: '#FFFFFF', accent: '#00796B', accentText: '#FFFFFF' },
+  },
+  // v1.0.5: six more (Jason). Light shades are deepened so links stay ≥ 4.5:1 on white; dark shades are lightened.
+  {
+    id: 'pink',
+    label: 'Pink',
+    dark: { primary: '#F48FB1', primaryText: '#2B0A17', accent: '#F48FB1', accentText: '#2B0A17' },
+    light: { primary: '#AD1457', primaryText: '#FFFFFF', accent: '#AD1457', accentText: '#FFFFFF' },
+  },
+  {
+    id: 'amber',
+    label: 'Amber',
+    dark: { primary: '#FFCA28', primaryText: '#261A00', accent: '#FFCA28', accentText: '#261A00' },
+    light: { primary: '#8A5300', primaryText: '#FFFFFF', accent: '#8A5300', accentText: '#FFFFFF' },
+  },
+  {
+    id: 'indigo',
+    label: 'Indigo',
+    dark: { primary: '#9FA8DA', primaryText: '#121633', accent: '#9FA8DA', accentText: '#121633' },
+    light: { primary: '#3949AB', primaryText: '#FFFFFF', accent: '#3949AB', accentText: '#FFFFFF' },
+  },
+  {
+    id: 'brown',
+    label: 'Brown',
+    dark: { primary: '#C8A99A', primaryText: '#21140F', accent: '#C8A99A', accentText: '#21140F' },
+    light: { primary: '#6D4C41', primaryText: '#FFFFFF', accent: '#6D4C41', accentText: '#FFFFFF' },
+  },
+  {
+    id: 'lime',
+    label: 'Lime',
+    dark: { primary: '#C6D93F', primaryText: '#1A1C00', accent: '#C6D93F', accentText: '#1A1C00' },
+    light: { primary: '#556300', primaryText: '#FFFFFF', accent: '#556300', accentText: '#FFFFFF' },
+  },
+  {
+    id: 'slate',
+    label: 'Slate',
+    dark: { primary: '#B0BEC5', primaryText: '#111A1F', accent: '#B0BEC5', accentText: '#111A1F' },
+    light: { primary: '#455A64', primaryText: '#FFFFFF', accent: '#455A64', accentText: '#FFFFFF' },
   },
 ];
 
