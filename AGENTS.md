@@ -4,7 +4,9 @@ Guidance for Cursor cloud agents (and any other coding agent) working in this re
 
 ## Before building anything (mandatory)
 
-Read `LESSONS.md` first and follow every rule in it, including "Working with Eve". After finishing, add any new lesson learned to `LESSONS.md`. Recipe-only rules stay there. A rule that applies to any of Jason's apps goes to Eve (`eve.chief_of_staff@agentmail.to`) for the shared app-build-lessons skill. If that skill is not installed, follow `LESSONS.md` and say so.
+Read `LESSONS.md` first and follow every rule in it, including "Working with Eve". If the shared app-build-lessons skill is not installed, follow `LESSONS.md` and say so.
+
+**Before opening or updating a PR, add anything new you learned in this run to `LESSONS.md`, even if nobody asked:** app-specific lessons under the app section, reusable ones under General lessons. Also list them under a `Lessons learned` heading in the PR description so Eve can copy the general ones to the other repos and the shared skill.
 
 **Before building anything, read docs/INVENTORY.md, docs/SPEC.md and search the codebase. If something similar exists, extend it instead of creating a duplicate (no second helper, component, store, hook, or screen for the same job). Update docs/INVENTORY.md in your PR.**
 
@@ -17,7 +19,7 @@ Plan, then work, then self code review, then record what you learned:
 1. Put a short plan in the PR description with a yes/no done checklist (one line per item).
 2. Do the work.
 3. Self code review the whole diff (hard-coded colors, missing theme tokens, keyboard, truncation, tests). List findings and the fixes in the PR.
-4. Record new lessons in `LESSONS.md`.
+4. Before opening or updating the PR, record new lessons in `LESSONS.md` and list them under `Lessons learned` in the PR description (see the rule above).
 
 Bug fixes start with a failing test, then the fix. A checklist item is done only with evidence (a screenshot or a test result) linked next to it.
 
