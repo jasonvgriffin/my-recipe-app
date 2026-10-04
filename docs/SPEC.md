@@ -113,7 +113,7 @@ follow the Recipes-are-the-core rule above.
 
 ## v1.0.2 UI changes (Jason, Oct 3 2026)
 
-- **Cronometer-style bottom bar:** Recipes · Meal Plan · large orange **+** in the center · Shopping · More
+- **Cronometer-style bottom bar:** Recipes · Meal Plan · large accent **+** in the center · Shopping · More
   (`src/app/(tabs)/_layout.tsx`). More (`src/app/(tabs)/more.tsx`) lists Pantry, Household and Settings. Optional
   tabs hidden in Settings or locked by the gate drop out; the + button and More always stay.
 - **+ add sheet** (`src/components/add-menu-sheet.tsx`, items in `src/lib/add-menu.ts`): 3-column grid of round icon
@@ -229,13 +229,25 @@ follow the Recipes-are-the-core rule above.
   Import PDF: the categories picked on its screen) all carry several ids.
 - **Import PDF** (#31), see the table.
 
+## v1.0.9 UI changes (Jason, Oct 4 2026)
+
+Polish on theme, the tab bar, keyboard, and the Classic icon. Version `1.0.9`, Android `versionCode` 10. No new features, no nutrition, no sync, no MCP.
+
+- **Accents:** one mid-tone per accent in both light and dark (about 3:1 on white and on `#1D211D`). Amber is golden and Lime is a bright lime, with dark text; the other ten use white text. The old orange “+” color is gone (`accent` aliases `primary`). Badges stay `#E53935` with white text and a white ring.
+- **Tab bar:** icons 24dp. “Meal Plan” and “Shopping” shrink to fit (minimum scale 0.85) instead of truncating. Tab items have no horizontal padding. The center + uses the accent and its on-color.
+- **Recipes:** “New category” and “Add recipe” have no + glyph. Add recipe stays on screen while a new category name is typed. The search hint stays “Search recipes”.
+- **Shopping List:** Scan Item, Build from Meal Plan, and View Shopping List are narrower, centered, and a little farther apart.
+- **Keyboard:** Android resizes for the software keyboard, and every text field scrolls above it.
+- **Classic icon:** the yellow bowl fills the icon the way the other launcher art does.
+- **Docs:** `docs/DESIGN.md` §8 is the visual spec. `AGENTS.md` requires reading it before a UI change, and records the plan → work → review → lessons workflow.
+
 ## v1.0.8 UI changes (Jason, Oct 4 2026)
 
 Polish on the existing screens (no new features, no nutrition, no sync, no MCP). Version `1.0.8`, Android `versionCode` 9.
 
 - **Bottom bar:** “Meal Plan” and “Shopping” stay those names and draw in full at 13sp on a ~411dp phone. The center + slot is only as wide as the button (`src/app/(tabs)/_layout.tsx`).
 - **Recipes:** the search hint is “Search recipes” (one line). “New category” is a filled pill to the left of “Add recipe”.
-- **Bottom clearance:** `SystemNavFrame` ends every stack screen above the Android navigation bar. The bottom tab bar is in normal flow, so tab lists add about 32dp (`TAB_PLUS_CLEARANCE` via `useBottomInset` in `src/components/layout.tsx`) to clear the raised center +, not the bar height.
+- **Bottom clearance:** `SystemNavFrame` ends every stack screen above the Android navigation bar. The bottom tab bar is in normal flow, so tab lists add `TAB_PLUS_CLEARANCE` (the raised + extends 36dp above the bar, plus 16dp margin) via `useBottomInset` in `src/components/layout.tsx` to clear the center +, not the bar height.
 - **Filled buttons:** Shopping List “Scan Item”, “Build from Meal Plan” and Add match “View Shopping List”. Pantry “Scan barcode” is a full-width filled button matching “Add item”. Placeholders are “Quantity” and “Notes”.
 - **Appearance:** dark-mode Red, Blue and Amber are darker (`#E25955`, `#248AE5`, `#FFB300`); light mode is unchanged. The stored accent id stays `amber`. With the Red accent, trash icons use a neutral color. Switches use a green track and a matching green knob whatever the accent. “Default” sits under Green and under the Classic app icon. The banner title is larger and uses the accent; page headings are slightly smaller. The Cookbook icon’s cream plate is darker so it reads on a light background.
 - **Pantry:** typed names keep the user’s casing. Cards title the product or brand (“M&M’s”); the generic description (“Chocolate Candies”) and the quantity are on the line below. New scans fill the name from the product or brand first. The Notes box is about three times taller and scrolls inside itself.

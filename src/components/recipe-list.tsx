@@ -1,10 +1,26 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link, router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  type ScrollView,
+} from 'react-native';
 
 import { AdvancedSearchSheet } from '@/components/advanced-search-sheet';
-import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout, useBottomInset } from '@/components/layout';
+import {
+  KeyboardAwareFlatList,
+  KeyboardAwareScrollView,
+  MaxWidthContainer,
+  MAX_CONTENT_WIDTH,
+  TwoPaneLayout,
+  useBottomInset,
+} from '@/components/layout';
 import { RecipeCategories } from '@/components/recipe-categories';
 import { RecipeDetail } from '@/components/recipe-detail';
 import { StarRating } from '@/components/star-rating';
@@ -59,6 +75,7 @@ export function RecipeList() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   /** Selected recipe for the detail pane (medium/expanded). Kept across fold/unfold. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const categoryScroll = useRef<ScrollView>(null);
   const { isTwoPane } = useWindowSizeClass();
 
   const showRatings = useFeature('ratings').available;
@@ -187,7 +204,6 @@ export function RecipeList() {
   const addRecipeButton = selecting ? null : (
     <Link href="/add" asChild>
       <Pressable style={styles.addRecipe} accessibilityRole="button" testID="list-add-recipe-button">
-        <Ionicons name="add" size={20} color={colors.primaryText} />
         <Text style={styles.addRecipeText}>Add recipe</Text>
       </Pressable>
     </Link>
@@ -215,13 +231,17 @@ export function RecipeList() {
         style={[styles.filterBtn, advancedActive && styles.filterBtnActive]}
         testID="advanced-search-button">
         <Ionicons name="options-outline" size={22} color={advancedActive ? colors.primaryText : colors.primary} />
-        {advancedActive ? <View style={styles.filterDot} testID="advanced-search-indicator" /> : null}
+        {advancedActive ? (
+          <View style={styles.filterDotHalo} testID="advanced-search-indicator">
+            <View style={styles.filterDot} />
+          </View>
+        ) : null}
       </Pressable>
     </View>
   );
 
   const list = (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {searchRow}
       {sharePdfMode ? <Stack.Screen options={{ title: 'Share recipes' }} /> : null}
       {pdf.available && selecting ? (
@@ -260,9 +280,9 @@ export function RecipeList() {
         </Pressable>
       ) : null}
       {byCategory ? (
-        <ScrollView
+        <KeyboardAwareScrollView
+          ref={categoryScroll}
           contentContainerStyle={[styles.list, { paddingBottom: listBottom }]}
-          keyboardShouldPersistTaps="handled"
           testID="recipe-category-scroll">
           <RecipeCategories
             {...groupRecipesByCategory(visible, categories)}
@@ -270,19 +290,19 @@ export function RecipeList() {
             selectedId={isTwoPane ? selectedId : null}
             onOpen={openRecipe}
             onChanged={() => void reload()}
+            onFieldFocus={() => categoryScroll.current?.scrollToEnd({ animated: true })}
             accessory={addRecipeButton}
           />
           {recipes.length === 0 ? (
             <Text style={styles.hint}>No recipes yet. Tap “Add recipe” or the + button to create or import one.</Text>
           ) : null}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
-        <FlatList
+        <KeyboardAwareFlatList
           data={visible}
           keyExtractor={(r) => r.id}
           extraData={[selectedId, selecting, picked]}
           contentContainerStyle={[styles.list, { paddingBottom: listBottom }]}
-          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <Text style={styles.empty}>
               {searching ? 'No recipes match.' : 'No recipes yet. Tap “Add recipe” or the + button to create or import one.'}
@@ -363,7 +383,7 @@ export function RecipeList() {
         showTags={showTags}
         showRatings={showRatings}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 
   return (
@@ -413,16 +433,26 @@ const useStyles = makeStyles((colors) => ({
     justifyContent: 'center',
   },
   filterBtnActive: { backgroundColor: colors.primary },
-  filterDot: {
+  // Card halo, then the white badge ring, then the red fill. On the Red accent the fill matches the
+  // button, so the halo is what keeps the dot from disappearing into it.
+  filterDotHalo: {
     position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.accent,
-    borderWidth: 1,
+    top: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
     borderColor: colors.card,
+    backgroundColor: colors.badgeRing,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.badge,
   },
   filtersOn: { marginHorizontal: 12, marginTop: 8, minHeight: 32, justifyContent: 'center' },
   filtersOnText: { color: colors.primary, fontWeight: '600' },

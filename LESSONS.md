@@ -26,6 +26,17 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - Status colors (badges, destructive actions) are fixed, not accent-driven, so they never blend in.
 - Check every accent in both light and dark mode for ~3:1 contrast on icons/borders before shipping.
 
+## v1.0.9 (2026-10-04)
+
+- **One accent shade, aliased.** Light and dark used different hexes, and a second orange token leaked into the + button, More, the add menu, the filter dot, and the navigation theme. `accent` is now an alias of `primary`. Badges stay a fixed red with a white ring so they still show on the Red accent.
+- **A custom tab button must apply `style`.** v1.0.8 set the center slot to the + width on `tabBarItemStyle`. That style is on the outer item; the inner button only gets it if `tabBarButton` uses the `style` prop. Measure the rendered slot before assuming the width took effect.
+- **Do not write `flex: 0` to size a tab slot.** On web that shorthand is flex-basis 0% and the item collapses to 0px even with `width: 58`. The + circle then overlaps Shopping. Set `flexGrow: 0`, `flexShrink: 0`, and `flexBasis` to the width. Measured on the 1.0.9 web render: the old style left the center item at 0px and the circle’s center at x=208 on a 360px bar (screen center 180).
+- **Classic artwork has to fill the safe circle.** The yellow bowl was drawn smaller than the other launcher icons. Scale the adaptive foreground and the legacy icon up with the others, and check a side-by-side render.
+- **Hooks stay above any early return.** `RecipeList` called `useRef` after `if (!recipes) return`. The hook count changed once recipes loaded and every screen that mounts the list crashed with “Rendered more hooks than during the previous render.”
+- **Check contrast on the real page background, not only pure white.** The light background is `#F5F7F5`. A shade that clears 3.11:1 on `#FFFFFF` can fall under 3:1 there. Amber and Lime were darkened a step (`#C1810A`, `#58A018`) so they still clear 3:1 on that surface.
+- **A flex row of a text field plus buttons clips at 360dp unless the field can shrink.** Set `flexGrow: 1`, `flexShrink: 1`, and `minWidth: 0` on the input, and leave Add and Cancel at their natural width (`flexShrink: 0`). `minWidth: auto` on a web input keeps the placeholder width and pushes Cancel off the card.
+- **The raised + clearance is the measured rise, plus a margin.** `marginTop: -29` is not the whole overlap. On the rendered bar the circle top sits 36dp above the bar, and 32dp of padding left Add recipe under it. `TAB_PLUS_CLEARANCE` is that rise plus 16dp, on every tab's scroll padding. Scrolling a focused field to the center parks the next control on the +.
+
 ## Process
 - **Cloud agents: put Node on `/usr/local/bin`.** (2026-10-04) Login shells skip `~/.bashrc`, so nvm is invisible after install. Expo web binds IPv6 `localhost` (`::1`); `127.0.0.1:8081` does not connect. Open `http://localhost:8081`.
 - Put reviewer (Spec/Pixel) checks into the build prompt up front so one cloud-agent run is enough; avoid fix-up runs.
@@ -41,7 +52,12 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 
 ### Verification
 - Verify UI from real renders or screenshots at a small width (360dp) and a default width, never from layout math. Reviewers sign off only from screenshots. (Recipe app 1.0.8: labels passed the math but were truncated on the phone.)
+- **Open every screenshot before signing off.** A file can exist and still be an error overlay. (Recipe app 1.0.9: all 12 keyboard shots and the add-menu shots were a red `currentlyFocusedInput` error, and they were attached anyway.)
+- **A web render does not prove text fits on a phone.** Keep `allowFontScaling={false}` on tab labels, or capture on Android at a font scale above 1. Shrink-to-fit at the default web font size still truncates when Samsung scales the font. (Recipe app 1.0.9.)
 - Include reviewer checklists in the build prompt up front, so one agent run is enough and no fix-up run is needed.
+
+### Platform APIs
+- **Guard platform-specific React Native APIs with `typeof` before calling them.** `TextInput.State.currentlyFocusedInput` is missing on react-native-web, and calling it throws on every focus. The web build is what produces the screenshots, so an unguarded native API fails the review renders. Fall back (`currentlyFocusedField`, then `document.activeElement` on web). (Recipe app 1.0.9.)
 
 ### Layout
 - Text never truncates: shrink-to-fit plus removing padding come before shortening labels.

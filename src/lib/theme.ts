@@ -8,10 +8,19 @@ export interface ThemeColors {
   primary: string;
   /** Text/icons on a `primary` background. */
   primaryText: string;
-  /** Center + button and the + menu icons (v1.0.2, Cronometer-style). */
+  /**
+   * Alias of `primary`. v1.0.9 removed the separate orange “+” color so this cannot diverge from the
+   * accent the user picked. Center + button, More icons and add-menu icons read `primary`.
+   */
   accent: string;
-  /** Text/icons on an `accent` background. */
+  /** Alias of `primaryText`. */
   accentText: string;
+  /** Status badge fill. Fixed red in every accent and mode. */
+  badge: string;
+  /** Text on a `badge`. Always white. */
+  badgeText: string;
+  /** Ring around a badge so it stays visible when the Red accent is selected. */
+  badgeRing: string;
   background: string;
   card: string;
   text: string;
@@ -58,103 +67,66 @@ export const THEME_MODES: readonly { id: ThemeMode; label: string }[] = [
   { id: 'dark', label: 'Dark' },
 ];
 
-type AccentSwatch = Pick<ThemeColors, 'primary' | 'primaryText' | 'accent' | 'accentText'>;
+type AccentSwatch = Pick<ThemeColors, 'primary' | 'primaryText'>;
+
+/** Text/icons on an accent fill. Dark on Amber and Lime; white on the other ten. */
+export const ACCENT_ON_DARK = '#121412';
+export const ACCENT_ON_LIGHT = '#FFFFFF';
+
+/** Accents whose fill is light enough that the on-color is dark. */
+export const DARK_ON_ACCENT_IDS: readonly AccentId[] = ['amber', 'lime'];
 
 /**
- * Accent themes. Each has a dark- and light-mode shade chosen for WCAG AA contrast (≥ 4.5:1) as text on the
- * background/card and against its own `primaryText`. Green is the original look (green + orange + button);
- * every other accent tints the + button and + menu icons with the same hue. v1.0.5: dark shades are saturated so each
- * accent reads as its name (no washed-out pastels); Slate is intentionally a cool gray.
+ * Fixed status badge (v1.0.9). Not an accent: it stays this red with white text in every theme.
+ * `badgeRing` is a thin white outline so the badge does not disappear on the Red accent.
+ */
+export const BADGE_COLORS = { badge: '#E53935', badgeText: '#FFFFFF', badgeRing: '#FFFFFF' } as const;
+
+/** Backgrounds the shared accent shade must clear at about 3:1 (white and the dark card). */
+export const ACCENT_CONTRAST_BACKGROUNDS = ['#FFFFFF', '#1D211D'] as const;
+
+function shade(primary: string, on: 'dark' | 'light'): AccentSwatch {
+  return { primary, primaryText: on === 'dark' ? ACCENT_ON_DARK : ACCENT_ON_LIGHT };
+}
+
+/**
+ * Accent themes (v1.0.9). One mid-tone per accent, used in both light and dark mode, with about 3:1 contrast
+ * on white and on the dark card. Amber is golden and Lime is a bright lime (dark on-color). The other ten
+ * use white on-color. There is no second “+ button” color.
  */
 export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch; light: AccentSwatch }[] = [
-  {
-    id: 'green',
-    label: 'Green',
-    // v1.0.7 (Jason): deeper green (was #66BB6A / #2E7D32); still the original orange + button.
-    dark: { primary: '#43A047', primaryText: '#06170A', accent: '#FF8A3D', accentText: '#1F1206' },
-    light: { primary: '#1B5E20', primaryText: '#FFFFFF', accent: '#C2410C', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'orange',
-    label: 'Orange',
-    // v1.0.7: deeper orange (was #FF9E5E / #B54708).
-    dark: { primary: '#EF6C00', primaryText: '#1F1206', accent: '#EF6C00', accentText: '#1F1206' },
-    light: { primary: '#A84300', primaryText: '#FFFFFF', accent: '#A84300', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'blue',
-    label: 'Blue',
-    // v1.0.8: darker blue. #1E88E5 is the target; #248AE5 is the darkest of that hue that still clears 4.5:1
-    // on the dark card (near-black text). Light mode is unchanged.
-    dark: { primary: '#248AE5', primaryText: '#08192B', accent: '#248AE5', accentText: '#08192B' },
-    light: { primary: '#1565C0', primaryText: '#FFFFFF', accent: '#1565C0', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'purple',
-    label: 'Purple',
-    // v1.0.7: deeper purple (v1.0.6 #B47CFF / #6A1B9A; v1.0.5 was pastel #B39DDB).
-    dark: { primary: '#A36AFC', primaryText: '#1E0A33', accent: '#A36AFC', accentText: '#1E0A33' },
-    light: { primary: '#4A148C', primaryText: '#FFFFFF', accent: '#4A148C', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'red',
-    label: 'Red',
-    // v1.0.8: darker red. #E53935 misses 4.5:1 on the dark card; #E25955 is the darkest red (near-black text)
-    // that still passes. Light mode stays #D32F2F. White on these fills is under 4.5:1, so text stays near-black.
-    dark: { primary: '#E25955', primaryText: '#1F0000', accent: '#E25955', accentText: '#1F0000' },
-    light: { primary: '#D32F2F', primaryText: '#FFFFFF', accent: '#D32F2F', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'teal',
-    label: 'Teal',
-    dark: { primary: '#26BFB0', primaryText: '#04201D', accent: '#26BFB0', accentText: '#04201D' }, // v1.0.5: was #4DB6AC
-    light: { primary: '#00796B', primaryText: '#FFFFFF', accent: '#00796B', accentText: '#FFFFFF' },
-  },
-  // v1.0.5: six more (Jason). Light shades are deepened so links stay ≥ 4.5:1 on white; dark shades are lightened.
-  {
-    id: 'pink',
-    label: 'Pink',
-    dark: { primary: '#FF5CA8', primaryText: '#2B0A17', accent: '#FF5CA8', accentText: '#2B0A17' },
-    light: { primary: '#AD1457', primaryText: '#FFFFFF', accent: '#AD1457', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'amber',
-    label: 'Amber',
-    // v1.0.8: a true amber (~42°). The id and the name stay "amber" / Amber. Light mode is unchanged.
-    dark: { primary: '#FFB300', primaryText: '#261A00', accent: '#FFB300', accentText: '#261A00' },
-    light: { primary: '#8A5300', primaryText: '#FFFFFF', accent: '#8A5300', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'indigo',
-    label: 'Indigo',
-    dark: { primary: '#7C8CFF', primaryText: '#0E1440', accent: '#7C8CFF', accentText: '#0E1440' },
-    light: { primary: '#3949AB', primaryText: '#FFFFFF', accent: '#3949AB', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'brown',
-    label: 'Brown',
-    dark: { primary: '#CD8E62', primaryText: '#21120A', accent: '#CD8E62', accentText: '#21120A' },
-    light: { primary: '#6D4C41', primaryText: '#FFFFFF', accent: '#6D4C41', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'lime',
-    label: 'Lime',
-    // v1.0.7: a truer, brighter lime green (hue ~88°, was yellowish #C6D93F / #556300).
-    dark: { primary: '#8BE02A', primaryText: '#142100', accent: '#8BE02A', accentText: '#142100' },
-    light: { primary: '#3F7A00', primaryText: '#FFFFFF', accent: '#3F7A00', accentText: '#FFFFFF' },
-  },
-  {
-    id: 'slate',
-    label: 'Slate',
-    dark: { primary: '#B0BEC5', primaryText: '#111A1F', accent: '#B0BEC5', accentText: '#111A1F' },
-    light: { primary: '#455A64', primaryText: '#FFFFFF', accent: '#455A64', accentText: '#FFFFFF' },
-  },
+  { id: 'green', label: 'Green', dark: shade('#3C8F40', 'light'), light: shade('#3C8F40', 'light') },
+  { id: 'orange', label: 'Orange', dark: shade('#CF5D00', 'light'), light: shade('#CF5D00', 'light') },
+  { id: 'blue', label: 'Blue', dark: shade('#1981DC', 'light'), light: shade('#1981DC', 'light') },
+  { id: 'purple', label: 'Purple', dark: shade('#9D5DEE', 'light'), light: shade('#9D5DEE', 'light') },
+  { id: 'red', label: 'Red', dark: shade('#E6423F', 'light'), light: shade('#E6423F', 'light') },
+  { id: 'teal', label: 'Teal', dark: shade('#008F80', 'light'), light: shade('#008F80', 'light') },
+  { id: 'pink', label: 'Pink', dark: shade('#EB3271', 'light'), light: shade('#EB3271', 'light') },
+  // Brighter than a brown-gold so the name still reads Amber. Dark on-color.
+  { id: 'amber', label: 'Amber', dark: shade('#C1810A', 'dark'), light: shade('#C1810A', 'dark') },
+  { id: 'indigo', label: 'Indigo', dark: shade('#6C7AC6', 'light'), light: shade('#6C7AC6', 'light') },
+  { id: 'brown', label: 'Brown', dark: shade('#AC714F', 'light'), light: shade('#AC714F', 'light') },
+  // A true lime, not olive. Dark on-color.
+  { id: 'lime', label: 'Lime', dark: shade('#58A018', 'dark'), light: shade('#58A018', 'dark') },
+  { id: 'slate', label: 'Slate', dark: shade('#69838F', 'light'), light: shade('#69838F', 'light') },
 ];
 
 /** Green switch chrome in both color schemes (v1.0.8). Not derived from the accent, and not teal. */
 const SWITCH_ON = { track: '#43A047', thumb: '#C8E6C9' } as const;
 
-type Base = Omit<ThemeColors, keyof AccentSwatch | 'tagBg' | 'dangerIcon' | 'switchTrack' | 'switchThumb'>;
+type Base = Omit<
+  ThemeColors,
+  | keyof AccentSwatch
+  | 'accent'
+  | 'accentText'
+  | 'badge'
+  | 'badgeText'
+  | 'badgeRing'
+  | 'tagBg'
+  | 'dangerIcon'
+  | 'switchTrack'
+  | 'switchThumb'
+>;
 
 const BASES: Record<ColorScheme, Base> = {
   dark: {
@@ -242,6 +214,9 @@ export function buildColors(scheme: ColorScheme, accentId: AccentId = DEFAULT_AC
   const colors: ThemeColors = {
     ...base,
     ...swatch,
+    accent: swatch.primary,
+    accentText: swatch.primaryText,
+    ...BADGE_COLORS,
     tagBg: mixHex(base.background, swatch.primary, scheme === 'dark' ? 0.16 : 0.12),
     dangerIcon: accentId === 'red' ? base.muted : base.danger,
     switchTrack: SWITCH_ON.track,

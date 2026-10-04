@@ -1,5 +1,19 @@
-import { createContext, useContext, type ReactNode } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { createContext, forwardRef, useContext, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
+import {
+  findNodeHandle,
+  FlatList,
+  Keyboard,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type FlatListProps,
+  type ScrollViewProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
@@ -16,17 +30,24 @@ export const BottomBarCoversInsetProvider = BottomBarCoversInsetContext.Provider
 const FrameClearsInsetContext = createContext(false);
 
 /**
- * Extra padding inside bottom-tab scenes. The tab bar is in normal flow (not absolute), so the scene
- * already ends above it. This only clears the raised center + button (~29dp overlap).
+ * How far the raised center + extends above the tab bar. The circle's `marginTop` is −29, and on the
+ * rendered bar the circle top sits 36dp above the bar top (the slot is shorter than the circle).
  */
-export const TAB_PLUS_CLEARANCE = 32;
+export const TAB_PLUS_RAISE = 36;
+/** Extra gap so the last control is not flush against the raised +. */
+export const TAB_PLUS_MARGIN = 16;
+/**
+ * Extra padding inside bottom-tab scenes. The tab bar is in normal flow (not absolute), so the scene
+ * already ends above it. This clears the raised center + (the raise, plus a margin).
+ */
+export const TAB_PLUS_CLEARANCE = TAB_PLUS_RAISE + TAB_PLUS_MARGIN;
 
 /**
  * Extra bottom space for scroll content and floating buttons (v1.0.3, extended in v1.0.8).
  *
- * - Inside a bottom tab bar: `TAB_PLUS_CLEARANCE` only. Do not add the bar height or the system inset —
- *   the bar is already in flow, and adding them lifts absolute controls (the recipe selection bar) far
- *   above the bar.
+ * - Inside a bottom tab bar: `TAB_PLUS_CLEARANCE` only (the raise above the bar, plus a margin). Do not
+ *   add the bar height or the system inset — the bar is already in flow, and adding them lifts absolute
+ *   controls (the recipe selection bar) far above the bar.
  * - Inside `SystemNavFrame`: 0. The frame already ends the viewport above the system navigation bar, so
  *   scroll padding must not add that inset again.
  * - Otherwise: the safe-area bottom inset (stack screens rendered without the frame, and the side rail).
@@ -62,11 +83,15 @@ export function SystemNavFrame({ children }: { children: ReactNode }) {
 
 /**
  * v1.0.7 (Jason): the bottom bar is ~33% bigger — bar height, icons, labels and the + scale together
- * (60→80dp bar, 22→29dp icons, 10→13sp labels, 44→58dp +). The bar adds the safe-area bottom inset so it stays
- * clear of the gesture pill / 3-button nav bar. The bar is in normal flow; tab scenes add `TAB_PLUS_CLEARANCE`
- * (`useBottomInset`) so content and floating buttons clear the raised +, not the whole bar.
+ * (60→80dp bar, 22→29dp icons, 10→13sp labels, 44→58dp +). v1.0.9: icons are 24dp so the labels have room.
+ * The bar adds the safe-area bottom inset so it stays clear of the gesture pill / 3-button nav bar. The bar is
+ * in normal flow; tab scenes add `TAB_PLUS_CLEARANCE` (`useBottomInset`) so content and floating buttons clear
+ * the raised + (how far it rises above the bar, plus a margin), not the whole bar.
  */
-export const TAB_BAR = { height: 80, icon: 29, label: 13, plus: 58, plusIcon: 31 } as const;
+export const TAB_BAR = { height: 80, icon: 24, label: 13, plus: 58, plusIcon: 31 } as const;
+
+/** Tab labels shrink to fit instead of truncating (v1.0.9). */
+export const TAB_LABEL_MIN_SCALE = 0.85;
 
 /** Max readable widths so content never stretches across a wide unfolded screen / hinge (spec #23). */
 export const MAX_CONTENT_WIDTH = { text: 720, list: 560, form: 640 } as const;
@@ -144,6 +169,193 @@ export function TwoPaneLayout({
         </View>
       ) : null}
     </View>
+  );
+}
+
+type Measurable = {
+  measureLayout: (
+    relative: number,
+    onSuccess: (x: number, y: number, width: number, height: number) => void,
+    onFail: () => void,
+  ) => void;
+};
+
+/** Height of the open software keyboard (0 when hidden). */
+export function useKeyboardHeight(): number {
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, (e) => setHeight(e.endCoordinates?.height ?? 0));
+    const hide = Keyboard.addListener(hideEvent, () => setHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return height;
+}
+
+type FocusState = {
+  currentlyFocusedInput?: () => Measurable | null;
+  currentlyFocusedField?: () => Measurable | null;
+};
+
+/**
+ * The focused field, without calling APIs the platform doesn't have.
+ * react-native-web's `TextInput.State` has no `currentlyFocusedInput`; calling it throws on every focus.
+ * Fall through to `currentlyFocusedField`, then to `document.activeElement` on web.
+ */
+export function focusedTextInput(): Measurable | null {
+  const state = (TextInput as unknown as { State?: FocusState }).State;
+  if (state && typeof state.currentlyFocusedInput === 'function') {
+    const input = state.currentlyFocusedInput();
+    if (input) return input;
+  }
+  if (state && typeof state.currentlyFocusedField === 'function') {
+    const field = state.currentlyFocusedField();
+    if (field) return field;
+  }
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    const el = document.activeElement as (Measurable & { tagName?: string; isContentEditable?: boolean }) | null;
+    if (!el || el.tagName === 'BODY') return null;
+    const tag = el.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable) return el;
+  }
+  return null;
+}
+
+type WebNode = Measurable & {
+  parentElement?: WebNode | null;
+  scrollTop?: number;
+  scrollHeight?: number;
+  clientHeight?: number;
+  scrollIntoView?: (opts?: { block?: 'nearest' }) => void;
+  getBoundingClientRect?: () => { top: number; bottom: number; height: number };
+};
+
+function scrollableParent(node: WebNode): WebNode | null {
+  let current = node.parentElement ?? null;
+  while (current) {
+    const style = typeof getComputedStyle === 'function' ? getComputedStyle(current as unknown as Element) : null;
+    const overflow = style?.overflowY ?? '';
+    const scrollHeight = current.scrollHeight ?? 0;
+    const clientHeight = current.clientHeight ?? 0;
+    if ((overflow === 'auto' || overflow === 'scroll') && scrollHeight > clientHeight + 1) return current;
+    current = current.parentElement ?? null;
+  }
+  return null;
+}
+
+/**
+ * Keep the focused field on screen. On web, if the rest of the scroll content fits under the field, scroll
+ * to the end so the bottom padding (`TAB_PLUS_CLEARANCE`) puts the last control above the raised +.
+ * Centering the field would park that control on the +.
+ */
+function scrollFocusedIntoView(scroll: ScrollView | null) {
+  const input = focusedTextInput();
+  if (!input) return;
+  // findNodeHandle throws on web ("not supported"). Scroll the DOM node instead.
+  if (Platform.OS !== 'web' && scroll && typeof input.measureLayout === 'function' && typeof findNodeHandle === 'function') {
+    const node = findNodeHandle(scroll);
+    if (node) {
+      input.measureLayout(
+        node,
+        (_x, y) => scroll.scrollTo({ y: Math.max(0, y - TAB_PLUS_CLEARANCE), animated: true }),
+        () => undefined,
+      );
+      return;
+    }
+  }
+  const webEl = input as WebNode;
+  const scroller = scrollableParent(webEl);
+  if (typeof webEl.scrollIntoView === 'function') webEl.scrollIntoView({ block: 'nearest' });
+  if (!scroller || typeof scroller.scrollTop !== 'number' || typeof scroller.getBoundingClientRect !== 'function') return;
+  const elRect = webEl.getBoundingClientRect?.();
+  const scRect = scroller.getBoundingClientRect?.();
+  if (!elRect || !scRect) return;
+  const below = (scroller.scrollHeight ?? 0) - scroller.scrollTop - (elRect.bottom - scRect.top);
+  if (below <= scRect.height) {
+    scroller.scrollTop = scroller.scrollHeight ?? scroller.scrollTop;
+    return;
+  }
+  const overlap = elRect.bottom - (scRect.bottom - TAB_PLUS_CLEARANCE);
+  if (overlap > 0) scroller.scrollTop += overlap;
+}
+
+function subscribeWebFocus(onScroll: () => void): () => void {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return () => undefined;
+  const run = () => requestAnimationFrame(onScroll);
+  document.addEventListener('focusin', run);
+  if (typeof window !== 'undefined') window.addEventListener('resize', run);
+  const viewport = (typeof window !== 'undefined'
+    ? (window as unknown as { visualViewport?: EventTarget }).visualViewport
+    : undefined);
+  viewport?.addEventListener('resize', run);
+  return () => {
+    document.removeEventListener('focusin', run);
+    if (typeof window !== 'undefined') window.removeEventListener('resize', run);
+    viewport?.removeEventListener('resize', run);
+  };
+}
+
+function withKeyboardPadding(style: ScrollViewProps['contentContainerStyle'], keyboard: number) {
+  // Android already shrinks the window (`softwareKeyboardLayoutMode: "resize"`). Extra padding stacks on that.
+  if (Platform.OS === 'android' || keyboard <= 0) return style;
+  const flat = StyleSheet.flatten(style) ?? {};
+  const base = typeof flat.paddingBottom === 'number' ? flat.paddingBottom : 0;
+  return [style, { paddingBottom: base + keyboard }];
+}
+
+/**
+ * ScrollView that keeps the focused TextInput above the keyboard (v1.0.9). Android relies on
+ * `softwareKeyboardLayoutMode: "resize"` and does not add keyboard padding on top of that. iOS adds the
+ * keyboard inset. Web scrolls the focused field on focusin.
+ */
+export const KeyboardAwareScrollView = forwardRef<ScrollView, ScrollViewProps>(function KeyboardAwareScrollView(
+  { contentContainerStyle, ...rest },
+  ref,
+) {
+  const keyboard = useKeyboardHeight();
+  const inner = useRef<ScrollView>(null);
+  useImperativeHandle(ref, () => inner.current as ScrollView);
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      requestAnimationFrame(() => scrollFocusedIntoView(inner.current));
+    });
+    return () => sub.remove();
+  }, []);
+  useEffect(() => subscribeWebFocus(() => scrollFocusedIntoView(inner.current)), []);
+  return (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      {...rest}
+      ref={inner}
+      contentContainerStyle={withKeyboardPadding(contentContainerStyle, keyboard)}
+    />
+  );
+});
+
+/** FlatList with the same keyboard behavior as `KeyboardAwareScrollView`. */
+export function KeyboardAwareFlatList<T>({ contentContainerStyle, ...rest }: FlatListProps<T>) {
+  const keyboard = useKeyboardHeight();
+  const inner = useRef<FlatList<T>>(null);
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      requestAnimationFrame(() => scrollFocusedIntoView(inner.current as unknown as ScrollView));
+    });
+    return () => sub.remove();
+  }, []);
+  useEffect(() => subscribeWebFocus(() => scrollFocusedIntoView(inner.current as unknown as ScrollView)), []);
+  return (
+    <FlatList
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      {...rest}
+      ref={inner}
+      contentContainerStyle={withKeyboardPadding(contentContainerStyle, keyboard)}
+    />
   );
 }
 

@@ -24,6 +24,7 @@ export function RecipeCategories({
   selectedId,
   onOpen,
   onChanged,
+  onFieldFocus,
   accessory,
 }: {
   groups: RecipeCategoryGroup[];
@@ -34,7 +35,9 @@ export function RecipeCategories({
   onOpen: (id: string) => void;
   /** Called after a category was added, renamed or deleted. */
   onChanged: () => void;
-  /** Shown to the right of “New category” (the Recipes tab’s Add recipe button). */
+  /** Scroll the focused name field above the keyboard. */
+  onFieldFocus?: () => void;
+  /** Shown beside “New category”, and still shown while a new name is being typed. */
   accessory?: ReactNode;
 }) {
   const styles = useStyles();
@@ -164,6 +167,7 @@ export function RecipeCategories({
                   placeholder="Category name"
                   placeholderTextColor={colors.placeholder}
                   onSubmitEditing={() => void saveRename()}
+                  onFocus={onFieldFocus}
                   accessibilityLabel={`Rename ${category.name}`}
                   testID={`rename-category-input-${key}`}
                 />
@@ -219,9 +223,9 @@ export function RecipeCategories({
           {recipeRows(UNCATEGORIZED_KEY, uncategorized)}
         </View>
       ) : null}
-      <View style={styles.actionRow}>
+      <View style={[styles.actionRow, adding !== null && styles.actionStack]}>
         {adding !== null ? (
-          <View style={styles.editRow}>
+          <View style={styles.addForm}>
             <TextInput
               value={adding}
               onChangeText={setAdding}
@@ -230,6 +234,7 @@ export function RecipeCategories({
               placeholder="New category name"
               placeholderTextColor={colors.placeholder}
               onSubmitEditing={() => void saveNew()}
+              onFocus={onFieldFocus}
               accessibilityLabel="New category name"
               testID="new-category-input"
             />
@@ -242,7 +247,7 @@ export function RecipeCategories({
                 setAdding(null);
                 setError(null);
               }}
-              style={styles.iconBtn}
+              style={styles.cancelBtn}
               testID="cancel-new-category">
               <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
@@ -256,11 +261,10 @@ export function RecipeCategories({
             }}
             style={styles.addCategory}
             testID="add-category-button">
-            <Ionicons name="add" size={20} color={colors.primaryText} />
             <Text style={styles.addCategoryText}>New category</Text>
           </Pressable>
         )}
-        {adding === null && accessory ? <View style={styles.actionSlot}>{accessory}</View> : null}
+        {accessory ? <View style={styles.actionSlot}>{accessory}</View> : null}
       </View>
     </View>
   );
@@ -302,9 +306,13 @@ const useStyles = makeStyles((colors) => ({
   },
   editRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  actionSlot: { flex: 1 },
+  actionStack: { flexDirection: 'column', alignItems: 'stretch' },
+  actionSlot: { flex: 1, alignSelf: 'stretch' },
+  addForm: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch', minWidth: 0 },
   input: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
     minHeight: 44,
     borderWidth: 1,
     borderColor: colors.border,
@@ -315,10 +323,20 @@ const useStyles = makeStyles((colors) => ({
     fontSize: 16,
   },
   smallBtn: {
+    flexGrow: 0,
+    flexShrink: 0,
     minHeight: 44,
     paddingHorizontal: 14,
     borderRadius: 8,
     backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtn: {
+    flexGrow: 0,
+    flexShrink: 0,
+    minHeight: 44,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,13 +1,13 @@
 /**
  * v1.0.8: stack screens pad their frame by the safe-area bottom inset (`SystemNavFrame`) so mid-screen controls
  * clear the Android navigation bar. The bottom tab bar is in normal flow, so tab scenes already end above it.
- * `useBottomInset` inside tabs is only `TAB_PLUS_CLEARANCE` (~32dp) so content clears the raised center +.
+ * `useBottomInset` inside tabs is `TAB_PLUS_CLEARANCE` (how far the + rises above the bar, plus a margin).
  */
 import { render, screen } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 import { StyleSheet, Text } from 'react-native';
 
-import { BottomBarCoversInsetProvider, TAB_PLUS_CLEARANCE, useBottomInset } from '@/components/layout';
+import { BottomBarCoversInsetProvider, TAB_PLUS_CLEARANCE, TAB_PLUS_MARGIN, TAB_PLUS_RAISE, useBottomInset } from '@/components/layout';
 
 const NAV_BAR = 48;
 
@@ -69,7 +69,10 @@ describe('useBottomInset', () => {
       </SafeAreaProvider>,
     );
     expect(screen.getByTestId('probe')).toHaveTextContent(String(TAB_PLUS_CLEARANCE));
-    expect(TAB_PLUS_CLEARANCE).toBe(32);
+    // The circle rises this far above the bar; clearance is that plus a margin, or the last control stays covered.
+    expect(TAB_PLUS_RAISE).toBeGreaterThanOrEqual(36);
+    expect(TAB_PLUS_MARGIN).toBeGreaterThanOrEqual(16);
+    expect(TAB_PLUS_CLEARANCE).toBe(TAB_PLUS_RAISE + TAB_PLUS_MARGIN);
     screen.unmount();
     render(<Probe />);
     expect(screen.getByTestId('probe')).toHaveTextContent('0');

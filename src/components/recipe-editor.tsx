@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, Text, TextInput, View } from 'react-native';
 
 import { CategoryChips, toggleCategoryId } from '@/components/category-chips';
-import { useBottomInset } from '@/components/layout';
+import { KeyboardAwareScrollView, useBottomInset } from '@/components/layout';
 import { TagEditor } from '@/components/tag-editor';
 import { useFeature } from '@/hooks/use-feature';
 import { deleteLocalPhoto, PhotoPermissionError, pickRecipePhoto } from '@/lib/photos';
@@ -84,7 +84,7 @@ export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (re
   }
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="recipe-editor">
+    <KeyboardAwareScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} testID="recipe-editor">
       <Field label="Title">
         <TextInput
           value={state.title}
@@ -228,7 +228,7 @@ export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (re
         testID="save-recipe-button">
         <Text style={styles.saveText}>{saving ? 'Saving…' : 'Save changes'}</Text>
       </Pressable>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
