@@ -14,7 +14,7 @@ import { readMagicLink } from './auth-url';
 import type { SupabaseConfig } from './config';
 import { SYNC_TABLES } from './engine';
 import { fromRow, toRow, type DbRow } from './rows';
-import type { RemoteAdapter } from './types';
+import type { RemoteAdapter, SyncScope } from './types';
 
 export function createSupabase(config: SupabaseConfig): SupabaseClient {
   return createClient(config.url, config.anonKey, {
@@ -25,8 +25,10 @@ export function createSupabase(config: SupabaseConfig): SupabaseClient {
 /** RemoteAdapter over PostgREST. RLS on the server restricts rows to the caller's households. */
 export function createSupabaseRemote(client: SupabaseClient): RemoteAdapter {
   return {
-    async pull(table: SyncTable, householdId: string, sinceIso?: string) {
-      let q = client.from(table).select('*').eq('household_id', householdId).order('updated_at').limit(1000);
+    async pull(table: SyncTable, householdId: string | null, sinceIso?: string) {
+      const base = client.from(table).select('*');
+      // null = personal space: RLS only returns the caller's own personal rows.
+      let q = (householdId ? base.eq('household_id', householdId) : base.is('household_id', null)).order('updated_at').limit(1000);
       if (sinceIso) q = q.gt('updated_at', sinceIso);
       const { data, error } = await q;
       if (error) throw error;
@@ -212,14 +214,15 @@ export function createSupabaseAccount(client: SupabaseClient): AccountBackend {
  */
 export function subscribeHouseholdRealtime(
   client: SupabaseClient,
-  householdId: string,
+  scope: SyncScope,
   onChange: () => void,
 ): () => void {
-  const channel = client.channel(`household-sync:${householdId}`);
+  const filter = scope.householdId ? `household_id=eq.${scope.householdId}` : `owner_id=eq.${scope.userId}`;
+  const channel = client.channel(scope.householdId ? `household-sync:${scope.householdId}` : `personal-sync:${scope.userId}`);
   for (const table of SYNC_TABLES) {
     channel.on(
       'postgres_changes',
-      { event: '*', schema: 'public', table, filter: `household_id=eq.${householdId}` },
+      { event: '*', schema: 'public', table, filter },
       () => onChange(),
     );
   }

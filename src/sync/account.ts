@@ -122,9 +122,15 @@ export function createAccountController({
     for (const listener of listeners) listener(state);
   }
 
-  function unavailable(): { ok: false; error: string } | null {
-    if (!canUse('householdSync')) return { ok: false, error: 'Household sharing is not available.' };
-    if (!backend) return { ok: false, error: 'Household sharing is not configured on this build.' };
+  /** The account (email-code sign-in) serves personal cloud sync + AI assistants AND household sharing. */
+  function accountAvailable(): boolean {
+    return canUse('cloudSync') || canUse('householdSync');
+  }
+
+  function unavailable(scope: 'account' | 'household'): { ok: false; error: string } | null {
+    if (scope === 'household' && !canUse('householdSync')) return { ok: false, error: 'Household sharing is not available.' };
+    if (!accountAvailable()) return { ok: false, error: 'Sign-in is not available.' };
+    if (!backend) return { ok: false, error: 'Cloud sync is not configured on this build.' };
     return null;
   }
 
@@ -141,7 +147,7 @@ export function createAccountController({
     return {
       configured: true,
       user: cached.userId ? { id: cached.userId, email: cached.email } : null,
-      household: cached.household ?? null,
+      household: canUse('householdSync') ? (cached.household ?? null) : null,
       households: [],
       role: cached.role ?? null,
       members: cached.members ?? [],
@@ -168,6 +174,11 @@ export function createAccountController({
 
   async function loadMembership(preferredId?: string): Promise<void> {
     if (!backend || !state.user) return;
+    if (!canUse('householdSync')) {
+      // Household sharing is its own (optional) feature; without it the user syncs their personal space only.
+      state = { ...state, households: [], household: null, members: [], role: null };
+      return;
+    }
     const households = await backend.listHouseholds();
     const pick = households.find((h) => h.id === preferredId) ?? (households.length === 1 ? households[0] : undefined);
     if (!pick) {
@@ -186,8 +197,8 @@ export function createAccountController({
     };
   }
 
-  async function run(fn: () => Promise<void>): Promise<AccountResult> {
-    const blocked = unavailable();
+  async function run(fn: () => Promise<void>, scope: 'account' | 'household' = 'account'): Promise<AccountResult> {
+    const blocked = unavailable(scope);
     if (blocked) {
       state = { ...state, error: blocked.error };
       publish();
@@ -209,12 +220,12 @@ export function createAccountController({
 
   async function doRestore(): Promise<void> {
     const cached = await readCache();
-    if (!canUse('householdSync') || !backend) {
+    if (!accountAvailable() || !backend) {
       state = emptyAccountState(!!backend);
       publish();
       return;
     }
-    if (cached?.userId && cached.household) {
+    if (cached?.userId) {
       state = cacheToState(cached);
       publish();
     }
@@ -324,7 +335,7 @@ export function createAccountController({
           households: [],
           displayName: me?.displayName?.trim() ?? state.displayName,
         };
-      });
+      }, 'household');
     },
     joinWithCode(code: string): Promise<AccountResult> {
       const trimmed = code.trim();
@@ -334,14 +345,14 @@ export function createAccountController({
         const id = await backend!.joinHousehold(trimmed);
         await loadMembership(id);
         if (!state.household) throw new Error('Could not join that household.');
-      });
+      }, 'household');
     },
     selectHousehold(id: string): Promise<AccountResult> {
       return run(async () => {
         if (!state.user) throw new Error('Sign in first.');
         await loadMembership(id);
         if (state.household?.id !== id) throw new Error('That household is not available.');
-      });
+      }, 'household');
     },
     rotateInvite(): Promise<AccountResult> {
       return run(async () => {
@@ -349,14 +360,14 @@ export function createAccountController({
         if (state.role !== 'owner') throw new Error('Only the owner can rotate the invite code.');
         const inviteCode = await backend!.rotateInviteCode(state.household.id);
         state = { ...state, household: { ...state.household, inviteCode } };
-      });
+      }, 'household');
     },
     leave(): Promise<AccountResult> {
       return run(async () => {
         if (!state.household || !state.user) throw new Error('You are not in a household.');
         await backend!.removeMember(state.household.id, state.user.id);
         state = { ...state, household: null, members: [], role: null, households: [] };
-      });
+      }, 'household');
     },
     removeMember(userId: string): Promise<AccountResult> {
       return run(async () => {
@@ -365,7 +376,7 @@ export function createAccountController({
         if (userId === state.user.id) throw new Error('Use leave to remove yourself.');
         await backend!.removeMember(state.household.id, userId);
         state = { ...state, members: state.members.filter((m) => m.userId !== userId) };
-      });
+      }, 'household');
     },
     setDisplayName(name: string): Promise<AccountResult> {
       const trimmed = name.trim().slice(0, 80);
@@ -379,7 +390,7 @@ export function createAccountController({
             m.userId === state.user?.id ? { ...m, displayName: trimmed || null } : m,
           ),
         };
-      });
+      }, 'household');
     },
   };
 }

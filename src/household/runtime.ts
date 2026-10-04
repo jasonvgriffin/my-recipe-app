@@ -17,7 +17,7 @@ import {
   type SyncReason,
   type SyncSchedule,
 } from '@/sync';
-import type { RemoteAdapter } from '@/sync/types';
+import type { RemoteAdapter, SyncScope } from '@/sync/types';
 
 import { setHouseholdSnapshot } from './state';
 
@@ -25,7 +25,8 @@ export interface HouseholdRuntimeOptions {
   account: AccountBackend | null;
   remote: RemoteAdapter | null;
   schedule?: SyncSchedule;
-  realtime?: (householdId: string, onChange: () => void) => () => void;
+  /** Optional realtime for the active scope (household, or the user's personal space when householdId is unset). */
+  realtime?: (scope: SyncScope, onChange: () => void) => () => void;
 }
 
 let account: AccountController = createAccountController({
@@ -64,14 +65,16 @@ function bind(): void {
     const key = `${next.user?.id ?? ''}|${next.household?.id ?? ''}`;
     if (key !== lastKey) {
       lastKey = key;
-      const householdId = next.household?.id;
-      if (next.user && householdId && realtimeFactory) {
+      // v1.0.6: any signed-in user syncs — their household if they have one, else their personal space.
+      const user = next.user;
+      const scope: SyncScope | undefined = user ? { userId: user.id, householdId: next.household?.id } : undefined;
+      if (scope && realtimeFactory) {
         const start = realtimeFactory;
-        coordinator.setRealtime((onChange) => start(householdId, onChange));
+        coordinator.setRealtime((onChange) => start(scope, onChange));
       } else {
         coordinator.setRealtime(null);
       }
-      if (next.user && next.household) coordinator.requestSync('signin');
+      if (user) coordinator.requestSync('signin');
       else coordinator.enterSolo();
     }
     refreshSnapshot();
@@ -122,7 +125,7 @@ export function startHouseholdRuntime(): void {
   install({
     account: createSupabaseAccount(client),
     remote: createSupabaseRemote(client),
-    realtime: (householdId, onChange) => subscribeHouseholdRealtime(client, householdId, onChange),
+    realtime: (scope, onChange) => subscribeHouseholdRealtime(client, scope, onChange),
   });
   void account.restore();
 }

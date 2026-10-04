@@ -7,7 +7,8 @@ import type { SyncTable } from '@/types/sync';
  */
 export interface DbRow {
   id: string;
-  household_id: string;
+  /** NULL = the signer's personal space (v1.0.6, docs/SYNC.md "Personal space"); the server sets owner_id. */
+  household_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -29,7 +30,7 @@ export function toRow(table: SyncTable, rec: StoredRecord & Record<string, unkno
   const { id, householdId, createdBy, createdAt, updatedAt, deletedAt, ...data } = rec;
   const row: DbRow = {
     id,
-    household_id: householdId as string,
+    household_id: (householdId as string | undefined) || null,
     created_by: (createdBy as string | undefined) ?? null,
     created_at: (createdAt as string | undefined) ?? (updatedAt as string),
     updated_at: updatedAt as string,
@@ -44,10 +45,10 @@ export function fromRow(row: DbRow): StoredRecord & Record<string, unknown> {
   const rec: StoredRecord & Record<string, unknown> = {
     ...row.data,
     id: row.id,
-    householdId: row.household_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+  if (row.household_id) rec.householdId = row.household_id;
   if (row.created_by) rec.createdBy = row.created_by;
   if (row.deleted_at) rec.deletedAt = row.deleted_at;
   return rec;

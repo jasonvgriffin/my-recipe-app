@@ -1,18 +1,21 @@
 # AI assistant access (remote MCP server)
 
 Ask Grok, Claude, ChatGPT or another MCP client to find, add and edit recipes, plan meals and manage the
-shopping list. Changes land in your household's synced data and show up in the app on its next sync.
+shopping list. Changes land in your synced data (your personal space, or your household's if you share one) and
+show up in the app on its next sync.
 This feature is in v1.0 (approved by Jason, Oct 3 2026).
 
 **Server URL:** `https://krqmumdgsfimasjawxqn.supabase.co/functions/v1/mcp`
 
 ## Before you connect
 
-1. In the app, open **Settings → Household**, sign in with your email code, and create or join a household.
-2. Let the app sync once, so your recipes are in Supabase. The assistant can only see synced household data.
-   It can't reach recipes that live only on the phone.
+1. In the app, open **Settings → AI assistants (MCP) → Sign in to sync and use with AI assistants** and sign in
+   with your email code. **No household needed** (v1.0.6). Household sharing (More → Household) is separate and
+   optional.
+2. Let the app sync once, so your recipes are in Supabase. The assistant sees your synced data: your personal
+   space, or your household's shared data when you are in one. It can't reach recipes that live only on the phone.
 
-Solo/offline use of the app still needs no account. Only MCP needs one.
+Solo/offline use of the app still needs no account. Only cloud sync and MCP need one.
 
 ## Connect
 
@@ -52,7 +55,9 @@ control stays on the phone: the cook session lives on the device, and assistants
 ## Limits and safety
 
 - **Auth:** OAuth 2.1 with PKCE (S256) and dynamic client registration, provided by Supabase Auth's OAuth 2.1
-  server (free, beta). Sign-in is the household email-code account (existing accounts only). The client gets a
+  server (free, beta). Sign-in is the app's email-code account (existing accounts only; created by signing in in
+the app). No household is required: a user in no household works in their personal space (`household_id` NULL,
+`owner_id` = them; docs/SYNC.md "Personal space"), a household member in the household's shared data. The client gets a
   Supabase access token for you (1 hour, refreshable); every query runs as you, under the same row-level
   security as the app. Connected apps show up in Supabase under Authentication → OAuth Apps.
 - **Entitlement:** `mcpAccess` in `src/entitlements` (free in v1). It is checked on every request and at sign-in.
@@ -68,7 +73,7 @@ control stays on the phone: the cook session lives on the device, and assistants
   - `server.ts`: HTTP routes, protected resource metadata, consent backend, JSON-RPC.
   - `tools.ts`: tools built on `importRecipeWith`, `applyRecipeEdit`, `filterRecipes`,
     `compileWeekShoppingList`, `addManualItem`, `isInPantry`.
-  - `repo.ts`: synced tables through `src/sync/rows.ts`.
+  - `repo.ts`: synced tables through `src/sync/rows.ts`, scoped to the household or (none) the personal space.
   - `oauth.ts`: resource metadata, Supabase issuer, input checks.
   - `rate-limit.ts`
 - `supabase/functions/mcp/`: Supabase Edge Function binding (supabase-js, env).
@@ -84,7 +89,7 @@ control stays on the phone: the cook session lives on the device, and assistants
   - `https://<ref>.supabase.co/.well-known/oauth-authorization-server/auth/v1`: discovery (Supabase)
   - `.../auth/v1/oauth/clients/register`, `/oauth/authorize`, `/oauth/token`: Supabase
   - `<server>/consent/send`, `<server>/consent/verify`: JSON backend of the consent page (email code, entitlement,
-    household check, then approves the Supabase authorization and ends the consent session)
+    then approves the Supabase authorization and ends the consent session)
   - `POST <server>`: MCP Streamable HTTP, JSON responses, stateless. Unauthenticated calls get 401 with
     `WWW-Authenticate: Bearer resource_metadata="…"`
   - `GET` / `DELETE <server>` without a valid token: the same 401 challenge (405 only once authenticated; no SSE

@@ -1,5 +1,5 @@
 /**
- * MCP tools (Phase 3): recipes, categories/tags, meal plan and shopping list for the caller's household.
+ * MCP tools (Phase 3): recipes, categories/tags, meal plan and shopping list for the caller's household, or their personal space when they have none (v1.0.6).
  * Built on the app's own modules — `importRecipeWith` (the one import pipeline), `applyRecipeEdit`,
  * `filterRecipes`, `compileWeekShoppingList`, `addManualItem` — so validation, the allulose-only rule and URL
  * dedupe are identical to the app. No nutrition tools: this is a recipe app, not a nutrition app.
@@ -126,7 +126,7 @@ const schemas = {
 export type ToolName = keyof typeof schemas;
 
 const descriptions: Record<ToolName, string> = {
-  search_recipes: 'Search the household recipe box. Returns id, title, tags, rating and servings for each match.',
+  search_recipes: 'Search the recipe box (the shared household, or your own if you share none). Returns id, title, tags, rating and servings for each match.',
   get_recipe: 'Get one recipe with ingredients, steps, notes, tags and source link.',
   add_recipe:
     'Add a recipe from a URL, plain text, or a structured recipe. Same import pipeline as the app: validated, deduplicated by source link. Allulose is the only sugar-free sweetener; monk fruit is rejected.',

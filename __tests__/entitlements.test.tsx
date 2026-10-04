@@ -63,6 +63,14 @@ describe('feature gate', () => {
     expect(gate.canUse('pdfExport')).toBe(false);
   });
 
+  it('registers cloudSync (personal account + sync, v1.0.6) separately from householdSync, free in v1', () => {
+    expect(DEFAULT_FEATURE_CONFIG.cloudSync).toEqual({ tier: 'free', enabled: true });
+    expect(canUse('cloudSync')).toBe(true);
+    featureGate.setConfig({ householdSync: { enabled: false } });
+    expect(canUse('cloudSync')).toBe(true);
+    expect(canUse('householdSync')).toBe(false);
+  });
+
   it('registers mcpAccess (future MCP server paywall switch), free in v1', () => {
     expect(DEFAULT_FEATURE_CONFIG.mcpAccess).toEqual({ tier: 'free', enabled: true });
     expect(canUse('mcpAccess')).toBe(true);

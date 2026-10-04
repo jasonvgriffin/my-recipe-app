@@ -127,7 +127,35 @@ describe('sync coordinator triggers and offline queue', () => {
     expect(pushed.some((row) => row.id === 'r1')).toBe(true);
   });
 
-  it('is a no-op without a household, and when the feature is locked', async () => {
+  it('syncs a signed-in user without a household (personal space, cloudSync gate only)', async () => {
+    const remote = { pull: jest.fn(async () => []), push: jest.fn(async () => {}) };
+    const kv = memoryStore();
+    const personal = createSyncCoordinator({
+      collections: collections(kv),
+      getRemote: () => remote,
+      getIdentity: () => ({ userId: 'ada' }),
+      kv,
+      canUse: (id) => id !== 'householdSync',
+      isolate: withoutSyncNotify,
+    });
+    await personal.syncNow('signin');
+    expect(personal.getStatus().phase).toBe('synced');
+    expect(remote.pull).toHaveBeenCalledWith('recipes', null, undefined);
+
+    remote.pull.mockClear();
+    const noCloud = createSyncCoordinator({
+      collections: collections(kv),
+      getRemote: () => remote,
+      getIdentity: () => ({ userId: 'ada' }),
+      kv,
+      canUse: (id) => id !== 'cloudSync',
+    });
+    await noCloud.syncNow('signin');
+    expect(noCloud.getStatus().phase).toBe('solo');
+    expect(remote.pull).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when signed out, and when the feature is locked', async () => {
     const remote = { pull: jest.fn(async () => []), push: jest.fn() };
     const kv = memoryStore();
     const locked = createSyncCoordinator({

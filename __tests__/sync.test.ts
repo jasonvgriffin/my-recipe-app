@@ -111,6 +111,49 @@ describe('household sync (spec #25)', () => {
     expect(remote.rows.get('recipes')!.get(solo.id)!.deleted_at).toBe('2026-10-02T12:00:00.000Z');
   });
 
+  it('syncs a signed-in user with NO household to their personal space, then shares it on joining (v1.0.6)', async () => {
+    const remote = fakeRemote();
+    const phone = device();
+    const tablet = device();
+    const offline = await phone.recipes.save({ ...SAMPLE_RECIPES[0] }, at('2026-10-01T10:00:00Z'));
+    setIdentity({ userId: 'ada' });
+    const signedIn = await phone.recipes.save({ ...SAMPLE_RECIPES[1] }, at('2026-10-01T11:00:00Z'));
+    expect(signedIn).toMatchObject({ createdBy: 'ada' });
+    expect(signedIn.householdId).toBeUndefined();
+    // Someone else's personal record left on the device (other account signed out) is never pushed.
+    const foreign = await phone.recipes.save({ ...SAMPLE_RECIPES[2], createdBy: 'bob' } as never, at('2026-10-01T11:30:00Z'));
+
+    const personal = (d: ReturnType<typeof device>) =>
+      createSyncEngine({ ...d, remote, userId: 'ada', now: () => at('2026-10-02T10:00:00Z') });
+    const r = await personal(phone).syncOnce();
+    expect(r.pushed.recipes).toBe(2);
+    expect(remote.rows.get('recipes')!.get(offline.id)).toMatchObject({ household_id: null, created_by: 'ada' });
+    expect(remote.rows.get('recipes')!.get(signedIn.id)).toMatchObject({ household_id: null, created_by: 'ada' });
+    expect(remote.rows.get('recipes')!.has(foreign.id)).toBe(false);
+    expect(await phone.kv.getItem('my-recipe-app/sync-cursors/personal/ada')).toBeTruthy();
+
+    // A second device of the same user pulls the personal space (no household anywhere).
+    await personal(tablet).syncOnce();
+    const pulled = await tablet.recipes.get(signedIn.id);
+    expect(pulled).toMatchObject({ title: signedIn.title, createdBy: 'ada' });
+    expect(pulled?.householdId).toBeUndefined();
+
+    // Joining a household later adopts the personal records into it (household sharing is optional on top).
+    const shared = createSyncEngine({ ...phone, remote, householdId: HH, userId: 'ada', now: () => at('2026-10-03T10:00:00Z') });
+    await shared.syncOnce();
+    expect(remote.rows.get('recipes')!.get(signedIn.id)).toMatchObject({ household_id: HH });
+  });
+
+  it('personal sync needs cloudSync, never householdSync', async () => {
+    const remote = { pull: jest.fn(async () => []), push: jest.fn(async () => {}) };
+    const d = device();
+    const noHousehold = createSyncEngine({ ...d, remote, userId: 'ada', canUse: (id) => id !== 'householdSync' });
+    expect((await noHousehold.syncOnce()).skipped).toBeUndefined();
+    expect(remote.pull).toHaveBeenCalledWith('recipes', null, undefined);
+    const locked = createSyncEngine({ ...d, remote, userId: 'ada', canUse: (id) => id !== 'cloudSync' });
+    expect((await locked.syncOnce()).skipped).toBe('feature_locked');
+  });
+
   it('stamps householdId/createdBy on new records from the active identity', async () => {
     setIdentity({ userId: 'u1', householdId: HH });
     const d = device();
