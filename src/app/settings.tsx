@@ -209,6 +209,30 @@ function AppearanceSection() {
   );
 }
 
+/**
+ * Sign-in row for cloud sync + AI assistants (v1.0.6): opens /account. Separate from More → Household — a
+ * personal account syncs and works with the MCP server on its own. Gated by `cloudSync`, not `householdSync`.
+ */
+function AccountSettingsLink() {
+  const styles = useStyles();
+  const { account, sync } = useHousehold();
+  const title = account.user ? 'Cloud sync & AI assistants' : 'Sign in to sync and use with AI assistants';
+  const subtitle = !account.user
+    ? 'Back up your recipes and let Grok, Claude or ChatGPT use them. No household needed.'
+    : `${account.user.email ?? 'Signed in'} · ${syncStatusLabel(sync)}`;
+  return (
+    <Link href="/account" asChild>
+      <Pressable accessibilityRole="button" testID="account-settings-link" style={styles.row}>
+        <View style={styles.flex}>
+          <Text style={styles.label}>{title}</Text>
+          <Text style={styles.help}>{subtitle}</Text>
+        </View>
+        <Text style={styles.label}>›</Text>
+      </Pressable>
+    </Link>
+  );
+}
+
 /** AI assistants (MCP): the server URL (`MCP_SERVER_URL`, src/config) with a copy button. Spec #28, docs/MCP.md. */
 function McpServerSection() {
   const styles = useStyles();
@@ -217,8 +241,12 @@ function McpServerSection() {
   return (
     <>
       <Text style={styles.section}>AI assistants (MCP)</Text>
+      <FeatureGate id="cloudSync">
+        <AccountSettingsLink />
+      </FeatureGate>
       <Text style={styles.help}>
-        Add this server URL to Grok, Claude or ChatGPT as a connector so your assistant can work with your recipes.
+        Add this server URL to Grok, Claude or ChatGPT as a connector, then sign in there with the same email, so
+        your assistant can work with your recipes.
       </Text>
       <View style={styles.mcpBox} testID="mcp-server">
         <Text style={styles.url} selectable testID="mcp-server-url">

@@ -12,6 +12,11 @@ export const FeatureId = {
   pantry: 'pantry',
   barcodeScan: 'barcodeScan',
   householdSync: 'householdSync',
+  /**
+   * Personal account + cloud sync of your own data (v1.0.6, docs/SYNC.md "Personal space"). Separate from
+   * householdSync: signing in and syncing never needs a household. The MCP server reads/writes this space.
+   */
+  cloudSync: 'cloudSync',
   cookingMode: 'cookingMode',
   cookWithMe: 'cookWithMe',
   timers: 'timers',
@@ -50,6 +55,7 @@ export const FEATURES: Record<FeatureId, FeatureInfo> = {
   // also needs its own screen's feature (pantry / shoppingList) to be visible.
   barcodeScan: { id: 'barcodeScan', label: 'Barcode scanning', spec: [27] },
   householdSync: { id: 'householdSync', label: 'Household sharing', spec: [25] },
+  cloudSync: { id: 'cloudSync', label: 'Cloud sync (personal account)', spec: [25, 28] },
   cookingMode: { id: 'cookingMode', label: 'Cooking mode', spec: [19] },
   cookWithMe: { id: 'cookWithMe', label: 'Cook-with-me (voice assistant)', spec: [24] },
   timers: { id: 'timers', label: 'Step timers', spec: [15] },

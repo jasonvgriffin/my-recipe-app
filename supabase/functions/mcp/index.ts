@@ -80,8 +80,9 @@ const handler = createMcpHandler({
       .eq('user_id', userId)
       .order('joined_at', { ascending: false })
       .limit(1);
-    const householdId = data?.[0]?.household_id as string | undefined;
-    return householdId ? createSupabaseRepo(client as unknown as SupabaseLike, { householdId, userId }) : undefined;
+    // v1.0.6: no household = the user's personal space (household_id NULL, owner = them). A household is optional.
+    const householdId = (data?.[0]?.household_id as string | undefined) ?? null;
+    return createSupabaseRepo(client as unknown as SupabaseLike, { householdId, userId });
   },
   rateLimiter: (accessToken) => createRpcRateLimiter((fn, args) => asUser(accessToken).rpc(fn, args)),
   async fetchHtml(url) {

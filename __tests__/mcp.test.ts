@@ -29,8 +29,11 @@ const RECIPE_HTML = `<html><head><script type="application/ld+json">${JSON.strin
   recipeYield: '9',
 })}</script></head><body></body></html>`;
 
-async function setup(opts: { household?: boolean; canUse?: (id: FeatureId) => boolean; perMinute?: number } = {}) {
-  const repo = createMemoryRepo('h1', 'u1', () => NOW);
+async function setup(
+  opts: { household?: boolean; reachable?: boolean; canUse?: (id: FeatureId) => boolean; perMinute?: number } = {},
+) {
+  // household: false = a user in NO household: their personal space (householdId null), v1.0.6.
+  const repo = createMemoryRepo(opts.household === false ? null : 'h1', 'u1', () => NOW);
   const sent: string[] = [];
   const approved: string[] = [];
   const ended: string[] = [];
@@ -60,7 +63,7 @@ async function setup(opts: { household?: boolean; canUse?: (id: FeatureId) => bo
     resource: RESOURCE,
     authorizationServer: AUTH_SERVER,
     auth,
-    connect: async () => (opts.household === false ? undefined : repo),
+    connect: async () => (opts.reachable === false ? undefined : repo),
     rateLimiter: (() => {
       const limiter = createMemoryRateLimiter({ perMinute: opts.perMinute ?? 1000, perDay: 10_000 }, () => NOW);
       return () => limiter;
@@ -159,11 +162,30 @@ describe('MCP server: OAuth discovery and auth', () => {
     expect((await s.rpc('not-a-token', 'ping')).status).toBe(401);
   });
 
-  it('requires a household with synced recipes', async () => {
+  it('does NOT need a household: a personal user consents and add_recipe / search_recipes use their personal space (v1.0.6)', async () => {
     const s = await setup({ household: false });
     const r = await s.consent();
-    expect(r.status).toBe(403);
-    expect(r.body.error).toContain('No household found');
+    expect(r.status).toBe(200);
+    expect(r.body.redirect_url).toContain('code=abc');
+    expect(s.approved).toEqual([AUTH_ID]);
+    expect(s.ended).toEqual(['sb-consent-session']);
+    const { access_token: at } = await s.token();
+    const added = await s.tool(at, 'add_recipe', {
+      recipe: { title: 'Solo Allulose Muffins', ingredients: ['1 cup almond flour', '1/4 cup allulose'], steps: ['Bake.'] },
+    });
+    expect(added.isError).toBeUndefined();
+    const id = added.structuredContent.recipe.id as string;
+    const stored = s.repo.tables.recipes.get(id)!;
+    expect(stored.householdId).toBeUndefined();
+    expect(stored.createdBy).toBe('u1');
+    const found = await s.tool(at, 'search_recipes', { query: 'muffins' });
+    expect(JSON.stringify(found.structuredContent)).toContain(id);
+  });
+
+  it('reports an unreachable data store without approving', async () => {
+    const s = await setup({ reachable: false });
+    const r = await s.consent();
+    expect(r.status).toBe(503);
     expect(s.approved).toEqual([]);
     expect(s.ended).toEqual(['sb-consent-session']);
   });
@@ -323,16 +345,21 @@ describe('MCP Supabase bindings', () => {
       title: 'Soup',
       data: { title: 'Soup', ingredients: [{ text: 'water' }], steps: [{ text: 'Boil.' }], tags: [], servings: 2 },
     };
+    /** Chainable PostgREST-like filter: records `table:filter,filter`, resolves to rows matching household_id. */
+    const query = (table: string, applied: string[]): any => ({
+      eq: (col: string, val: string) => query(table, [...applied, `${col}=${val}`]),
+      is: (col: string, val: null) => query(table, [...applied, `${col} is ${val}`]),
+      then: (resolve: (v: unknown) => void) => {
+        filters.push(`${table}:${applied.join(',')}`);
+        const personal = applied.includes('household_id is null');
+        const rows = [row, personalRow].filter((r) => (personal ? r.household_id === null : r.household_id === 'h1'));
+        resolve({ data: rows, error: null });
+      },
+    });
+    const personalRow = { ...row, id: 'p1', household_id: null, created_by: 'u1', title: 'My Soup', data: { ...row.data, title: 'My Soup' } };
     const client = {
       from: (table: string) => ({
-        select: () => ({
-          eq: (col: string, val: string) => ({
-            is: async (col2: string) => {
-              filters.push(`${table}:${col}=${val}:${col2}`);
-              return { data: [row], error: null };
-            },
-          }),
-        }),
+        select: () => query(table, []),
         upsert: async (rows: unknown[]) => {
           upserts.push(...rows);
           return { error: null };
@@ -342,11 +369,20 @@ describe('MCP Supabase bindings', () => {
     const repo = createSupabaseRepo(client, { householdId: 'h1', userId: 'u1', now: () => NOW });
     const [rec] = await repo.list('recipes');
     expect(rec).toMatchObject({ id: 'r1', title: 'Soup', householdId: 'h1', createdBy: 'u2' });
-    expect(filters).toEqual(['recipes:household_id=h1:deleted_at']);
+    expect(filters).toEqual(['recipes:household_id=h1,deleted_at is null']);
     await repo.save('recipes', { ...rec, title: 'Better Soup' });
     expect(upserts[0]).toMatchObject({ id: 'r1', household_id: 'h1', created_by: 'u2', title: 'Better Soup', updated_at: NOW.toISOString() });
     await repo.remove('recipes', 'r1');
     expect(upserts[1]).toMatchObject({ id: 'r1', deleted_at: NOW.toISOString() });
+
+    // No household (v1.0.6): the personal space = household_id IS NULL (RLS: owner_id = the caller).
+    const personal = createSupabaseRepo(client, { householdId: null, userId: 'u1', now: () => NOW });
+    const mine = await personal.list('recipes');
+    expect(mine.map((r) => r.id)).toEqual(['p1']);
+    expect(mine[0].householdId).toBeUndefined();
+    expect(filters.at(-1)).toBe('recipes:household_id is null,deleted_at is null');
+    await personal.save('recipes', { id: 'p2', title: 'New', createdAt: NOW.toISOString(), updatedAt: NOW.toISOString() });
+    expect(upserts.at(-1)).toMatchObject({ id: 'p2', household_id: null, created_by: 'u1' });
 
     const calls: unknown[] = [];
     const limiter = createRpcRateLimiter(async (fn, args) => {

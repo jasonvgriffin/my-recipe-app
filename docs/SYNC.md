@@ -28,6 +28,27 @@ UI screens ──> stores (src/storage/*: recipeStore, mealPlanStore, pantryStor
   shopping item is its own row so two people can check items concurrently), `barcode_items`. (`receipt_aliases` exists in the database from an applied migration but is no longer synced: receipt scanning was removed in v1.0.1.)
   Settings and the cook-with-me session stay per device.
 
+## Personal space (v1.0.6): sync and AI assistants without a household
+
+Household sharing is optional sharing ON TOP of a personal account. Signing in (Settings → AI assistants (MCP) →
+"Sign in to sync and use with AI assistants", `src/app/account.tsx`) syncs your own data on its own.
+
+- **Rows:** personal row = `household_id IS NULL` + `owner_id` = the user (set by the `_sync_columns_check`
+  trigger from `auth.uid()`); household row = `household_id` set, `owner_id` NULL. Check constraint: one of them.
+  RLS on every synced table: `can_access_sync_row(household_id, owner_id)` = household member, or the personal
+  owner. `owner_id` cascades on user delete. Migration `20261005000000_personal_sync.sql`.
+- **App:** identity `{ userId, householdId: undefined }` = personal scope. The coordinator syncs any signed-in
+  user; the engine pulls `household_id IS NULL` (RLS limits it to your rows), pushes local records that have no
+  household and are yours (or unauthored: claimed on first sync), and keeps cursors under
+  `sync-cursors/personal/<userId>`. Realtime filters on `owner_id`.
+- **Joining / creating a household** shares your personal space into it: `create_household` / `join_household`
+  move your personal rows to the household server-side (bumping `updated_at` so other members pull them), and
+  the device adopts its local copies (same as solo data always was). Leaving keeps the household's data with
+  the household; new local writes then sync to your personal space.
+- **Gates:** `cloudSync` = sign-in + personal sync; `householdSync` = household sharing (create/join, household
+  sync). They are independent; MCP (`mcpAccess`) never needs `householdSync`.
+- **MCP:** no household → the personal space; in a household → the household's data.
+
 ## Sync algorithm (`createSyncEngine(...).syncOnce()`)
 
 Per table:

@@ -141,7 +141,26 @@ describe('household account controller', () => {
     expect(solo.createdBy).toBeUndefined();
   });
 
-  it('does not call the backend when householdSync is locked', async () => {
+  it('signs in for personal cloud sync without household sharing (v1.0.6: separate gates)', async () => {
+    const fake = createFakeAccountBackend();
+    const account = createAccountController({
+      kv: memoryStore(),
+      backend: fake.api,
+      setIdentity,
+      canUse: (id) => id !== 'householdSync',
+    });
+    expect(await account.sendCode('ada@example.com')).toEqual({ ok: true });
+    expect(await account.verifyCode('ada@example.com', '123456')).toEqual({ ok: true });
+    const userId = account.getState().user?.id;
+    expect(userId).toBeTruthy();
+    expect(account.getState().household).toBeNull();
+    // Identity = signed in, no household → the sync coordinator uses the personal space.
+    expect(getIdentity()).toEqual({ userId, householdId: undefined });
+    expect(await account.createHousehold('Griffins')).toEqual({ ok: false, error: 'Household sharing is not available.' });
+    expect(await account.joinWithCode('ABCD1234')).toEqual({ ok: false, error: 'Household sharing is not available.' });
+  });
+
+  it('does not call the backend when sign-in (cloudSync and householdSync) is locked', async () => {
     const fake = createFakeAccountBackend();
     const account = createAccountController({
       kv: memoryStore(),
@@ -150,7 +169,7 @@ describe('household account controller', () => {
       canUse: () => false,
     });
     const result = await account.sendCode('ada@example.com');
-    expect(result).toEqual({ ok: false, error: 'Household sharing is not available.' });
+    expect(result).toEqual({ ok: false, error: 'Sign-in is not available.' });
     expect(fake.sent).toEqual([]);
     await account.restore();
     expect(getIdentity()).toEqual({});

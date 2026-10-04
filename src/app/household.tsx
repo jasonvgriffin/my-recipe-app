@@ -129,7 +129,7 @@ export default function HouseholdScreen() {
   async function leave(): Promise<void> {
     const ok = await confirmAction(
       'Leave household?',
-      'Recipes stay on this device. Sync pauses until you join a household again.',
+      'Recipes stay on this device. New changes sync to your personal account until you join a household again.',
       'Leave',
     );
     if (!ok) return;
@@ -167,7 +167,8 @@ export default function HouseholdScreen() {
       {/* v1.0.4: the “Household” page title comes from SectionLayout (no duplicate heading here). */}
       <Text style={styles.help}>
         Share recipes, the pantry, meal plan and shopping list with people you live with. Optional — recipes work
-        without an account.
+        without an account, and cloud sync and AI assistants work without a household (Settings → AI assistants).
+        Creating or joining a household shares your synced recipes with it.
       </Text>
       {authParams.auth === 'ok' && account.user ? (
         <Text testID="household-auth-ok" style={styles.success}>
@@ -205,7 +206,7 @@ export default function HouseholdScreen() {
           <Text testID="household-role" style={styles.help}>
             {account.role === 'owner' ? 'You are the owner' : 'You are a member'}
           </Text>
-          <SyncStatusBanner status={sync} inHousehold />
+          <SyncStatusBanner status={sync} scope="household" />
           <Field label="Your name">
             <TextInput
               testID="household-display-name"
@@ -227,7 +228,7 @@ export default function HouseholdScreen() {
           <Button testID="household-leave" label="Leave household" kind="danger" disabled={busy} onPress={() => void leave()} />
         </>
       ) : account.user ? (
-        <SyncStatusBanner status={sync} inHousehold={false} />
+        <SyncStatusBanner status={sync} scope="personal" />
       ) : null}
       {!isTwoPane && !account.household ? membersPaneContent() : null}
       {account.user ? (

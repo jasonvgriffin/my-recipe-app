@@ -40,7 +40,10 @@ export interface McpServerDeps {
   /** OAuth issuer: Supabase Auth, e.g. https://<ref>.supabase.co/auth/v1. */
   authorizationServer: string;
   auth: McpAuthBackend;
-  /** Household data for this user (RLS via their token), or undefined if they are in no household. */
+  /**
+   * This user's data (RLS via their token): their household when they are in one, otherwise their personal space
+   * (v1.0.6: no household needed). Undefined only if the data can't be reached.
+   */
   connect(accessToken: string, userId: string): Promise<HouseholdRepo | undefined>;
   rateLimiter(accessToken: string): RateLimiter;
   fetchHtml: (url: string) => Promise<string>;
@@ -80,12 +83,18 @@ export function createMcpHandler(deps: McpServerDeps) {
     try {
       await deps.auth.sendCode(email);
     } catch {
-      return json({ error: 'Could not send a code. Use the email you signed in with in the app (Settings → Household).' }, 400);
+      return json(
+        { error: 'Could not send a code. Use the email you signed in with in the app (Settings → AI assistants → Sign in).' },
+        400,
+      );
     }
     return json({ ok: true, email });
   }
 
-  /** Consent page step 2: check the code, entitlement and household, then approve the Supabase authorization. */
+  /**
+   * Consent page step 2: check the code and entitlement, then approve the Supabase authorization. No household
+   * needed (v1.0.6): users without one work in their personal space.
+   */
   async function consentVerify(req: Request) {
     const form = await jsonBody(req);
     const email = (form.email ?? '').trim().toLowerCase();
@@ -101,12 +110,7 @@ export function createMcpHandler(deps: McpServerDeps) {
     try {
       if (!canUse('mcpAccess')) return json({ error: 'AI assistant access is not available for this account.' }, 403);
       const repo = await deps.connect(session.accessToken, session.userId);
-      if (!repo) {
-        return json(
-          { error: 'No household found. In the app, open Settings → Household, create or join a household, and let your recipes sync.' },
-          403,
-        );
-      }
+      if (!repo) return json({ error: 'Could not reach your recipes. Try again in a minute.' }, 503);
       try {
         const { redirectUrl } = await deps.auth.approve(authorizationId, session.accessToken);
         return json({ redirect_url: redirectUrl });
@@ -164,7 +168,8 @@ export function createMcpHandler(deps: McpServerDeps) {
             capabilities: { tools: { listChanged: false } },
             serverInfo: MCP_SERVER_INFO,
             instructions:
-              "Jason's household recipe box. Search, read, add and edit recipes; plan meals; manage the shopping list. " +
+              "Jason's recipe box (the user's household when they share one, otherwise their personal recipes). " +
+              'Search, read, add and edit recipes; plan meals; manage the shopping list. ' +
               'Allulose is the only sugar-free sweetener (never monk fruit). This is a recipe app, not a nutrition app: no nutrition data.',
           });
         }
@@ -176,7 +181,7 @@ export function createMcpHandler(deps: McpServerDeps) {
           const r = await getRepo();
           if (!r) {
             return rpcResult(msg.id, {
-              content: [{ type: 'text', text: 'No household found. In the app: Settings → Household → create or join, then sync.' }],
+              content: [{ type: 'text', text: 'Could not reach your recipes. Try again in a minute.' }],
               isError: true,
             });
           }

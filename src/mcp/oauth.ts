@@ -5,7 +5,7 @@
  * Function cannot serve root-level discovery or real HTML pages, and strict clients (Grok's connector manager)
  * only try the root-level URL, so this server is only the protected resource (RFC 9728) plus the JSON backend
  * of the consent page (`site/oauth/consent.html`, GitHub Pages = Auth Site URL + `/oauth/consent`).
- * Sign-in is the household email-code account, so the assistant acts as the same user under the same RLS.
+ * Sign-in is the app's email-code account (personal; a household is optional), so the assistant acts as the same user under the same RLS.
  */
 
 /** Supabase Auth issuer for a project URL, e.g. https://<ref>.supabase.co → https://<ref>.supabase.co/auth/v1. */

@@ -7,9 +7,9 @@ import { recipeStore } from '@/storage/recipes';
 
 import type { SyncCollections } from './types';
 
-export { createSyncEngine, SYNC_TABLES, TOMBSTONE_TTL_DAYS, syncCursorStorageKey } from './engine';
+export { createSyncEngine, inSyncScope, SYNC_TABLES, syncFeatureFor, TOMBSTONE_TTL_DAYS, syncCursorStorageKey } from './engine';
 export { getSupabaseConfig, isSyncConfigured, type SupabaseConfig } from './config';
-export type { RemoteAdapter, SyncCollections, SyncResult } from './types';
+export type { RemoteAdapter, SyncCollections, SyncResult, SyncScope } from './types';
 export {
   createAccountController,
   emptyAccountState,

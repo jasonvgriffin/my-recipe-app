@@ -2,7 +2,7 @@ import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import type { KeyValueStore } from '@/storage/kv';
 import type { SyncTable } from '@/types/sync';
 
-import { createSyncEngine, SYNC_TABLES, syncCursorStorageKey } from './engine';
+import { createSyncEngine, inSyncScope, SYNC_TABLES, syncCursorStorageKey, syncFeatureFor } from './engine';
 import { syncErrorMessage, isOfflineError } from './errors';
 import type { SyncReason, SyncStatus } from './status';
 import { SOLO_STATUS } from './status';
@@ -95,10 +95,10 @@ export function createSyncCoordinator({
     await kv.setItem(QUEUE_KEY, JSON.stringify(queue));
   }
 
-  async function countPending(householdId: string): Promise<number> {
+  async function countPending(householdId: string | undefined, userId: string): Promise<number> {
     let cursors: Cursors = {};
     try {
-      const raw = await kv.getItem(syncCursorStorageKey(householdId));
+      const raw = await kv.getItem(syncCursorStorageKey(householdId, userId));
       cursors = raw ? (JSON.parse(raw) as Cursors) : {};
     } catch {
       cursors = {};
@@ -106,17 +106,24 @@ export function createSyncCoordinator({
     let pending = 0;
     for (const table of SYNC_TABLES) {
       const changes = await collections[table].changesSince(cursors.pushed?.[table]);
-      pending += changes.filter((row) => !row.householdId || row.householdId === householdId).length;
+      // Household: local-only rows get adopted too. Personal: rows in the personal scope.
+      pending += changes.filter((row) => (householdId && !row.householdId) || inSyncScope(row, householdId, userId)).length;
     }
     return pending;
   }
 
-  function active(): { userId: string; householdId: string; remote: RemoteAdapter } | null {
-    if (stopped || !canUse('householdSync')) return null;
+  /**
+   * Sync runs for any signed-in user: in their household when they have one (householdSync), otherwise in
+   * their personal space (cloudSync). v1.0.6: no household needed.
+   */
+  function active(): { userId: string; householdId?: string; remote: RemoteAdapter } | null {
+    if (stopped) return null;
     const remote = getRemote();
     const identity = getIdentity();
-    if (!remote || !identity.userId || !identity.householdId) return null;
-    return { userId: identity.userId, householdId: identity.householdId, remote };
+    if (!remote || !identity.userId) return null;
+    const householdId = identity.householdId || undefined;
+    if (!canUse(syncFeatureFor(householdId))) return null;
+    return { userId: identity.userId, householdId, remote };
   }
 
   function enterSolo(): void {
@@ -171,7 +178,7 @@ export function createSyncCoordinator({
       if (result.skipped === 'feature_locked') {
         locked = true;
       } else {
-        const pending = await countPending(ctx.householdId);
+        const pending = await countPending(ctx.householdId, ctx.userId);
         const lastSyncedAt = now().toISOString();
         await saveQueue({ householdId: ctx.householdId, dirty: pending > 0, attempts: 0, lastSyncedAt });
         if (pending > 0) {
@@ -188,7 +195,7 @@ export function createSyncCoordinator({
       const offline = isOfflineError(error);
       const previous = await loadQueue();
       const attempts = (previous.attempts ?? 0) + 1;
-      const pending = await countPending(ctx.householdId).catch(() => status.pending);
+      const pending = await countPending(ctx.householdId, ctx.userId).catch(() => status.pending);
       const lastError = syncErrorMessage(error);
       await saveQueue({
         householdId: ctx.householdId,
@@ -229,8 +236,8 @@ export function createSyncCoordinator({
       }, delay);
       const identity = getIdentity();
       const ticket = epoch;
-      if (identity.householdId && status.phase !== 'syncing') {
-        void countPending(identity.householdId).then((pending) => {
+      if (identity.userId && status.phase !== 'syncing') {
+        void countPending(identity.householdId || undefined, identity.userId).then((pending) => {
           if (ticket !== epoch || stopped || status.phase === 'syncing') return;
           status = { ...status, phase: 'pending', pending };
           emit();

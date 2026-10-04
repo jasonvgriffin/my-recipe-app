@@ -6,7 +6,7 @@
 <meta name="referrer" content="no-referrer">
 <title>Connect to My Recipe App</title>
 <!-- OAuth consent page for the remote MCP server (docs/MCP.md). Supabase Auth redirects here with
-     ?authorization_id=…; the MCP Edge Function checks the household email code and approves the request. -->
+     ?authorization_id=…; the MCP Edge Function checks the email code and approves the request. -->
 <style>
 body{font-family:system-ui,sans-serif;background:#16211A;color:#EDEFEA;display:flex;justify-content:center;padding:32px;margin:0}
 main{max-width:420px;width:100%}
@@ -21,8 +21,8 @@ button:disabled{opacity:.6}
 <body>
 <main>
 <h1>My Recipe App</h1>
-<p>An AI assistant wants to read and add recipes, meal plans and shopping lists in your household.</p>
-<p class="info">Sign in with the same email you use for household sharing in the app. Your recipes must be synced.</p>
+<p>An AI assistant wants to read and add recipes, meal plans and shopping lists in your account (your household's, if you share one).</p>
+<p class="info">Sign in with the same email you use in the app (Settings → AI assistants). No household needed.</p>
 <p id="msg" class="err" role="alert" hidden></p>
 <form id="send">
 <label>Email<input id="email" name="email" type="email" autocomplete="email" required autofocus></label>
