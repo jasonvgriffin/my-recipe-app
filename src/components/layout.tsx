@@ -6,28 +6,65 @@ import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { makeStyles } from '@/hooks/use-theme';
 
 /**
- * True inside the bottom tab bar's screens (the bar already sits above the system navigation bar). Provided by
- * `src/app/(tabs)/_layout.tsx`; false for stack screens and when tabs become a side rail (expanded width).
+ * True inside the bottom tab bar's screens. Provided by `src/app/(tabs)/_layout.tsx`; false for stack screens and
+ * when tabs become a side rail (expanded width).
  */
 const BottomBarCoversInsetContext = createContext(false);
 export const BottomBarCoversInsetProvider = BottomBarCoversInsetContext.Provider;
 
+/** True when `SystemNavFrame` already padded this screen by the system navigation-bar inset. */
+const FrameClearsInsetContext = createContext(false);
+
 /**
- * Extra bottom space so the end of a scrolling screen (or a floating button) is never hidden behind the Android
- * navigation bar (gesture pill / 3-button bar) — v1.0.3. 0 inside bottom tabs, else the safe-area bottom inset.
+ * Extra padding inside bottom-tab scenes. The tab bar is in normal flow (not absolute), so the scene
+ * already ends above it. This only clears the raised center + button (~29dp overlap).
+ */
+export const TAB_PLUS_CLEARANCE = 32;
+
+/**
+ * Extra bottom space for scroll content and floating buttons (v1.0.3, extended in v1.0.8).
+ *
+ * - Inside a bottom tab bar: `TAB_PLUS_CLEARANCE` only. Do not add the bar height or the system inset —
+ *   the bar is already in flow, and adding them lifts absolute controls (the recipe selection bar) far
+ *   above the bar.
+ * - Inside `SystemNavFrame`: 0. The frame already ends the viewport above the system navigation bar, so
+ *   scroll padding must not add that inset again.
+ * - Otherwise: the safe-area bottom inset (stack screens rendered without the frame, and the side rail).
+ *
  * Use as `contentContainerStyle={[styles.list, { paddingBottom: 48 + bottomInset }]}`.
  */
 export function useBottomInset(): number {
   // Read the context directly (not useSafeAreaInsets) so screens rendered without a SafeAreaProvider get 0.
+  // Hooks stay unconditional — the early returns are on the values, not the calls.
   const bottom = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
-  return useContext(BottomBarCoversInsetContext) ? 0 : bottom;
+  const frameClears = useContext(FrameClearsInsetContext);
+  const tabBarCovers = useContext(BottomBarCoversInsetContext);
+  if (frameClears) return 0;
+  if (tabBarCovers) return TAB_PLUS_CLEARANCE;
+  return bottom;
+}
+
+/**
+ * Pads a stack screen so its whole viewport — not only the end of the scroll — sits above the Android
+ * system navigation bar (v1.0.8). One place for every stack screen, via the root `screenLayout`.
+ * Tab scenes skip this: the bar is in normal flow, so the scene already ends above it.
+ */
+export function SystemNavFrame({ children }: { children: ReactNode }) {
+  const bottom = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
+  return (
+    <FrameClearsInsetContext.Provider value>
+      <View style={{ flex: 1, paddingBottom: bottom }} testID="system-nav-frame">
+        {children}
+      </View>
+    </FrameClearsInsetContext.Provider>
+  );
 }
 
 /**
  * v1.0.7 (Jason): the bottom bar is ~33% bigger — bar height, icons, labels and the + scale together
  * (60→80dp bar, 22→29dp icons, 10→13sp labels, 44→58dp +). The bar adds the safe-area bottom inset so it stays
- * clear of the gesture pill / 3-button nav bar; tab scenes are laid out above it (not absolute), so nothing hides
- * behind it.
+ * clear of the gesture pill / 3-button nav bar. The bar is in normal flow; tab scenes add `TAB_PLUS_CLEARANCE`
+ * (`useBottomInset`) so content and floating buttons clear the raised +, not the whole bar.
  */
 export const TAB_BAR = { height: 80, icon: 29, label: 13, plus: 58, plusIcon: 31 } as const;
 

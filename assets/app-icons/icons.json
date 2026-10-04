@@ -2,7 +2,7 @@
   {"id": "default", "label": "Classic", "design": "bowl", "background": "#16211A", "bowl": "#FFD60A", "steam": "#ECEFEC"},
   {"id": "orange", "label": "Spoons", "design": "spoons", "background": "#E8590C", "colors": {"fg": "#FFFFFF", "fg2": "#FFE3CC"}},
   {"id": "navy", "label": "Chef's Hat", "design": "chef_hat", "background": "#14213D", "colors": {"fg": "#FFFFFF", "fg2": "#FFD60A", "line": "#C9D1E3"}},
-  {"id": "cream", "label": "Cookbook", "design": "cookbook", "background": "#FFF3DC", "colors": {"fg": "#D9480F", "fg2": "#FFFFFF", "line": "#A63A0B", "emblem": "#FFF3DC"}},
+  {"id": "cream", "label": "Cookbook", "design": "cookbook", "background": "#C9956B", "colors": {"fg": "#D9480F", "fg2": "#FFFFFF", "line": "#A63A0B", "emblem": "#FFF3DC"}},
   {"id": "red", "label": "Pot", "design": "pot", "background": "#C62828", "colors": {"fg": "#FFFFFF", "line": "#C62828"}},
   {"id": "green", "label": "Whisk", "design": "whisk", "background": "#2E7D32", "colors": {"fg": "#FFFFFF", "fg2": "#DCEFDC"}},
   {"id": "teal", "label": "Fork & Knife", "design": "fork_knife", "background": "#00695C", "colors": {"fg": "#FFFFFF"}}

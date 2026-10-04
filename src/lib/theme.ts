@@ -18,6 +18,15 @@ export interface ThemeColors {
   muted: string;
   border: string;
   danger: string;
+  /**
+   * Trash / delete icons. The danger red, except while the Red accent is selected — then a neutral muted
+   * color so the outlined trash doesn't match the red edit pencils (v1.0.8).
+   */
+  dangerIcon: string;
+  /** On/off switch track when the switch is on. Green in both schemes, independent of the accent (v1.0.8). */
+  switchTrack: string;
+  /** On/off switch knob when on. A green that matches `switchTrack` (not the default Android teal). */
+  switchThumb: string;
   /** Tinted background for tags, today's calendar cell, selected rows. */
   tagBg: string;
   input: string;
@@ -75,7 +84,9 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
   {
     id: 'blue',
     label: 'Blue',
-    dark: { primary: '#64B5F6', primaryText: '#08192B', accent: '#64B5F6', accentText: '#08192B' },
+    // v1.0.8: darker blue. #1E88E5 is the target; #248AE5 is the darkest of that hue that still clears 4.5:1
+    // on the dark card (near-black text). Light mode is unchanged.
+    dark: { primary: '#248AE5', primaryText: '#08192B', accent: '#248AE5', accentText: '#08192B' },
     light: { primary: '#1565C0', primaryText: '#FFFFFF', accent: '#1565C0', accentText: '#FFFFFF' },
   },
   {
@@ -88,9 +99,9 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
   {
     id: 'red',
     label: 'Red',
-    // v1.0.5: a true, saturated red (was salmon #F28B82 in dark). Dark mode keeps near-black text on it: white on a red
-    // bright enough to read on the dark card would be < 4.5:1.
-    dark: { primary: '#FF4444', primaryText: '#1F0000', accent: '#FF4444', accentText: '#1F0000' },
+    // v1.0.8: darker red. #E53935 misses 4.5:1 on the dark card; #E25955 is the darkest red (near-black text)
+    // that still passes. Light mode stays #D32F2F. White on these fills is under 4.5:1, so text stays near-black.
+    dark: { primary: '#E25955', primaryText: '#1F0000', accent: '#E25955', accentText: '#1F0000' },
     light: { primary: '#D32F2F', primaryText: '#FFFFFF', accent: '#D32F2F', accentText: '#FFFFFF' },
   },
   {
@@ -109,7 +120,8 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
   {
     id: 'amber',
     label: 'Amber',
-    dark: { primary: '#FFCA28', primaryText: '#261A00', accent: '#FFCA28', accentText: '#261A00' },
+    // v1.0.8: a true amber (~42°). The id and the name stay "amber" / Amber. Light mode is unchanged.
+    dark: { primary: '#FFB300', primaryText: '#261A00', accent: '#FFB300', accentText: '#261A00' },
     light: { primary: '#8A5300', primaryText: '#FFFFFF', accent: '#8A5300', accentText: '#FFFFFF' },
   },
   {
@@ -139,7 +151,10 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
   },
 ];
 
-type Base = Omit<ThemeColors, keyof AccentSwatch | 'tagBg'>;
+/** Green switch chrome in both color schemes (v1.0.8). Not derived from the accent, and not teal. */
+const SWITCH_ON = { track: '#43A047', thumb: '#C8E6C9' } as const;
+
+type Base = Omit<ThemeColors, keyof AccentSwatch | 'tagBg' | 'dangerIcon' | 'switchTrack' | 'switchThumb'>;
 
 const BASES: Record<ColorScheme, Base> = {
   dark: {
@@ -228,6 +243,9 @@ export function buildColors(scheme: ColorScheme, accentId: AccentId = DEFAULT_AC
     ...base,
     ...swatch,
     tagBg: mixHex(base.background, swatch.primary, scheme === 'dark' ? 0.16 : 0.12),
+    dangerIcon: accentId === 'red' ? base.muted : base.danger,
+    switchTrack: SWITCH_ON.track,
+    switchThumb: SWITCH_ON.thumb,
   };
   cache.set(key, colors);
   return colors;

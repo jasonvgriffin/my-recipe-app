@@ -6,6 +6,20 @@ import { pantryStore } from '@/storage/pantry';
 
 const EAN = '3017620422003';
 
+/** testIDs in paint order. FlatList's test tree has circular refs, so JSON.stringify(screen.toJSON()) throws. */
+function testIdsInOrder(node: unknown, seen = new WeakSet<object>(), out: string[] = []): string[] {
+  if (node == null || typeof node !== 'object') return out;
+  if (seen.has(node)) return out;
+  seen.add(node);
+  if (Array.isArray(node)) {
+    for (const child of node) testIdsInOrder(child, seen, out);
+    return out;
+  }
+  const el = node as { children?: unknown; props?: { testID?: unknown } };
+  if (typeof el.props?.testID === 'string') out.push(el.props.testID);
+  return testIdsInOrder(el.children, seen, out);
+}
+
 jest.mock('expo-camera', () => {
   const React = require('react');
   const { Pressable, Text, View } = require('react-native');
@@ -131,7 +145,7 @@ describe('barcode camera (spec #27)', () => {
     expect(screen.getByTestId('manual-input').props.placeholder).toBe('Type here & press Add');
     expect(screen.getByTestId('build-list')).toHaveTextContent('Build from Meal Plan');
     expect(screen.getByTestId('grocery-run-button')).toHaveTextContent('View Shopping List');
-    const tree = JSON.stringify(screen.toJSON());
+    const tree = testIdsInOrder(screen.toJSON());
     const order = [
       'week-label',
       'manual-input',
@@ -140,9 +154,7 @@ describe('barcode camera (spec #27)', () => {
       'shopping-scan-button',
       'build-list',
       'grocery-run-button',
-    ].map((id) =>
-      tree.indexOf(`"testID":"${id}"`),
-    );
+    ].map((id) => tree.indexOf(id));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });

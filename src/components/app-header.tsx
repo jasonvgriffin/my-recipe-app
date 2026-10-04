@@ -16,7 +16,7 @@ export function AppHeaderTitle() {
   const styles = useStyles();
   return (
     <View style={styles.title} testID="app-header">
-      <Text style={styles.app} accessibilityRole="header" numberOfLines={1}>
+      <Text style={styles.app} accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
         {APP_TITLE}
       </Text>
     </View>
@@ -63,11 +63,11 @@ export function SettingsGearButton() {
 
 const useStyles = makeStyles((colors) => ({
   title: { alignItems: 'center', justifyContent: 'center' },
-  app: { color: colors.text, fontSize: 22, lineHeight: 26, fontWeight: '800' },
+  app: { color: colors.primary, fontSize: 28, lineHeight: 34, fontWeight: '800' },
   section: {
     color: colors.text,
-    fontSize: 25,
-    lineHeight: 30,
+    fontSize: 22,
+    lineHeight: 26,
     fontWeight: '800',
     textAlign: 'center',
     paddingHorizontal: 16,

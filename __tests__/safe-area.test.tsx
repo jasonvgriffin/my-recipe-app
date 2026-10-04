@@ -1,13 +1,13 @@
 /**
- * v1.0.3: scrolling screens end above the Android navigation bar (gesture pill / 3-button bar). Stack screens
- * add the safe-area bottom inset (`useBottomInset`, src/components/layout.tsx); bottom-tab screens don't need it
- * because the tab bar already sits above the system bar.
+ * v1.0.8: stack screens pad their frame by the safe-area bottom inset (`SystemNavFrame`) so mid-screen controls
+ * clear the Android navigation bar. The bottom tab bar is in normal flow, so tab scenes already end above it.
+ * `useBottomInset` inside tabs is only `TAB_PLUS_CLEARANCE` (~32dp) so content clears the raised center +.
  */
 import { render, screen } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 import { StyleSheet, Text } from 'react-native';
 
-import { BottomBarCoversInsetProvider, useBottomInset } from '@/components/layout';
+import { BottomBarCoversInsetProvider, TAB_PLUS_CLEARANCE, useBottomInset } from '@/components/layout';
 
 const NAV_BAR = 48;
 
@@ -60,7 +60,7 @@ describe('useBottomInset', () => {
     expect(screen.getByTestId('probe')).toHaveTextContent(String(NAV_BAR));
   });
 
-  it('is 0 inside the bottom tab bar (it already clears the system bar) and without a provider', () => {
+  it('is a small clearance for the raised + inside bottom tabs, and is 0 without a provider', () => {
     render(
       <SafeAreaProvider>
         <BottomBarCoversInsetProvider value>
@@ -68,7 +68,8 @@ describe('useBottomInset', () => {
         </BottomBarCoversInsetProvider>
       </SafeAreaProvider>,
     );
-    expect(screen.getByTestId('probe')).toHaveTextContent('0');
+    expect(screen.getByTestId('probe')).toHaveTextContent(String(TAB_PLUS_CLEARANCE));
+    expect(TAB_PLUS_CLEARANCE).toBe(32);
     screen.unmount();
     render(<Probe />);
     expect(screen.getByTestId('probe')).toHaveTextContent('0');
@@ -79,17 +80,18 @@ describe('screens', () => {
   it('Settings: the version line clears the navigation bar', async () => {
     renderRouter(routes(), { initialUrl: '/settings' });
     const scroll = await screen.findByTestId('settings-screen');
-    expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(16 + NAV_BAR);
+    const frame = screen.getByTestId('system-nav-frame');
+    expect(StyleSheet.flatten(frame.props.style).paddingBottom).toBe(NAV_BAR);
+    expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(16);
     expect(await screen.findByTestId('app-version')).toHaveTextContent('Version 1.0.5');
   });
 
-  it('Recipes tab (inside the bottom bar): no extra inset', async () => {
+  it('Recipes tab (inside the bottom bar): only enough padding to clear the raised +', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    // v1.0.5: the Recipes tab lists categories; “Add recipe” is the last item of the list (no floating button over
-    // the list), and the list ends 24dp above the bar (no nav-bar inset inside the tabs).
+    // The bar is in flow. Scroll content and the absolute selection row sit just above it (24dp + ~32dp).
     const add = await screen.findByTestId('list-add-recipe-button');
     expect(StyleSheet.flatten(add.props.style).position).toBeUndefined();
     const scroll = screen.getByTestId('recipe-category-scroll');
-    expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(24);
+    expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(24 + TAB_PLUS_CLEARANCE);
   });
 });

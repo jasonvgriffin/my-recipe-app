@@ -202,9 +202,16 @@ describe('section title below the banner (v1.0.4)', () => {
     expect(screen.getByTestId('settings-button')).toBeTruthy();
     const title = screen.getByTestId('section-title');
     expect(title).toHaveTextContent('Recipes');
+    const appTitle = within(banner).getByText('My Recipe App');
+    const appStyle = StyleSheet.flatten(appTitle.props.style);
+    expect(appStyle.fontSize).toBeGreaterThanOrEqual(26);
+    expect(['#43A047', '#1B5E20']).toContain(appStyle.color);
+    const slot = StyleSheet.flatten(screen.getByTestId('tab-add-slot').props.style);
+    expect(slot.width).toBe(58);
+    expect(slot.flex).toBeUndefined();
     const style = StyleSheet.flatten(title.props.style);
-    expect(style.fontSize).toBeGreaterThanOrEqual(24);
-    expect(style.fontSize).toBeLessThanOrEqual(26);
+    expect(style.fontSize).toBeGreaterThanOrEqual(20);
+    expect(style.fontSize).toBeLessThanOrEqual(23);
     expect(style).toMatchObject({ textAlign: 'center', fontWeight: '800' });
     // The search bar is in the content under the title.
     expect(within(screen.getByTestId('section-layout')).getByTestId('search-input')).toBeTruthy();

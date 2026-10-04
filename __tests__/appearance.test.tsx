@@ -2,7 +2,7 @@
  * v1.0.3 Settings → Appearance: theme mode (System / Light / Dark, default System) and accent color, applied
  * app-wide through `src/hooks/use-theme.tsx` and saved in local settings. Free (no entitlement gate).
  */
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { renderRouter } from 'expo-router/testing-library';
 
@@ -68,9 +68,32 @@ describe('palettes', () => {
       expect(red.h <= 8 || red.h >= 352).toBe(true);
       expect(red.s).toBeGreaterThanOrEqual(0.6);
     }
-    expect(buildColors('dark', 'red').primary).toBe('#FF4444');
+    expect(buildColors('dark', 'red').primary).toBe('#E25955');
     expect(buildColors('light', 'red').primary).toBe('#D32F2F');
     expect(buildColors('light', 'red').primaryText).toBe('#FFFFFF');
+  });
+
+  it('v1.0.8: darker dark-mode red and blue, true amber; switches stay green; red trash icons go neutral', () => {
+    expect(buildColors('dark', 'blue').primary).toBe('#248AE5');
+    expect(buildColors('light', 'blue').primary).toBe('#1565C0');
+    expect(buildColors('dark', 'amber').primary).toBe('#FFB300');
+    expect(buildColors('light', 'amber').primary).toBe('#8A5300');
+    expect(ACCENTS.find((a) => a.id === 'amber')?.label).toBe('Amber');
+    for (const id of ['green', 'blue', 'red', 'amber'] as const) {
+      for (const scheme of ['dark', 'light'] as const) {
+        const c = buildColors(scheme, id);
+        expect(c.switchTrack).toBe('#43A047');
+        expect(c.switchThumb).toBe('#C8E6C9');
+      }
+    }
+    expect(buildColors('dark', 'red').dangerIcon).toBe(buildColors('dark', 'red').muted);
+    expect(buildColors('light', 'red').dangerIcon).toBe(buildColors('light', 'red').muted);
+    expect(buildColors('dark', 'green').dangerIcon).toBe(buildColors('dark', 'green').danger);
+    for (const scheme of ['dark', 'light'] as const) {
+      const c = buildColors(scheme, 'green');
+      expect(contrastRatio(c.placeholder, c.card)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(c.muted, c.card)).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it('Green dark: deeper green (v1.0.7), still the original orange + button', () => {
@@ -146,10 +169,34 @@ describe('Settings → Appearance (UI)', () => {
     expect(screen.getByTestId('tab-add-button')).toHaveStyle({ backgroundColor: blue.accent });
   });
 
+  it('off switches use a visible knob and track (on stays green)', async () => {
+    await settingsStore.update({
+      appearance: { themeMode: 'dark' },
+      features: { mealPlan: false },
+      cookingModeKeepAwake: false,
+    });
+    renderRouter(routes(), { initialUrl: '/settings' });
+    const dark = buildColors('dark', 'green');
+    await screen.findByTestId('feature-toggle-mealPlan');
+    await waitFor(() => {
+      for (const id of ['feature-toggle-mealPlan', 'keep-awake-toggle']) {
+        const props = screen.getByTestId(id).props;
+        const thumb = props.thumbColor ?? props.thumbTintColor;
+        const off = props.trackColor?.false ?? props.tintColor ?? props.trackColorForFalse;
+        const on = props.trackColor?.true ?? props.onTintColor ?? props.trackColorForTrue;
+        expect(thumb).toBe(dark.muted);
+        expect(off).toBe(dark.placeholder);
+        expect(on).toBe('#43A047');
+      }
+    });
+  });
+
   it('is never gated (shown with every optional feature hidden)', async () => {
     await settingsStore.update({ features: { mealPlan: false, shopping: false, pantry: false } });
     renderRouter(routes(), { initialUrl: '/settings' });
     expect(await screen.findByText('Appearance')).toBeTruthy();
+    expect(within(screen.getByTestId('settings-accent-green')).getByText('Default')).toBeTruthy();
+    expect(within(screen.getByTestId('settings-accent-blue')).queryByText('Default')).toBeNull();
     for (const a of ACCENTS) expect(screen.getByTestId(`settings-accent-${a.id}`)).toBeTruthy();
   });
 

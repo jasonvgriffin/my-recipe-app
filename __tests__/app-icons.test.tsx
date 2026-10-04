@@ -2,7 +2,7 @@
  * App icon picker (v1.0.6): launcher activity-aliases from the config plugin, the icon assets, and the
  * Settings → Appearance picker (warns, switches, persists).
  */
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, within } from '@testing-library/react-native';
 import { Alert, Platform } from 'react-native';
 
 const mockNative = { getAppIcon: jest.fn(), setAppIcon: jest.fn() };
@@ -172,6 +172,8 @@ describe('Settings → Appearance → App icon', () => {
     const picker = await screen.findByTestId('app-icon-picker');
     expect(picker).toBeTruthy();
     expect(screen.getByTestId('settings-app-icon-default').props.accessibilityState).toMatchObject({ selected: true });
+    expect(within(screen.getByTestId('settings-app-icon-default')).getByText('Default')).toBeTruthy();
+    expect(within(screen.getByTestId('settings-app-icon-navy')).queryByText('Default')).toBeNull();
     await act(async () => fireEvent.press(screen.getByTestId('settings-app-icon-navy')));
     expect(alert).toHaveBeenCalledWith("Use the Chef's Hat icon?", expect.stringMatching(/take a little while, or move the shortcut/), expect.any(Array));
     expect(mockNative.setAppIcon).toHaveBeenCalledWith('LauncherIconNavy', ICONS.map((i) => plugin.aliasSuffix(i.id)));

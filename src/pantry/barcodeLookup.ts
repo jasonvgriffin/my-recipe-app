@@ -11,7 +11,7 @@
  */
 import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import type { Collection } from '@/storage/kv';
-import { pickBrand, pickProductName, tidyProductName } from './product-name';
+import { scannedProductFields, tidyProductName } from './product-name';
 import type { SyncMeta } from '@/types/sync';
 
 export const OFF_USER_AGENT = 'MyRecipeApp/1.0 (github.com/jasonvgriffin)';
@@ -22,6 +22,8 @@ export interface BarcodeProduct {
   barcode: string;
   name: string;
   brand?: string;
+  /** Generic description when `name` is the specific product or brand (v1.0.8). */
+  description?: string;
 }
 
 /** Saved barcode mapping record (synced table `barcode_items`). id = barcode-derived UUID-free key. */
@@ -79,11 +81,10 @@ export function parseOpenFoodFacts(barcode: string, json: unknown): BarcodeProdu
   const body = json as { status?: number; product?: Record<string, unknown> };
   const p = body.product;
   if (body.status !== 1 || !p) return undefined;
-  // v1.0.7: specific product name over generic text ("Peanut M&M's", not "CHOCOLATE CANDIES"), title-cased.
-  const name = pickProductName(p);
-  if (!name) return undefined;
-  const brand = pickBrand(p);
-  return brand ? { barcode, name, brand } : { barcode, name };
+  // v1.0.8: product or brand name first; generic text (e.g. "Chocolate Candies") is description, title-cased.
+  const fields = scannedProductFields(p);
+  if (!fields.name) return undefined;
+  return { barcode, ...fields };
 }
 
 export function createBarcodeLookup({
@@ -112,11 +113,15 @@ export function createBarcodeLookup({
     );
   }
   const strip = (i: BarcodeItem): BarcodeProduct => {
-    const { barcode, brand: rawBrand } = i;
+    const { barcode, brand: rawBrand, description: rawDescription } = i;
     // Names cached by older builds may be ALL CAPS; tidy them on the way out (user-typed names are kept).
     const name = i.source === 'user' ? i.name : tidyProductName(i.name);
     const brand = rawBrand && i.source !== 'user' ? tidyProductName(rawBrand) : rawBrand;
-    return brand ? { barcode, name, brand } : { barcode, name };
+    const description = rawDescription && i.source !== 'user' ? tidyProductName(rawDescription) : rawDescription;
+    const product: BarcodeProduct = { barcode, name };
+    if (brand) product.brand = brand;
+    if (description && description.toLowerCase() !== name.toLowerCase()) product.description = description;
+    return product;
   };
 
   return {

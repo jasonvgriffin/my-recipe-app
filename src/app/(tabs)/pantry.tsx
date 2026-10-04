@@ -7,11 +7,11 @@ import { FeatureLocked } from '@/components/feature-gate';
 import { MAX_CONTENT_WIDTH, MaxWidthContainer, useBottomInset } from '@/components/layout';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
-import { formatQuantity } from '@/lib/ingredients';
 import {
   PANTRY_CATEGORIES,
   expiryState,
   filterSortPantry,
+  pantryCardText,
   pantryCategories,
   type PantrySort,
 } from '@/lib/pantry';
@@ -28,13 +28,14 @@ interface Draft {
   expiresAt: string;
   brand: string;
   notes: string;
+  description: string;
   /** Set when the form was opened by a barcode scan (v1.0.7 review-before-save). */
   barcode?: string;
   /** Keep the scanned product name as typed/reviewed instead of normalizing it. */
   keepName?: boolean;
 }
 
-const EMPTY_DRAFT: Draft = { name: '', quantity: '', unit: '', category: '', expiresAt: '', brand: '', notes: '' };
+const EMPTY_DRAFT: Draft = { name: '', quantity: '', unit: '', category: '', expiresAt: '', brand: '', notes: '', description: '' };
 
 function draftFor(item: PantryItem): Draft {
   return {
@@ -46,13 +47,8 @@ function draftFor(item: PantryItem): Draft {
     expiresAt: item.expiresAt ?? '',
     brand: item.brand ?? '',
     notes: item.notes ?? '',
+    description: item.description ?? '',
   };
-}
-
-function formatQty(quantity: number | undefined, unit: string | undefined): string {
-  if (quantity === undefined) return unit ? `some ${unit}` : 'on hand';
-  const qty = formatQuantity(quantity);
-  return unit ? `${qty} ${unit}` : qty;
 }
 
 /**
@@ -68,12 +64,13 @@ export default function PantryScreen() {
   const gate = useFeature('pantry');
   const visible = useFeatureVisible('pantry');
   const showBarcode = useFeatureVisible('barcodeScan');
-  const { added, scan, scanBarcode, scanName, scanBrand } = useLocalSearchParams<{
+  const { added, scan, scanBarcode, scanName, scanBrand, scanDescription } = useLocalSearchParams<{
     added?: string;
     scan?: string;
     scanBarcode?: string;
     scanName?: string;
     scanBrand?: string;
+    scanDescription?: string;
   }>();
   const [items, setItems] = useState<PantryItem[] | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -95,6 +92,7 @@ export default function PantryScreen() {
     if (typeof scanBarcode !== 'string' || typeof scanName !== 'string' || !scanName) return;
     handledScan.current = scan;
     const brand = typeof scanBrand === 'string' ? scanBrand : '';
+    const description = typeof scanDescription === 'string' ? scanDescription : '';
     void pantryStore.findScanned({ barcode: scanBarcode, name: scanName }).then((existing) => {
       setJustAdded(undefined);
       setError('');
@@ -103,13 +101,23 @@ export default function PantryScreen() {
           ...draftFor(existing),
           quantity: String((existing.quantity ?? 0) + 1),
           brand: existing.brand || brand,
+          description: existing.description || description,
           barcode: scanBarcode,
         });
       } else {
-        setDraft({ ...EMPTY_DRAFT, name: scanName, brand, quantity: '1', unit: 'package', barcode: scanBarcode, keepName: true });
+        setDraft({
+          ...EMPTY_DRAFT,
+          name: scanName,
+          brand,
+          description,
+          quantity: '1',
+          unit: 'package',
+          barcode: scanBarcode,
+          keepName: true,
+        });
       }
     });
-  }, [scan, scanBarcode, scanName, scanBrand]);
+  }, [scan, scanBarcode, scanName, scanBrand, scanDescription]);
 
   useFocusEffect(
     useCallback(() => {
@@ -169,6 +177,7 @@ export default function PantryScreen() {
         expiresAt,
         brand: draft.brand,
         notes: draft.notes,
+        description: draft.description,
         ...(draft.barcode ? { barcode: draft.barcode } : {}),
         ...(draft.keepName ? { keepName: true } : {}),
       });
@@ -197,17 +206,15 @@ export default function PantryScreen() {
           Added {justAdded || added}
         </Text>
       ) : null}
-      <View style={styles.actions}>
-        {showBarcode ? (
-          <Pressable
-            accessibilityRole="button"
-            style={styles.secondaryBtn}
-            testID="scan-barcode-button"
-            onPress={() => router.push('/pantry/scan')}>
-            <Text style={styles.secondaryBtnText}>Scan barcode</Text>
-          </Pressable>
-        ) : null}
-      </View>
+      {showBarcode ? (
+        <Pressable
+          accessibilityRole="button"
+          style={styles.primaryBtn}
+          testID="scan-barcode-button"
+          onPress={() => router.push('/pantry/scan')}>
+          <Text style={styles.primaryBtnText}>Scan barcode</Text>
+        </Pressable>
+      ) : null}
       {draft ? (
         <View style={styles.form}>
           <Text style={styles.heading} testID="pantry-form-heading">
@@ -291,6 +298,7 @@ export default function PantryScreen() {
             placeholderTextColor={colors.placeholder}
             accessibilityLabel="Notes (optional)"
             multiline
+            scrollEnabled
           />
           {error ? (
             <Text style={styles.error} testID="pantry-form-error">
@@ -356,6 +364,7 @@ export default function PantryScreen() {
       ) : null}
       {shownItems.map((item) => {
         const expiry = expiryState(item.expiresAt);
+        const card = pantryCardText(item);
         return (
           <Pressable
             key={item.id}
@@ -366,12 +375,8 @@ export default function PantryScreen() {
               setError('');
               setDraft(draftFor(item));
             }}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            <Text style={styles.muted}>
-              {formatQty(item.quantity, item.unit)}
-              {item.brand ? ` · ${item.brand}` : ''}
-              {item.category ? ` · ${item.category}` : ''}
-            </Text>
+            <Text style={styles.itemName}>{card.title}</Text>
+            <Text style={styles.muted}>{card.detail}</Text>
             {item.expiresAt ? (
               <Text style={expiry === 'expired' ? styles.error : styles.expiry}>
                 {expiry === 'expired' ? 'Expired' : expiry === 'soon' ? 'Expires soon' : 'Expires'} {item.expiresAt}
@@ -399,7 +404,6 @@ const useStyles = makeStyles((colors) => ({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.background },
   list: { padding: 16, gap: 10, paddingBottom: 32 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   form: { gap: 8, backgroundColor: colors.card, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border },
   heading: { color: colors.text, fontSize: 18, fontWeight: '700' },
   input: {
@@ -415,7 +419,7 @@ const useStyles = makeStyles((colors) => ({
   row: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   flex: { flex: 1, minWidth: 0 },
   wrap: { flexWrap: 'wrap' },
-  notes: { minHeight: 64, textAlignVertical: 'top' },
+  notes: { height: 192, minHeight: 192, textAlignVertical: 'top' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   card: { backgroundColor: colors.card, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border, minHeight: 44 },
   itemName: { color: colors.text, fontSize: 16, fontWeight: '600' },

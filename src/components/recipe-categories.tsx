@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 
 import { StarRating } from '@/components/star-rating';
@@ -24,6 +24,7 @@ export function RecipeCategories({
   selectedId,
   onOpen,
   onChanged,
+  accessory,
 }: {
   groups: RecipeCategoryGroup[];
   uncategorized: Recipe[];
@@ -33,6 +34,8 @@ export function RecipeCategories({
   onOpen: (id: string) => void;
   /** Called after a category was added, renamed or deleted. */
   onChanged: () => void;
+  /** Shown to the right of “New category” (the Recipes tab’s Add recipe button). */
+  accessory?: ReactNode;
 }) {
   const styles = useStyles();
   const colors = useColors();
@@ -201,7 +204,7 @@ export function RecipeCategories({
                     onPress={() => confirmDelete(group)}
                     style={styles.iconBtn}
                     testID={`delete-category-${key}`}>
-                    <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                    <Ionicons name="trash-outline" size={20} color={colors.dangerIcon} />
                   </Pressable>
                 </>,
               )
@@ -216,46 +219,49 @@ export function RecipeCategories({
           {recipeRows(UNCATEGORIZED_KEY, uncategorized)}
         </View>
       ) : null}
-      {adding !== null ? (
-        <View style={styles.editRow}>
-          <TextInput
-            value={adding}
-            onChangeText={setAdding}
-            style={styles.input}
-            autoFocus
-            placeholder="New category name"
-            placeholderTextColor={colors.placeholder}
-            onSubmitEditing={() => void saveNew()}
-            accessibilityLabel="New category name"
-            testID="new-category-input"
-          />
-          <Pressable accessibilityRole="button" onPress={() => void saveNew()} style={styles.smallBtn} testID="save-new-category">
-            <Text style={styles.smallBtnText}>Add</Text>
-          </Pressable>
+      <View style={styles.actionRow}>
+        {adding !== null ? (
+          <View style={styles.editRow}>
+            <TextInput
+              value={adding}
+              onChangeText={setAdding}
+              style={styles.input}
+              autoFocus
+              placeholder="New category name"
+              placeholderTextColor={colors.placeholder}
+              onSubmitEditing={() => void saveNew()}
+              accessibilityLabel="New category name"
+              testID="new-category-input"
+            />
+            <Pressable accessibilityRole="button" onPress={() => void saveNew()} style={styles.smallBtn} testID="save-new-category">
+              <Text style={styles.smallBtnText}>Add</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                setAdding(null);
+                setError(null);
+              }}
+              style={styles.iconBtn}
+              testID="cancel-new-category">
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        ) : (
           <Pressable
             accessibilityRole="button"
             onPress={() => {
-              setAdding(null);
+              setAdding('');
               setError(null);
             }}
-            style={styles.iconBtn}
-            testID="cancel-new-category">
-            <Text style={styles.cancelText}>Cancel</Text>
+            style={styles.addCategory}
+            testID="add-category-button">
+            <Ionicons name="add" size={20} color={colors.primaryText} />
+            <Text style={styles.addCategoryText}>New category</Text>
           </Pressable>
-        </View>
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            setAdding('');
-            setError(null);
-          }}
-          style={styles.addCategory}
-          testID="add-category-button">
-          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-          <Text style={styles.addCategoryText}>New category</Text>
-        </Pressable>
-      )}
+        )}
+        {adding === null && accessory ? <View style={styles.actionSlot}>{accessory}</View> : null}
+      </View>
     </View>
   );
 }
@@ -294,7 +300,9 @@ const useStyles = makeStyles((colors) => ({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  editRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8 },
+  editRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
+  actionSlot: { flex: 1 },
   input: {
     flex: 1,
     minHeight: 44,
@@ -316,7 +324,17 @@ const useStyles = makeStyles((colors) => ({
   },
   smallBtnText: { color: colors.primaryText, fontWeight: '700' },
   cancelText: { color: colors.muted, fontWeight: '600' },
-  addCategory: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 4 },
-  addCategoryText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
+  addCategory: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 48,
+    paddingHorizontal: 12,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+  },
+  addCategoryText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
   error: { color: colors.danger },
 }));

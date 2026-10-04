@@ -2,10 +2,12 @@
  * Meal plan, shopping list, and grocery run (spec #11, #12, #18, #23).
  * Each screen is exercised at compact (411dp) and expanded (900dp).
  */
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 import { useKeepAwake } from 'expo-keep-awake';
 
+import { GroceryRunView } from '@/components/grocery-run-view';
+import { ShoppingListView } from '@/components/shopping-list-view';
 import { featureGate, LocalFreeEntitlements, NoEntitlements } from '@/entitlements';
 import { addDays, formatMonthYear, formatShortDate, startOfWeek, toIsoDate } from '@/lib/dates';
 import { mealPlanStore } from '@/storage/meal-plan';
@@ -139,10 +141,10 @@ describe.each([
     if (width >= 600) expect(screen.getByTestId('pantry-on-hand')).toBeTruthy();
 
     await act(async () => fireEvent.press(screen.getByTestId('build-list')));
-    const beans = await screen.findByText(/green beans/i);
+    expect(await screen.findByText(/green beans/i)).toBeTruthy();
     expect(screen.queryByText(/olive oil/i)).toBeTruthy();
 
-    await act(async () => fireEvent.press(beans));
+    await act(async () => fireEvent.press(screen.getByRole('checkbox', { name: /green beans/i })));
     expect(await screen.findByTestId('clear-checked')).toBeTruthy();
 
     fireEvent.changeText(screen.getByTestId('manual-input'), '2 lemons');
@@ -218,6 +220,87 @@ describe('grocery run (spec #18)', () => {
     renderRouter({ 'grocery-run': Grocery() }, { initialUrl: `/grocery-run?recipeId=${recipe.id}` });
     expect(await screen.findByText(/green beans/i)).toBeTruthy();
     expect(screen.getByTestId('grocery-layout-dual')).toBeTruthy();
+  });
+
+  it('opens notes without checking the item off; only the checkbox toggles', () => {
+    const onToggle = jest.fn();
+    const item = {
+      id: '1',
+      weekStart: '2026-10-05' as const,
+      text: "Peanut M&M's",
+      checked: false,
+      recipeIds: [],
+      quantity: '1',
+      notes: 'Party size',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    };
+    render(<GroceryRunView items={[item]} canUndo={false} onToggle={onToggle} onUndo={() => undefined} />);
+    expect(screen.getByText('Qty: 1')).toBeTruthy();
+    expect(screen.queryByText('Party size')).toBeNull();
+    fireEvent.press(screen.getByText('(see notes)'));
+    expect(onToggle).not.toHaveBeenCalled();
+    expect(screen.getByText('Party size')).toBeTruthy();
+    fireEvent.press(screen.getAllByText("Peanut M&M's")[0]);
+    fireEvent.press(screen.getByText('Qty: 1'));
+    expect(onToggle).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('grocery-check-1'));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('shopping list opens notes without checking the item off; only the checkbox toggles', () => {
+    const onToggle = jest.fn();
+    const item = {
+      id: 's1',
+      weekStart: '2026-10-05' as const,
+      text: 'Paper towels',
+      checked: false,
+      recipeIds: [] as string[],
+      quantity: '2',
+      notes: 'Big pack',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    };
+    render(
+      <ShoppingListView
+        weekStart="2026-10-05"
+        mealCount={1}
+        list={{
+          id: 'list',
+          weekStart: '2026-10-05',
+          items: [item],
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        }}
+        manualText=""
+        onManualText={() => undefined}
+        manualQuantity=""
+        onManualQuantity={() => undefined}
+        manualNotes=""
+        onManualNotes={() => undefined}
+        onEditItem={() => undefined}
+        showGroceryRun
+        onPrevWeek={() => undefined}
+        onNextWeek={() => undefined}
+        onBuild={() => undefined}
+        onToggle={onToggle}
+        onAddManual={() => undefined}
+        onClearChecked={() => undefined}
+        onGroceryRun={() => undefined}
+      />,
+    );
+    expect(screen.getByTestId('shopping-list').props.keyboardShouldPersistTaps).toBe('handled');
+    expect(screen.getByText('Qty: 2')).toBeTruthy();
+    expect(screen.queryByText('Big pack')).toBeNull();
+    fireEvent.press(screen.getByText('(see notes)'));
+    expect(onToggle).not.toHaveBeenCalled();
+    expect(screen.getByTestId('grocery-notes-modal')).toBeTruthy();
+    expect(screen.getByText('Big pack')).toBeTruthy();
+    fireEvent.press(screen.getAllByText('Paper towels')[0]);
+    fireEvent.press(screen.getByText('Qty: 2'));
+    expect(onToggle).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('shop-item-s1'));
+    expect(onToggle).toHaveBeenCalledTimes(1);
   });
 });
 

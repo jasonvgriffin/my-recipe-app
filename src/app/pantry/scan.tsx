@@ -24,6 +24,7 @@ export default function PantryScanScreen() {
               scanBarcode: product.barcode,
               scanName: product.name,
               scanBrand: product.brand ?? '',
+              scanDescription: product.description ?? '',
             },
           });
         }}
