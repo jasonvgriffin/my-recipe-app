@@ -181,6 +181,15 @@ jobs:
             echo "::error::APK requests a blocked permission (see app.json android.blockedPermissions)"; exit 1
           fi
 
+      - name: Verify launcher icons (app icon picker, v1.0.6)
+        run: |
+          apk=$(ls android/app/build/outputs/apk/release/*.apk | head -n1)
+          bt="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n1)"
+          "$bt/aapt2" dump xmltree --file AndroidManifest.xml "$apk" > manifest.txt
+          python3 scripts/check-launcher-icons.py "$(python3 -c 'import json;print(len(json.load(open("assets/app-icons/icons.json"))))')" < manifest.txt
+          "$bt/aapt2" dump resources "$apk" | grep -E "mipmap/(ic_launcher_alt_[a-z]+|ic_launcher_monochrome)\b" | sort -u | tee res.txt
+          grep -q "mipmap/ic_launcher_monochrome" res.txt || { echo "::error::monochrome launcher layer missing"; exit 1; }
+
       - name: Remove decoded keystore
         if: always()
         run: rm -f "$RUNNER_TEMP/release.keystore"
