@@ -61,6 +61,21 @@ export function sharedPayloadToText(
 }
 
 /**
+ * A PDF shared to the app (v1.0.6: Share → My Recipe App on a PDF). Returns its content:// / file:// URI, which the
+ * Import PDF screen reads. The share grants read access to that one file, so no storage permission is needed.
+ */
+export function sharedPdfUri(
+  payloads: readonly { value?: string; mimeType?: string; contentUri?: string | null; contentMimeType?: string | null }[],
+): string | undefined {
+  for (const payload of payloads) {
+    const isPdf = payload.contentMimeType === 'application/pdf' || payload.mimeType === 'application/pdf';
+    const uri = payload.contentUri ?? payload.value;
+    if (isPdf && uri && /^(content|file):\/\//i.test(uri)) return uri;
+  }
+  return undefined;
+}
+
+/**
  * Expo Router `redirectSystemPath` helper. Android SEND (expo-sharing) opens
  * `myrecipeapp://expo-sharing`; send the user to the import draft screen.
  * Every other path is unchanged.

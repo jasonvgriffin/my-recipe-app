@@ -18,7 +18,8 @@ uploads APK _artifacts_ on each push/PR (to keep builds green); a GitHub Release
 **v1.0.6 (Jason's requests):** household sharing (#25) was removed — existing household rows were migrated to their
 owner's personal scope and the old household tables are left in place for now. **MCP server deliberately cut in 1.0.6
 at Jason's request; may be revisited in a future version.** With both gone the app is local-first (no sign-in, no
-sync); Backup & restore moves data between phones.
+sync); Backup & restore moves data between phones. Also in v1.0.6: a recipe can be in several categories, Import PDF
+(on-device, + menu or share a PDF to the app), the app icon picker and the recipe-detail Save fix.
 
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
@@ -132,7 +133,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
    GitHub to download), or publish via Google Play (one-time $25 developer fee, needs a real release keystore)?
 2. **Release signing:** OK to generate a production keystore and store it only in GitHub secrets?
 3. **Backend / hosting** for sync + MCP: Cloudflare, Supabase, Fly.io, or something else? Any budget?
-4. ~~**MCP auth:** API key only vs OAuth?~~ **Resolved (Oct 3 2026): OAuth** tied to the household-sharing email-code account; own paywall switch; per-user rate limits (see Phase 3).
+4. ~~**MCP auth:** API key only vs OAuth?~~ **Resolved (Oct 3 2026): OAuth** tied to the household-sharing email-code account; own paywall switch; per-user rate limits (see Phase 3). _Moot since v1.0.6: MCP server deliberately cut in 1.0.6 at Jason's request; may be revisited in a future version._
 5. **Storage engine:** stay on AsyncStorage for now, or switch to `expo-sqlite` early?
 6. ~~Nutrition lookup source~~ — resolved (Oct 3 2026): no nutrition features at all.
 7. **iOS timing** and whether to pay for Apple Developer ($99/yr) and/or EAS.

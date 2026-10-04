@@ -2,7 +2,7 @@ import { Link, router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { CategoryChips } from '@/components/category-chips';
+import { CategoryChips, toggleCategoryId } from '@/components/category-chips';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, useBottomInset } from '@/components/layout';
 import { StarRating } from '@/components/star-rating';
 import { useFeature } from '@/hooks/use-feature';
@@ -50,7 +50,7 @@ export default function AddRecipeScreen() {
     if (!name) return;
     const created = await recipeStore.addCategory(name);
     setCategories(await recipeStore.listCategories());
-    setCategoryIds([created.id]);
+    setCategoryIds((ids) => (ids.includes(created.id) ? ids : [...ids, created.id]));
     setNewCategory('');
   }
 
@@ -130,13 +130,12 @@ export default function AddRecipeScreen() {
           />
         </Field>
         {categoriesOn ? (
-          <Field label="Category">
+          <Field label="Categories">
             <CategoryChips
-              single
               categories={categories}
               selectedIds={categoryIds}
               testIDPrefix="add-category"
-              onToggle={(id) => setCategoryIds(id ? [id] : [])}
+              onToggle={(id) => setCategoryIds((ids) => toggleCategoryId(ids, id))}
             />
             <View style={styles.categoryAdd}>
               <TextInput

@@ -10,6 +10,7 @@ import {
   importRecipe,
   parseImportDeepLink,
   sharedPayloadToText,
+  sharedPdfUri,
   shareTextToImportInput,
   type ImportErrorCode,
   type ImportResult,
@@ -96,6 +97,13 @@ function ImportBody() {
     (async () => {
       const resolved = await Sharing.getResolvedSharedPayloadsAsync().catch(() => []);
       const raw = resolved.length ? resolved : Sharing.getSharedPayloads();
+      const pdf = sharedPdfUri(raw as never);
+      if (pdf) {
+        // A shared PDF goes to Import PDF (v1.0.6).
+        Sharing.clearSharedPayloads();
+        if (active) router.replace({ pathname: '/import-pdf', params: { uri: pdf } });
+        return;
+      }
       const shared = sharedPayloadToText(raw);
       Sharing.clearSharedPayloads();
       if (!active) return;

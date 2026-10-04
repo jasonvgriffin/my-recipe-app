@@ -72,8 +72,9 @@ async function fullPhone() {
   const old = phone();
   setIdentity({ userId: 'old-user' });
   const dinner = await old.recipes.addCategory('Dinner', at('2026-10-01T09:00:00Z'));
+  const weeknight = await old.recipes.addCategory('Weeknight', at('2026-10-01T09:00:00Z'));
   const chicken = await old.recipes.save(
-    { ...SAMPLE_RECIPES[0], categoryIds: [dinner.id], rating: 5, tags: ['weeknight'], photoUri: 'file:///docs/recipe-photos/seed-lemon-herb-chicken.jpg', cooked: true, lastCookedAt: '2026-10-02T18:00:00.000Z', cookedDates: ['2026-10-02T18:00:00.000Z'] } as never,
+    { ...SAMPLE_RECIPES[0], categoryIds: [dinner.id, weeknight.id], rating: 5, tags: ['weeknight'], photoUri: 'file:///docs/recipe-photos/seed-lemon-herb-chicken.jpg', cooked: true, lastCookedAt: '2026-10-02T18:00:00.000Z', cookedDates: ['2026-10-02T18:00:00.000Z'] } as never,
     at('2026-10-01T10:00:00Z'),
   );
   old.photos.files.set('file:///docs/recipe-photos/seed-lemon-herb-chicken.jpg', 'QUJD');
@@ -144,7 +145,9 @@ describe('restore', () => {
     expect(restored?.householdId).toBeUndefined();
     expect(restored?.photoUri).toBe('file:///docs/recipe-photos/seed-lemon-herb-chicken.jpg');
     expect(fresh.photos.files.get(restored!.photoUri!)).toBe('QUJD');
-    expect(restored?.categoryIds).toEqual([freshDinner.id]);
+    // Several categories survive (v1.0.6): the reused default by its new id, the other one as backed up.
+    const freshWeeknight = (await fresh.recipes.listCategories()).find((c) => c.name === 'Weeknight')!;
+    expect(restored?.categoryIds).toEqual([freshDinner.id, freshWeeknight.id]);
     expect((await fresh.recipes.listCategories()).filter((c) => c.name === 'Dinner')).toHaveLength(1);
     expect((await fresh.recipes.get(web.id))?.photoUri).toBe('https://example.com/p.jpg');
     expect((await fresh.plan.entriesForDates(['2026-10-05'])).map((e) => e.recipeId)).toEqual([chicken.id]);

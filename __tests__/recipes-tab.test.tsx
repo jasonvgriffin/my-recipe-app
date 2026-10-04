@@ -152,16 +152,21 @@ describe('Recipes tab categories (v1.0.5)', () => {
     alert.mockRestore();
   });
 
-  it('sets the category on add (single choice, or a new one) and on edit, with tags on the edit screen', async () => {
+  it('sets several categories on add (multi-select, plus a new one) and on edit, with tags on the edit screen', async () => {
     renderRouter(routes(), { initialUrl: '/recipes' });
     await screen.findByTestId('recipe-categories');
     const lunch = await categoryByName('Lunch');
     const dinner = await categoryByName('Dinner');
     await act(async () => fireEvent.press(screen.getByTestId('list-add-recipe-button')));
     await screen.findByText('Save recipe');
-    expect(screen.getByTestId('add-category-none')).toBeTruthy();
+    // v1.0.6: no "Uncategorized" chip — it is automatic when nothing is selected.
+    expect(screen.queryByTestId('add-category-none')).toBeNull();
+    expect(screen.getByTestId('add-category-uncategorized-hint')).toBeTruthy();
     fireEvent.press(await screen.findByTestId(`add-category-${lunch.id}`));
-    fireEvent.press(screen.getByTestId(`add-category-${dinner.id}`)); // single choice: replaces Lunch
+    fireEvent.press(screen.getByTestId(`add-category-${dinner.id}`)); // multi-select: Lunch AND Dinner
+    expect(screen.queryByTestId('add-category-uncategorized-hint')).toBeNull();
+    expect(screen.getByTestId(`add-category-${dinner.id}`).props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByText('✓ Dinner')).toBeTruthy();
     fireEvent.press(screen.getByTestId('add-rating-5'));
     fireEvent.changeText(screen.getByPlaceholderText('e.g. Cauliflower Mac & Cheese'), 'Almond Bread');
     fireEvent.changeText(screen.getByPlaceholderText(/1 head cauliflower/), `2 cups almond flour\n1 tbsp allulose`);
@@ -170,7 +175,7 @@ describe('Recipes tab categories (v1.0.5)', () => {
     await act(async () => fireEvent.press(screen.getByText('Save recipe')));
     const saved = await byTitle('Almond Bread');
     expect(saved.rating).toBe(5);
-    expect(saved.categoryIds).toEqual([dinner.id]);
+    expect(saved.categoryIds).toEqual([lunch.id, dinner.id]);
     expect(saved.tags).toEqual(['bread', 'quick']);
 
     // A brand-new category from the add form becomes the choice.
@@ -187,7 +192,9 @@ describe('Recipes tab categories (v1.0.5)', () => {
     await act(async () => router.push(`/recipe/${saved.id}/edit`));
     await screen.findByTestId('recipe-editor');
     const editor = within(screen.getByTestId('recipe-editor'));
-    fireEvent.press(editor.getByTestId('edit-category-none'));
+    fireEvent.press(editor.getByTestId(`edit-category-${lunch.id}`));
+    fireEvent.press(editor.getByTestId(`edit-category-${dinner.id}`)); // both off → Uncategorized
+    expect(editor.getByTestId('edit-category-uncategorized-hint')).toBeTruthy();
     fireEvent.changeText(editor.getByTestId('add-tag-input'), 'Weeknight');
     fireEvent.press(editor.getByTestId('add-tag-button'));
     fireEvent.press(editor.getByTestId('remove-tag-quick'));
@@ -199,7 +206,7 @@ describe('Recipes tab categories (v1.0.5)', () => {
     });
   });
 
-  it('recipe detail picks one category or Uncategorized', async () => {
+  it('recipe detail toggles several categories; none selected = Uncategorized (v1.0.6)', async () => {
     await addSampleRecipes(recipeStore);
     await recipeStore.prepareCategories();
     const chicken = await byTitle('Lemon');
@@ -207,12 +214,39 @@ describe('Recipes tab categories (v1.0.5)', () => {
     const dinner = await categoryByName('Dinner');
     renderRouter(routes(), { initialUrl: `/recipe/${chicken.id}` });
     const assignBreakfast = await screen.findByTestId(`assign-category-${breakfast.id}`);
+    expect(screen.queryByTestId('assign-category-none')).toBeNull();
+    expect(screen.getByTestId('assign-category-uncategorized-hint')).toBeTruthy();
     await act(async () => fireEvent.press(assignBreakfast));
     expect((await recipeStore.get(chicken.id))?.categoryIds).toEqual([breakfast.id]);
     await act(async () => fireEvent.press(screen.getByTestId(`assign-category-${dinner.id}`)));
+    expect((await recipeStore.get(chicken.id))?.categoryIds).toEqual([breakfast.id, dinner.id]);
+    expect(screen.getByTestId(`assign-category-${breakfast.id}`).props.accessibilityState).toMatchObject({ checked: true });
+    await act(async () => fireEvent.press(screen.getByTestId(`assign-category-${breakfast.id}`)));
     expect((await recipeStore.get(chicken.id))?.categoryIds).toEqual([dinner.id]);
-    await act(async () => fireEvent.press(screen.getByTestId('assign-category-none')));
+    await act(async () => fireEvent.press(screen.getByTestId(`assign-category-${dinner.id}`)));
     expect((await recipeStore.get(chicken.id))?.categoryIds).toEqual([]);
+    expect(screen.getByTestId('assign-category-uncategorized-hint')).toBeTruthy();
+  });
+
+  it('a recipe in several categories appears under each of them on the Recipes tab (v1.0.6)', async () => {
+    await addSampleRecipes(recipeStore);
+    await recipeStore.prepareCategories();
+    const chicken = await byTitle('Lemon');
+    const lunch = await categoryByName('Lunch');
+    const dinner = await categoryByName('Dinner');
+    await recipeStore.save({ ...chicken, categoryIds: [lunch.id, dinner.id] });
+    renderRouter(routes(), { initialUrl: '/' });
+    const lunchHeader = await screen.findByTestId(`category-header-${lunch.id}`);
+    const dinnerHeader = screen.getByTestId(`category-header-${dinner.id}`);
+    expect(within(lunchHeader).getByText('1')).toBeTruthy();
+    expect(within(dinnerHeader).getByText('1')).toBeTruthy();
+    await act(async () => fireEvent.press(lunchHeader));
+    await act(async () => fireEvent.press(dinnerHeader));
+    expect(within(screen.getByTestId(`category-${lunch.id}`)).getByTestId(`recipe-item-${chicken.id}`)).toBeTruthy();
+    expect(within(screen.getByTestId(`category-${dinner.id}`)).getByTestId(`recipe-item-${chicken.id}`)).toBeTruthy();
+    // Only the other sample is uncategorized.
+    await act(async () => fireEvent.press(screen.getByTestId('category-header-uncategorized')));
+    expect(within(screen.getByTestId('category-uncategorized')).queryByTestId(`recipe-item-${chicken.id}`)).toBeNull();
   });
 
   it('has no “Manage categories & tags”, “Import from link” or “Select recipes for PDF” on the page', async () => {

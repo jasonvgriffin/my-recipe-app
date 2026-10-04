@@ -1,6 +1,6 @@
 /**
  * v1.0.2 UI: Cronometer-style bottom bar (Recipes · Meal Plan · + · Shopping · More), the + add sheet, the More
- * screen, the "My Recipe App" header, and Settings (AI assistants / MCP URL, version). Optional features hidden in
+ * screen, the "My Recipe App" header, and Settings (version; the MCP section was cut in v1.0.6). Optional features hidden in
  * Settings (or locked by the gate) disappear from the bar and the + menu; the + button and More always stay.
  */
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
@@ -38,6 +38,7 @@ const routes = () => ({
   'pantry-match': require('@/app/pantry-match').default,
   add: require('@/app/add').default,
   import: require('@/app/import').default,
+  'import-pdf': require('@/app/import-pdf').default,
   'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
   settings: require('@/app/settings').default,
 });
@@ -55,10 +56,11 @@ beforeEach(async () => {
 const ALL_IDS = ADD_MENU_ITEMS.map((i) => i.id);
 
 describe('add menu items (pure)', () => {
-  it('lists all eight actions in order when everything is visible', () => {
+  it('lists all nine actions in order when everything is visible (v1.0.6: Import PDF, a 3×3 grid)', () => {
     expect(visibleAddMenuItems(() => true).map((i) => i.label)).toEqual([
       'Add Recipe',
       'Import Link',
+      'Import PDF',
       'Search Recipes',
       'Add to Shopping List',
       'Add Pantry Item',
@@ -74,7 +76,7 @@ describe('add menu items (pure)', () => {
 
   it('has no separate Scan Barcode item (scanning lives on the Shopping and Pantry screens)', () => {
     expect(ADD_MENU_ITEMS.some((i) => /scan/i.test(i.id) || /scan/i.test(i.label))).toBe(false);
-    expect(visibleAddMenuItems(() => true)).toHaveLength(8);
+    expect(visibleAddMenuItems(() => true)).toHaveLength(9);
     expect(addMenuHref('plan-meal', { today: '2026-10-03' })).toBe('/meal-plan/2026-10-03');
     expect(addMenuHref('share-recipe', { today: '2026-10-03' })).toBe('/recipes?select=pdf'); // v1.0.3: PDF
   });
@@ -110,6 +112,7 @@ describe('bottom bar, header and + sheet', () => {
   it('each action opens its existing flow', async () => {
     const cases: [string, string][] = [
       ['add-recipe', '/add'],
+      ['import-pdf', '/import-pdf'],
       ['search-recipes', '/recipes'],
       ['plan-meal', `/meal-plan/${toIsoDate(new Date())}`],
       ['what-can-i-make', '/pantry-match'],

@@ -2,8 +2,8 @@
  * Recipe import contract. See docs/IMPORT_API.md.
  *
  * Every way a recipe enters the app — the in-app "Import from link" UI, Android share intents,
- * deep links (myrecipeapp://import?url=...), a future MCP server ("Hey AI, send this recipe to my
- * recipe app"), and sync — calls `importRecipe(input)` with one of these inputs.
+ * deep links (myrecipeapp://import?url=...) and Import PDF (v1.0.6) — calls `importRecipe(input)` with one of
+ * these inputs.
  *
  * This module has NO UI dependencies (no React / react-native imports).
  */
@@ -16,7 +16,7 @@ import { isHttpUrl } from './url';
 const httpUrl = () => z.string().trim().refine(isHttpUrl, 'must be an http(s) URL');
 
 /** Where an import came from (for analytics/debugging and future per-channel rules). */
-export const ImportChannelSchema = z.enum(['app-link', 'app-text', 'share-intent', 'deep-link', 'mcp', 'sync', 'file']);
+export const ImportChannelSchema = z.enum(['app-link', 'app-text', 'share-intent', 'deep-link', 'file', 'pdf']);
 export type ImportChannel = z.infer<typeof ImportChannelSchema>;
 
 export const ImportSourceSchema = z.object({
@@ -71,7 +71,7 @@ export type ParsedRecipeDraft = z.output<typeof RecipeDraftSchema>;
 export const RecipeImportInputSchema = z.discriminatedUnion('kind', [
   /** Fetch a web page and parse it (schema.org JSON-LD first, then heuristics). */
   z.object({ kind: z.literal('url'), url: httpUrl(), source: ImportSourceSchema.optional() }),
-  /** Already-structured recipe, e.g. from an AI assistant via MCP or a JSON file. */
+  /** Already-structured recipe, e.g. from a JSON file. */
   z.object({ kind: z.literal('structured'), recipe: z.unknown(), source: ImportSourceSchema.optional() }),
   /** Free text, e.g. shared from another app or dictated. */
   z.object({ kind: z.literal('text'), text: z.string().min(1).max(100_000), source: ImportSourceSchema.optional() }),
@@ -90,6 +90,8 @@ export interface ImportOptions {
   onDuplicate?: DuplicatePolicy;
   /** Validate and normalize only; don't write to storage. Default false. */
   dryRun?: boolean;
+  /** Existing category ids to put the recipe in (in addition to any named by a structured import). */
+  categoryIds?: string[];
 }
 
 export type ImportErrorCode =

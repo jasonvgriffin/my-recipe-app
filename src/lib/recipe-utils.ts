@@ -169,12 +169,20 @@ export function removeRecipeTag(recipe: Recipe, tag: string, now: Date = new Dat
   return { ...recipe, tags: recipe.tags.filter((x) => x !== t), updatedAt: now.toISOString() };
 }
 
-/** Set the recipe's one category (v1.0.5), or none (`undefined` = Uncategorized). */
-export function setRecipeCategory(recipe: Recipe, categoryId: string | undefined, now: Date = new Date()): Recipe {
-  const categoryIds = categoryId ? [categoryId] : [];
+/** Set the recipe's categories (v1.0.6: several allowed; `[]` = Uncategorized). Duplicates are dropped. */
+export function setRecipeCategories(recipe: Recipe, ids: string[], now: Date = new Date()): Recipe {
+  const categoryIds = [...new Set(ids.filter(Boolean))];
   if (categoryIds.length === recipe.categoryIds.length && categoryIds.every((id, i) => recipe.categoryIds[i] === id))
     return recipe;
   return { ...recipe, categoryIds, updatedAt: now.toISOString() };
+}
+
+/** Add or remove one category (multi-select chips, v1.0.6). */
+export function toggleRecipeCategory(recipe: Recipe, categoryId: string, now: Date = new Date()): Recipe {
+  const ids = recipe.categoryIds.includes(categoryId)
+    ? recipe.categoryIds.filter((id) => id !== categoryId)
+    : [...recipe.categoryIds, categoryId];
+  return setRecipeCategories(recipe, ids, now);
 }
 
 /** The category shown/selected for a recipe: its first id that still exists, else undefined (Uncategorized). */

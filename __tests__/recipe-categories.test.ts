@@ -1,5 +1,5 @@
 /**
- * v1.0.5 recipe categories (spec #3): default Breakfast / Lunch / Dinner, ordering, one category per recipe,
+ * v1.0.5 recipe categories (spec #3): default Breakfast / Lunch / Dinner, ordering, several categories per recipe (v1.0.6),
  * duplicate merging after sync, grouping for the Recipes tab, Advanced search state, imports default
  * to Uncategorized.
  */
@@ -12,7 +12,8 @@ import {
   isAdvancedSearchActive,
   primaryCategoryId,
   resetAdvancedSearch,
-  setRecipeCategory,
+  setRecipeCategories,
+  toggleRecipeCategory,
   sortCategories,
 } from '@/lib/recipe-utils';
 import { createRecipeStore, DuplicateCategoryError, type KeyValueStore } from '@/storage/recipes';
@@ -119,12 +120,14 @@ describe('sync duplicates', () => {
 });
 
 describe('recipe helpers', () => {
-  it('setRecipeCategory sets one category or none; primaryCategoryId ignores deleted ids', () => {
-    const r = setRecipeCategory({ ...chicken, categoryIds: ['a', 'b'] }, 'c', T1);
-    expect(r.categoryIds).toEqual(['c']);
+  it('v1.0.6: a recipe can be in several categories (toggle on/off, none = Uncategorized)', () => {
+    const r = toggleRecipeCategory({ ...chicken, categoryIds: ['a', 'b'] }, 'c', T1);
+    expect(r.categoryIds).toEqual(['a', 'b', 'c']);
     expect(r.updatedAt).toBe(T1.toISOString());
-    expect(setRecipeCategory(r, undefined, T1).categoryIds).toEqual([]);
-    expect(setRecipeCategory(r, 'c', T0)).toBe(r);
+    expect(toggleRecipeCategory(r, 'a', T1).categoryIds).toEqual(['b', 'c']);
+    expect(setRecipeCategories(r, [], T1).categoryIds).toEqual([]);
+    expect(setRecipeCategories(r, ['x', 'x', 'y'], T1).categoryIds).toEqual(['x', 'y']);
+    expect(setRecipeCategories(r, ['a', 'b', 'c'], T0)).toBe(r);
     expect(primaryCategoryId({ categoryIds: ['gone', 'c'] }, [{ id: 'c' }])).toBe('c');
     expect(primaryCategoryId({ categoryIds: ['gone'] }, [{ id: 'c' }])).toBeUndefined();
   });
@@ -181,7 +184,7 @@ describe('imports default to Uncategorized (v1.0.5)', () => {
     expect(await d.store.listCategories()).toEqual([]);
   });
 
-  it('a structured (assistant) import uses the first category it names', async () => {
+  it('a structured import puts the recipe in every category it names (v1.0.6), matching existing ones', async () => {
     const d = deps();
     await d.store.prepareCategories(T0);
     const result = await importRecipe(
@@ -193,9 +196,19 @@ describe('imports default to Uncategorized (v1.0.5)', () => {
       d,
     );
     if (!result.ok) throw new Error(result.errors.join());
-    const breakfast = (await d.store.listCategories()).find((c) => c.name === 'Breakfast')!;
-    expect(result.recipe.categoryIds).toEqual([breakfast.id]);
-    expect(await d.store.listCategories()).toHaveLength(3);
+    const cats = await d.store.listCategories();
+    const breakfast = cats.find((c) => c.name === 'Breakfast')!;
+    const lunch = cats.find((c) => c.name === 'Lunch')!;
+    expect(result.recipe.categoryIds).toEqual([breakfast.id, lunch.id]);
+    expect(cats).toHaveLength(3);
+    // Extra ids passed by the caller (Import PDF's category picker) are added too, without duplicates.
+    const more = await importRecipe(
+      { kind: 'structured', recipe: { title: 'Toast', ingredients: ['bread'], categories: ['Lunch'] } },
+      { categoryIds: [breakfast.id, lunch.id] },
+      d,
+    );
+    if (!more.ok) throw new Error(more.errors.join());
+    expect(more.recipe.categoryIds).toEqual([breakfast.id, lunch.id]);
   });
 
   it('re-importing (update) keeps the category the user chose', async () => {
@@ -203,7 +216,7 @@ describe('imports default to Uncategorized (v1.0.5)', () => {
     const first = await importRecipe({ kind: 'url', url: 'https://example.com/bread' }, {}, d);
     if (!first.ok) throw new Error('import failed');
     const mine = await d.store.addCategory('Breads');
-    await d.store.save(setRecipeCategory(first.recipe, mine.id));
+    await d.store.save(setRecipeCategories(first.recipe, [mine.id]));
     const again = await importRecipe({ kind: 'url', url: 'https://example.com/bread' }, { onDuplicate: 'update' }, d);
     if (!again.ok) throw new Error('import failed');
     expect(again.recipe.categoryIds).toEqual([mine.id]);

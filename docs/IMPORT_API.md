@@ -9,11 +9,14 @@ Every entry point must call it — never write imported recipes to storage direc
 | Paste / dictate text                                                | ✅ same screen                      | `{ kind: 'text', text, source: { channel: 'app-text' } }`                   |
 | Deep link `myrecipeapp://import?url=…` / `?text=…`                  | ✅ route shows a draft              | `parseImportDeepLink(link)`                                                 |
 | Android share sheet → app (SEND `text/plain`)                       | ✅ `expo-sharing` + `+native-intent` | `shareTextToImportInput(sharedText)`                                        |
-| **MCP server** ("Hey AI, send this recipe to my recipe app") | `add_recipe` tool (src/mcp/tools.ts) | `{ kind: 'structured', recipe, source: { channel: 'mcp', label: 'Grok' } }` |
-| Future sync / JSON file import                                      | later phase                         | `{ kind: 'structured', …, source: { channel: 'sync' \| 'file' } }`          |
+| Android share sheet → app (SEND `application/pdf`, v1.0.6)          | ✅ forwarded to Import PDF          | `sharedPdfUri(payloads)` → `/import-pdf?uri=…`                              |
+| **Import PDF** (+ menu, v1.0.6)                                     | ✅ `src/app/import-pdf.tsx`         | `readRecipesFromPdf(bytes, deps)` → one `{ kind: 'text', text, source: { channel: 'pdf' } }` dry run per recipe; `importPdfCandidates(chosen, categoryIds, deps)` saves |
+| JSON file import                                                    | later phase                         | `{ kind: 'structured', …, source: { channel: 'file' } }`                    |
+
+The MCP server entry point was **cut in v1.0.6** at Jason's request (may be revisited); the API stays host-agnostic.
 
 The module has **no UI dependencies** (no React / react-native imports, enforced by ESLint) so it can be reused
-unchanged by a Node MCP server or sync worker; storage, network and clock are injected via `deps`.
+unchanged by another host (e.g. a server, if one is ever added back); storage, network and clock are injected via `deps`.
 
 - App code: `importRecipe(input, options?, deps = appImportDeps)` from `@/import` (binds the on-device store + fetch).
 - Other hosts: `importRecipeWith(deps, input, options?)` from `@/import/import-recipe` (only a _type_ import of
@@ -31,7 +34,7 @@ type RecipeImportInput =
 
 interface ImportSource {
   url?: string; // original page; kept on the recipe (spec #5) and used for dedupe
-  channel?: 'app-link' | 'app-text' | 'share-intent' | 'deep-link' | 'mcp' | 'sync' | 'file';
+  channel?: 'app-link' | 'app-text' | 'share-intent' | 'deep-link' | 'file' | 'pdf';
   label?: string; // e.g. "Grok"
 }
 
@@ -44,7 +47,7 @@ interface RecipeDraft {
   // timers auto-detected from text when durationSeconds absent (spec #15)
   description?: string;
   tags?: string[]; // lower-cased + deduped
-  categories?: string[]; // category NAMES; structured imports only: the FIRST name is used (created if missing). URL/text imports ignore page categories → Uncategorized (v1.0.5)
+  categories?: string[]; // category NAMES; structured imports only: v1.0.6 EVERY name is used (created if missing; a recipe can be in several). URL/text imports ignore page categories → Uncategorized
   servings?: number; // > 0; defaults to 1 with a warning
   rating?: number; // 1–5 (spec #22)
   notes?: string;
@@ -87,7 +90,7 @@ type ImportErrorCode =
    `utm_*`/`fbclid`/… params, sorted query, no trailing slash). Policy `skip` returns the existing recipe
    (`status: 'duplicate'`); `update` replaces content but keeps id, createdAt, cooked history, notes/photo if
    the import has none, and keeps the existing category (an uncategorized recipe takes the import's); `create` always adds a new one.
-6. **Normalize + save**: whitespace collapsed, tags lower-cased, categories resolved to ids (structured: first name only; URL/text: none — Uncategorized), `createRecipe`,
+6. **Normalize + save**: whitespace collapsed, tags lower-cased, categories resolved to ids (structured: every name; URL/text: none — Uncategorized; plus any `options.categoryIds`), `createRecipe`,
    `store.save`.
 
 ## Dependencies (`ImportDeps`)
@@ -100,7 +103,7 @@ interface ImportDeps {
 }
 ```
 
-A future MCP server would pass a server-side store (e.g. Postgres) implementing the same three methods.
+Another host would pass its own store implementing the same three methods.
 
 ## Examples
 
@@ -110,12 +113,9 @@ const r = await importRecipe({ kind: 'url', url: pasted, source: { channel: 'app
 if (r.ok) router.push({ pathname: '/recipe/[id]', params: { id: r.recipe.id } });
 else Alert.alert('Import failed', r.errors.join('\n'));
 
-// Future MCP tool `add_recipe` handler
-return importRecipeWith(
-  serverDeps,
-  { kind: 'structured', recipe: args, source: { channel: 'mcp', label: 'Grok' } },
-  { onDuplicate: 'update' },
-);
+// Import PDF: read on the phone, preview, then save the checked ones into categories (several allowed)
+const read = await readRecipesFromPdf(bytes, appImportDeps); // { ok:false, reason:'no_text' } for scans
+if (read.ok) await importPdfCandidates(read.candidates, [dinnerId, weeknightId], appImportDeps);
 
 // Deep link / share intent — the import screen previews with dryRun, then saves on confirm.
 const input = parseImportDeepLink(url) ?? shareTextToImportInput(sharedText);
@@ -140,3 +140,25 @@ __tests__/import.test.ts     contract tests
 ```
 
 Changing the contract? Update this doc, `types.ts`, and the tests in the same PR.
+
+## Import PDF (v1.0.6)
+
+On-device only (no network, no paid APIs, no new permissions; pure TypeScript, no native PDF library):
+
+- `src/import/pdf/objects.ts` — PDF object parser: xref-free object scan (works on damaged xrefs), object streams,
+  Flate (`inflate.ts`, pure TS) / ASCIIHex / ASCII85 filters and PNG predictors, page tree with inherited resources.
+- `src/import/pdf/fonts.ts` — ToUnicode CMaps (bfchar / bfrange, 1- and 2-byte codes), WinAnsi / MacRoman /
+  Standard encodings + `/Differences`, glyph widths (`/Widths`, CID `/W`).
+- `src/import/pdf/extract-text.ts` — content-stream interpreter (text matrices, TJ kerning, `cm`, Form XObjects,
+  inline images skipped) and line layout (lines by baseline, spaces from gaps, blank lines between blocks).
+  `hasText: false` for scans / image-only PDFs.
+- `src/import/pdf/recipes.ts` — `splitRecipeTexts(pages)`: one chunk per “Ingredients” heading; the title block is
+  found by walking back past meta lines, never past a page start, a section heading or a “Source:” line.
+- `src/import/parsers/text.ts` — the shared text parser now reads descriptions, servings (“Servings: 6”, “Serves 4”,
+  “Yield”), prep/cook times (kept in notes), numbered or wrapped steps, the app's own “(40 min)” step timers,
+  “Substitution:” notes, Notes and Tags sections and “Source: https://…”.
+- Errors: `not_pdf`, `unreadable` (damaged / encrypted), `no_text` (“Couldn’t read text from this PDF …”),
+  `no_recipes`, `locked` (the `linkImport` gate). Recipes with monk fruit are listed in `skipped`.
+- Tests: `__tests__/import-pdf.test.ts` (app-export round trip from Chrome/Skia-printed fixtures, generated
+  Helvetica PDFs via `test-helpers/simple-pdf.ts`, image-only PDF), `__tests__/import-pdf-ui.test.tsx`.
+
