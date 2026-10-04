@@ -53,8 +53,10 @@ for a in launchers:
     head = own_attrs(a)
     if not (attr(head, 'targetActivity') or '').endswith('.MainActivity'):
         errors.append('alias without MainActivity target')
-    m = re.search(r':enabled\([^)]*\)=\(type 0x12\)0x([0-9a-f]+)', head)
-    if m and int(m.group(1), 16) != 0:
+    # aapt2 prints booleans as `=true` / `=false` (older builds: `=(type 0x12)0xffffffff`); no attribute = enabled.
+    m = re.search(r':enabled\([^)]*\)=(?:\(type 0x12\)0x([0-9a-f]+)|(true|false))', head)
+    on = m is None or (m.group(2) == 'true' if m.group(2) else int(m.group(1), 16) != 0)
+    if on:
         enabled.append(attr(head, 'name'))
 if len(enabled) != 1 or not (enabled[0] or '').endswith('.LauncherIconDefault'):
     errors.append(f'expected only LauncherIconDefault enabled, found {enabled}')
