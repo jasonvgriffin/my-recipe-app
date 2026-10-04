@@ -7,7 +7,7 @@ AI-friendly, diabetic-friendly recipe app. Android first, iOS later from the sam
 **v1 = [docs/SPEC.md](SPEC.md)** (Jason's 27-item feature spec: link import, editing, categories, photos,
 source links, notes, search, filters, cooked tracking, meal plan calendar, shopping list, dark theme, share,
 step timers, unit conversion, ~~nutrition~~ (removed), grocery run mode, cooking mode, tags, pantry, ratings, foldables,
-cook-with-me, household sharing, barcode scanning; receipt scanning was removed in v1.0.1).
+cook-with-me, ~~household sharing~~ (removed in v1.0.6), barcode scanning; receipt scanning was removed in v1.0.1).
 
 **Standing rule (Jason, Oct 3 2026):** This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition. Spec #17 (nutrition) was removed;
 the pantry tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition), and barcode scans use Open Food Facts for the product name and brand only.
@@ -15,7 +15,10 @@ the pantry tracks item name, quantity and unit, plus optional category, expirati
 **Release policy:** v1.0.0 = ALL SPEC items 1–27 complete (#17 removed). The first published APK is v1.0.0. Until then CI only
 uploads APK _artifacts_ on each push/PR (to keep builds green); a GitHub Release is created only by pushing a
 `v*` tag (or a manual `publish` workflow run) — Eve/Jason decide when.
-Household sync on Supabase (#25) **is** in v1 (project live, migrations applied); the remote MCP server (SPEC #28) is **also in v1.0** (approved by Jason, Oct 3 2026; see docs/MCP.md).
+**v1.0.6 (Jason's requests):** household sharing (#25) was removed — existing household rows were migrated to their
+owner's personal scope and the old household tables are left in place for now. **MCP server deliberately cut in 1.0.6
+at Jason's request; may be revisited in a future version.** With both gone the app is local-first (no sign-in, no
+sync); Backup & restore moves data between phones.
 
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
@@ -69,7 +72,10 @@ Suggested PR order (each small, with tests; update the status table in SPEC.md):
 - [ ] Optional: move storage to `expo-sqlite` if recipe count / querying needs grow
 - [ ] Production signing keystore in GitHub secrets (needed before v1.0.0 so updates install over each other)
 
-## Phase 3 — AI-friendly (MCP server pulled into v1.0, Oct 3 2026)
+## Phase 3 — AI-friendly
+
+> **MCP server deliberately cut in 1.0.6 at Jason's request; may be revisited in a future version.** The notes below
+> are kept as history (the code is in git history: `src/mcp/`, `supabase/functions/mcp/`, `site/oauth/`).
 
 Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes, and see them in the app.
 

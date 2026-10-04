@@ -4,10 +4,8 @@
  * Settings (or locked by the gate) disappear from the bar and the + menu; the + button and More always stay.
  */
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
-import * as Clipboard from 'expo-clipboard';
 import { renderRouter } from 'expo-router/testing-library';
 
-import { MCP_SERVER_URL } from '@/config';
 import type { FeatureId } from '@/entitlements';
 import { ADD_MENU_ITEMS, addMenuHref, visibleAddMenuItems } from '@/lib/add-menu';
 import { toIsoDate } from '@/lib/dates';
@@ -42,7 +40,6 @@ const routes = () => ({
   import: require('@/app/import').default,
   'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
   settings: require('@/app/settings').default,
-  household: require('@/app/household').default,
 });
 
 beforeAll(() => {
@@ -224,7 +221,6 @@ describe('section title below the banner (v1.0.4)', () => {
     ['/more', 'More'],
     ['/pantry', 'Pantry'],
     ['/settings', 'Settings'],
-    ['/household', 'Household'],
   ])('%s shows the “%s” page title', async (url, section) => {
     renderRouter(routes(), { initialUrl: url });
     expect(await screen.findByTestId('section-title')).toHaveTextContent(section);
@@ -234,10 +230,11 @@ describe('section title below the banner (v1.0.4)', () => {
 });
 
 describe('More screen', () => {
-  it('lists Pantry, Household and Settings', async () => {
+  it('lists just Pantry and Settings (v1.0.6: Household removed)', async () => {
     renderRouter(routes(), { initialUrl: '/more' });
     expect(await screen.findByTestId('more-pantry')).toBeTruthy();
-    expect(screen.getByTestId('more-household')).toBeTruthy();
+    expect(screen.queryByTestId('more-household')).toBeNull();
+    expect(screen.queryByText('Household')).toBeNull();
     expect(screen.getByTestId('section-title')).toHaveTextContent('More');
     await act(async () => fireEvent.press(screen.getByTestId('more-settings')));
     expect(await screen.findByTestId('settings-screen')).toBeTruthy();
@@ -259,15 +256,16 @@ describe('More screen', () => {
 });
 
 describe('Settings (v1.0.2)', () => {
-  it('shows the MCP server URL with a copy button, no cooked-recently setting, and the app version', async () => {
+  it('has no AI assistants (MCP) section or sign-in (cut in v1.0.6), no cooked-recently setting, and shows the app version', async () => {
     renderRouter(routes(), { initialUrl: '/settings' });
-    expect(await screen.findByText('AI assistants (MCP)')).toBeTruthy();
-    expect(screen.getByTestId('mcp-server-url')).toHaveTextContent(MCP_SERVER_URL);
+    expect(await screen.findByTestId('settings-screen')).toBeTruthy();
+    expect(screen.queryByText(/AI assistants|MCP/)).toBeNull();
+    expect(screen.queryByTestId('mcp-server-url')).toBeNull();
+    expect(screen.queryByTestId('account-settings-link')).toBeNull();
+    expect(screen.queryByText(/Sign in/i)).toBeNull();
+    expect(screen.queryByText(/Household/)).toBeNull();
     expect(screen.queryByText(/Cooked recently/i)).toBeNull();
     expect(screen.queryByTestId('cooked-recently-input')).toBeNull();
-    await act(async () => fireEvent.press(screen.getByTestId('mcp-copy-button')));
-    expect(Clipboard.setStringAsync).toHaveBeenCalledWith(MCP_SERVER_URL);
-    expect(await screen.findByText('Copied')).toBeTruthy();
     const { version } = require('../app.json').expo as { version: string };
     expect(screen.getByTestId('app-version')).toHaveTextContent(`Version ${version}`);
   });

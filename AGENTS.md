@@ -8,7 +8,7 @@ Guidance for Cursor cloud agents (and any other coding agent) working in this re
 
 ## Rule #1: RECIPES ARE THE CORE
 
-Pantry, meal planning, shopping list, grocery run, barcode scanning and household sharing are optional
+Pantry, meal planning, shopping list, grocery run, barcode scanning are optional
 nice-to-haves. The app opens to Recipes; no onboarding, sign-in or setup; no recipe flow requires or prompts
 optional features; cross-links are unobtrusive and absent when a feature is hidden (`useSettings().features`)
 or empty; empty optional features never nag; Settings → Optional features hides the optional tabs. Recipe
@@ -35,8 +35,8 @@ Android first; iOS later from the **same codebase**.
   UI-free modules, voice/deep links, household-ready data).
 - [`docs/IMPORT_API.md`](docs/IMPORT_API.md) is the recipe import contract (see "Import pipeline" below).
 - [`docs/COOK_API.md`](docs/COOK_API.md) — cook-with-me session contract; [`docs/SYNC.md`](docs/SYNC.md) —
-  household sync on Supabase.
-- [`docs/PLAN.md`](docs/PLAN.md) is the phased roadmap (the remote MCP server, SPEC #28, is in v1.0; see docs/MCP.md).
+  why sync/households/MCP were removed in v1.0.6 and the Supabase project state.
+- [`docs/PLAN.md`](docs/PLAN.md) is the phased roadmap (the remote MCP server, SPEC #28, was deliberately cut in 1.0.6 at Jason's request; may be revisited).
 
 ## Stack
 
@@ -53,7 +53,7 @@ Android first; iOS later from the **same codebase**.
 ```
 src/app/_layout.tsx           root Stack + dark navigation theme
 src/app/(tabs)/               bottom tabs (v1.0.2): index.tsx (Recipes), meal-plan.tsx, + (add-menu.tsx placeholder →
-                              components/add-menu-sheet.tsx), shopping.tsx, more.tsx (Pantry, Household, Settings); pantry.tsx
+                              components/add-menu-sheet.tsx), shopping.tsx, more.tsx (Pantry, Settings); pantry.tsx
 src/app/add.tsx               add-recipe form (modal)
 src/app/recipe/[id].tsx       recipe detail (cooked toggle, plan for today, source link, delete)
 src/types/recipe.ts           Recipe (structured steps, parsed ingredients, rating, unitSystem),
@@ -69,9 +69,8 @@ src/storage/                  repositories over a KeyValueStore (AsyncStorage by
                               kv.ts (createCollection), recipes.ts (recipes + categories), meal-plan.ts,
                               pantry.ts, settings.ts
 src/app/(tabs)/index.tsx      Recipes tab = the recipe list (components/recipe-list.tsx; v1.0.4, no home page)
-src/config/index.ts           app constants: MCP_SERVER_URL, appVersion() (expo-constants)
+src/config/index.ts           app constants: appVersion() (expo-constants)
 src/app/recipes.tsx           stack route for the same list (deep links ?focus=search, ?select=pdf)
-src/app/auth.tsx              magic-link redirect (myrecipeapp://auth): sign in, then Settings → Household
 src/storage/legacy-samples.ts identifies untouched v1.0.0 sample recipes (no seeding since v1.0.1)
 test-helpers/sample-recipes.ts  sample recipes for tests only
 __tests__/          jest tests
@@ -96,10 +95,10 @@ Run **typecheck, lint and tests** before declaring any task done. They also run 
 Expo changes a lot between SDKs — do not trust memory. Check the versioned docs for the SDK in
 `package.json` (`https://docs.expo.dev/versions/v57.0.0/`) and https://docs.expo.dev/llms.txt.
 
-## Supabase (household sync backend)
+## Supabase (no longer used by the app since v1.0.6)
 
-Project is live; URL/anon key reach CI builds via repo variable `EXPO_PUBLIC_SUPABASE_URL` + secret
-`EXPO_PUBLIC_SUPABASE_ANON_KEY` (not committed). Schema changes = new file in `supabase/migrations/`, smoke-tested
+The project stays live (old tables kept) but the app has no sign-in or sync, and CI no longer passes the Supabase
+URL/key to builds. Schema changes = new file in `supabase/migrations/`, smoke-tested
 locally, merged to `main` → the migrations workflow applies it. Never commit the DB password or service_role key;
 never edit an applied migration. Details: `docs/SYNC.md`.
 
@@ -160,7 +159,7 @@ to my recipe app"). So:
   Inject storage/network/clock through `ImportDeps`.
 - Changing the contract (`src/import/types.ts`) requires updating `docs/IMPORT_API.md` and `__tests__/import.test.ts`.
 - Don't rely on the global `URL` class in shared code (RN's is a partial polyfill); use `src/import/url.ts`.
-- The MCP server (`src/mcp/`, `supabase/functions/mcp/`, docs/MCP.md) is in v1.0. Its tools must reuse the app modules (importRecipe, recipe/shopping/meal-plan libs). Never add a parallel implementation.
+- The MCP server was cut in v1.0.6 (Jason); don't re-add it unless he asks. If it returns, its tools must reuse the app modules (importRecipe, recipe/shopping/meal-plan libs).
 
 ## Signing & secrets
 

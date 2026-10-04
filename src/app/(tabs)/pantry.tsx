@@ -65,7 +65,7 @@ export default function PantryScreen() {
       void reload();
     }, [reload]),
   );
-  // Household sync (spec #25): reload when another member's changes land.
+  // Reload when data changes elsewhere (e.g. a Backup & restore).
   useOnDataChange(() => {
     void reload().catch(() => undefined);
   });

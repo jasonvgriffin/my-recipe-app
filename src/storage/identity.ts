@@ -1,10 +1,9 @@
 /**
- * Who is writing, and into which household (spec #25). Solo/offline mode = both undefined.
- * The sync layer (src/sync) sets this after sign-in / joining a household; stores stamp new records with it.
+ * Who is writing (spec #25). Offline / signed out = undefined. The sync layer (src/sync) sets this after
+ * sign-in; stores stamp new records with it. v1.0.6: household sharing was removed, so there is no household id.
  */
 export interface Identity {
   userId?: string;
-  householdId?: string;
 }
 
 let current: Identity = {};
@@ -15,7 +14,7 @@ export function getIdentity(): Identity {
 }
 
 export function setIdentity(next: Identity): void {
-  current = { ...next };
+  current = { userId: next.userId };
   listeners.forEach((l) => l(current));
 }
 

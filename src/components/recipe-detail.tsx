@@ -6,7 +6,6 @@ import { useBottomInset } from '@/components/layout';
 import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
 import { ServingsUnits } from '@/components/servings-units';
-import { SharedBy } from '@/components/shared-by';
 import { ShareRecipePanel } from '@/components/share-recipe-panel';
 import { StarRating } from '@/components/star-rating';
 import { TagEditor } from '@/components/tag-editor';
@@ -116,7 +115,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
       active = false;
     };
   }, [categoriesOn, categoriesProp, id]);
-  // Household sync (spec #25): reload when this recipe changes on another device.
+  // Reload when this recipe changes elsewhere (e.g. a Backup & restore).
   useOnDataChange(() => {
     void recipeStore.get(id).then((r) => {
       setRecipe(r ?? null);
@@ -302,7 +301,6 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
           />
         ) : null}
         <Text style={styles.title}>{recipe.title}</Text>
-        <SharedBy createdBy={recipe.createdBy} />
         {recipe.description ? <Text style={styles.description}>{recipe.description}</Text> : null}
         <View style={styles.stats}>
           <Stat label="Servings" value={String(recipe.servings)} />

@@ -17,6 +17,7 @@ export interface StoredRecord {
   id: string;
   updatedAt?: string;
   deletedAt?: string;
+  /** Legacy (household sharing was removed in v1.0.6); dropped on the next sync. */
   householdId?: string;
   createdBy?: string;
 }
@@ -32,7 +33,7 @@ export interface Collection<T extends StoredRecord> {
   allRaw(): Promise<T[]>;
   replaceAll(items: T[]): Promise<void>;
   get(id: string): Promise<T | undefined>;
-  /** Local write: stamps updatedAt (and householdId/createdBy from the current identity if unset). */
+  /** Local write: stamps updatedAt (and createdBy from the current identity if unset). */
   save(item: T, now?: Date): Promise<T>;
   /** Soft delete (tombstone). */
   remove(id: string, now?: Date): Promise<void>;
@@ -102,14 +103,12 @@ export function createCollection<T extends StoredRecord>(
     },
     save(item, now = new Date()) {
       return locked(async () => {
-        const { userId, householdId } = getIdentity();
+        const { userId } = getIdentity();
         const stamped: T = {
           ...item,
           updatedAt: now.toISOString(),
-          householdId: item.householdId ?? householdId,
           createdBy: item.createdBy ?? userId,
         };
-        if (stamped.householdId === undefined) delete stamped.householdId;
         if (stamped.createdBy === undefined) delete stamped.createdBy;
         const items = await allRaw();
         const idx = items.findIndex((x) => x.id === item.id);

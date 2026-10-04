@@ -2,9 +2,9 @@
  * Barcode → product lookup (spec #27). UI-free: the camera screen (expo-camera barcode scanning:
  * EAN-13, EAN-8, UPC-A, UPC-E) passes the scanned code here, then adds/increments the pantry item.
  *
- * Order: household-shared local mapping (incl. cached Open Food Facts results and user-typed names)
+ * Order: saved local mapping (incl. cached Open Food Facts results and user-typed names)
  * → Open Food Facts API (free, no key) → not found / offline → caller asks the user for a name once and
- * calls `saveUserProduct`, which is stored household-wide so nobody has to type it again.
+ * calls `saveUserProduct`, which is saved (and synced to your account) so you never have to type it again.
  *
  * Open Food Facts is used for the product NAME and BRAND only (no package size, image or nutrition). Never request or store
  * nutrition here — the pantry tracks names, quantities and optional details, never nutrition (Jason, Oct 3 2026).
@@ -23,7 +23,7 @@ export interface BarcodeProduct {
   brand?: string;
 }
 
-/** Household-shared barcode mapping record (synced table `barcode_items`). id = barcode-derived UUID-free key. */
+/** Saved barcode mapping record (synced table `barcode_items`). id = barcode-derived UUID-free key. */
 export interface BarcodeItem extends SyncMeta, BarcodeProduct {
   source: 'openfoodfacts' | 'user';
 }
@@ -36,7 +36,7 @@ export type BarcodeLookupResult =
   | { status: 'locked'; barcode: string; error: string }; // barcodeScan gated off (src/entitlements)
 
 export interface BarcodeDeps {
-  /** Household-shared mapping store. */
+  /** Saved mapping store. */
   items: Collection<BarcodeItem>;
   fetchJson: (url: string, headers: Record<string, string>) => Promise<{ status: number; json: unknown }>;
   newId: () => string;
@@ -62,7 +62,7 @@ export function normalizeBarcode(raw: string): string | undefined {
 
 /**
  * Keep only the name/brand mapping: drop extra data older builds cached on barcode mappings (package size,
- * image, nutrition), so it is neither kept on device nor pushed to the household again.
+ * image, nutrition), so it is neither kept on device nor pushed again.
  */
 export function withoutNutrition<T extends object>(item: T): T {
   const legacy = ['nutritionPer100g', 'quantity', 'imageUrl'];
@@ -135,7 +135,7 @@ export function createBarcodeLookup({
       await store(product, 'openfoodfacts');
       return { status: 'found', source: 'openfoodfacts', product };
     },
-    /** Save a user-typed name for an unknown/offline barcode (household-shared from then on). */
+    /** Save a user-typed name for an unknown/offline barcode (remembered from then on). */
     async saveUserProduct(
       rawBarcode: string,
       name: string,

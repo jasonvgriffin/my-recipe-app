@@ -47,7 +47,7 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
   }
 
   /**
-   * Household sync can bring two categories with the same name (e.g. each phone seeded “Breakfast” before
+   * Sync can bring two categories with the same name (e.g. each phone seeded “Breakfast” before
    * joining). Keep the oldest (then lowest id — every device picks the same one), move recipes onto it and
    * tombstone the rest. Returns how many were merged away.
    */
@@ -167,7 +167,7 @@ export function createRecipeStore(store: KeyValueStore = defaultStore) {
     /**
      * Recipes tab start-up (v1.0.5): once per device, add the default categories (Breakfast, Lunch, Dinner) that
      * don't exist yet — a category the user deletes later stays deleted. Every call also merges same-name
-     * duplicates that household sync may have brought in. Coalesced across overlapping reloads.
+     * duplicates that sync may have brought in. Coalesced across overlapping reloads.
      */
     prepareCategories(now: Date = new Date()): Promise<void> {
       if (!preparing) {

@@ -70,7 +70,7 @@ afterEach(() => setIdentity({}));
 
 async function fullPhone() {
   const old = phone();
-  setIdentity({ userId: 'old-user', householdId: 'old-household' });
+  setIdentity({ userId: 'old-user' });
   const dinner = await old.recipes.addCategory('Dinner', at('2026-10-01T09:00:00Z'));
   const chicken = await old.recipes.save(
     { ...SAMPLE_RECIPES[0], categoryIds: [dinner.id], rating: 5, tags: ['weeknight'], photoUri: 'file:///docs/recipe-photos/seed-lemon-herb-chicken.jpg', cooked: true, lastCookedAt: '2026-10-02T18:00:00.000Z', cookedDates: ['2026-10-02T18:00:00.000Z'] } as never,

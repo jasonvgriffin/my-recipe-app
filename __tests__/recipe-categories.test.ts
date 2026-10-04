@@ -1,6 +1,6 @@
 /**
  * v1.0.5 recipe categories (spec #3): default Breakfast / Lunch / Dinner, ordering, one category per recipe,
- * duplicate merging after household sync, grouping for the Recipes tab, Advanced search state, imports default
+ * duplicate merging after sync, grouping for the Recipes tab, Advanced search state, imports default
  * to Uncategorized.
  */
 import { SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
@@ -101,7 +101,7 @@ describe('rename / add / delete', () => {
   });
 });
 
-describe('household duplicates', () => {
+describe('sync duplicates', () => {
   it('merges same-name categories onto the oldest and moves recipes; every device picks the same one', async () => {
     const store = createRecipeStore(memoryStore());
     const older = cat('id-b', 'Breakfast', 0, '2026-09-01T00:00:00.000Z');

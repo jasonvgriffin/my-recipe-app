@@ -35,10 +35,10 @@
 | 22 | Five-star ratings | `src/components/star-rating.tsx`, `Recipe.rating`, the rating filter in `recipe-filters.tsx` (Advanced search), stars beside each recipe name in `recipe-categories.tsx` |
 | 23 | Foldables / responsive | `src/hooks/use-window-size-class.ts`, `src/components/layout.tsx` (`TwoPaneLayout`, `MaxWidthContainer`, `MAX_CONTENT_WIDTH`) |
 | 24 | Cook-with-me voice mode (no in-app TTS) | `src/cooking/session.ts`, `src/cooking/deep-link.ts` (`parseCookDeepLink`, `runCookCommand`), `src/cooking/index.ts`. Contract: `docs/COOK_API.md` |
-| 25 | Household sharing (Supabase) | `src/sync/` (`engine.ts`, `coordinator.ts`, `account.ts`, `supabase.ts`, `rows.ts`, `config.ts`, `status.ts`, `authors.ts`, `auth-url.ts`, `errors.ts`), `src/household/` (`runtime.ts`, `state.ts`), `src/hooks/use-household.ts`, `src/hooks/use-household-sync.ts`, `src/hooks/use-incoming-url.ts`, `src/app/household.tsx`, `src/app/auth.tsx` (magic-link redirect `myrecipeapp://auth`), `src/components/shared-by.tsx`, `src/components/sync-status.tsx`, `src/storage/identity.ts`, `supabase/migrations/*`, `.github/workflows/supabase-migrations.yml`. Contract: `docs/SYNC.md` |
+| 25 | ~~Household sharing~~: **removed in v1.0.6** (Jason). Household rows were migrated to personal scope (`supabase/migrations/20261006000000_remove_household_sharing.sql`); old tables stay unused | none |
 | 26 | ~~Receipt scanning~~: **removed in v1.0.1**. Do not re-add without Jason asking (the unused Supabase `receipt_aliases` table stays; never edit applied migrations) | none |
 | 27 | Barcode scanning (Open Food Facts for the **name and brand only**), pantry **and** shopping list | `src/components/barcode-scanner.tsx` (**the** scanner: camera, lookup, name-once), `src/pantry/barcodeLookup.ts`, `src/app/pantry/scan.tsx` (→ `pantryStore.addScanned`, back to Pantry with `?added=`), `src/app/shopping/scan.tsx` (→ `addManualItem`, back to Shopping with `?added=`). Product name is the item title (brand secondary) |
-| 28 | AI assistant access (remote MCP server) | Settings → “AI assistants (MCP)” shows `MCP_SERVER_URL` (`src/config/index.ts`) with a copy button; `src/mcp/` (`server.ts` HTTP/resource metadata/consent backend/JSON-RPC, `tools.ts` tools on top of `importRecipeWith` / `applyRecipeEdit` / `filterRecipes` / `compileWeekShoppingList` / `addManualItem` / `isInPantry`, `repo.ts` synced tables via `src/sync/rows.ts`, `oauth.ts` (Supabase Auth is the OAuth server), `rate-limit.ts`), `supabase/functions/mcp/` (Edge Function binding), `site/oauth/consent.html` + `.github/workflows/pages.yml` (OAuth consent page on GitHub Pages), `supabase/migrations/20261003030000_mcp_rate_limits.sql`, `.github/workflows/supabase-functions.yml`. Docs: `docs/MCP.md` |
+| 28 | ~~AI assistant access (MCP server)~~: **cut in v1.0.6** (Jason; may be revisited). Code is in git history | none |
 
 ## Navigation (v1.0.2)
 
@@ -46,9 +46,9 @@
 |-------|-------|
 | Bottom bar: Recipes · Meal Plan · **+** · Shopping · More (nav rail on expanded) | `src/app/(tabs)/_layout.tsx`. Meal Plan / Shopping drop out (`href: null`) when locked or hidden in Settings; + and More always stay. Pantry route stays in `(tabs)` (`href: null`), opened from More |
 | Center + button → add sheet (3-column round icon grid) | `PlusTabButton` in `(tabs)/_layout.tsx` (placeholder route `src/app/(tabs)/add-menu.tsx` redirects to `/`), `src/components/add-menu-sheet.tsx` (Modal; backdrop / back closes), items + filtering + routes in `src/lib/add-menu.ts` (`ADD_MENU_ITEMS`, `visibleAddMenuItems`, `addMenuHref`). Add a menu action there, never a second menu. v1.0.3: the `plan-meal` item is labeled “Meal Plan”, the Scan Barcode item is gone (scan from the Shopping / Pantry screens), and a partial last grid row is centered. v1.0.4: the + is 33% smaller (44dp raised / 39dp rail, 23dp glyph) and “Share Recipe” reads “Share Recipes”. v1.0.5: labels wrap (no `numberOfLines`), never “Add to Shopping Li…” |
-| More screen: Pantry (if visible), Household (if unlocked), Settings | `src/app/(tabs)/more.tsx` |
+| More screen: Pantry (if visible), Settings | `src/app/(tabs)/more.tsx` |
 | Header “My Recipe App” (banner) + settings gear right; section name as a big page title below the banner (v1.0.4) | `src/components/app-header.tsx` (`AppHeaderTitle`, `SectionTitle`, `SectionLayout` via the navigators' `screenLayout`, `SettingsGearButton`), used by `(tabs)/_layout.tsx` and the Settings / Household screens in `src/app/_layout.tsx` |
-| App constants (MCP server URL) and app version | `src/config/index.ts` (`MCP_SERVER_URL`, `appVersion()` from expo-constants); version shown at the bottom of Settings |
+| App version | `src/config/index.ts` (`appVersion()` from expo-constants); version shown at the bottom of Settings |
 | Accent for the + button and + menu icons | `colors.accent` / `accentText` (orange with the Green accent, else the chosen accent; `src/lib/theme.ts`) |
 
 ## Recipes tab (v1.0.5: search row + categories)
@@ -65,7 +65,7 @@ component as a stack route for + menu deep links. The old home actions are in th
 | Add Recipe | `src/app/add.tsx` (links to `src/app/import.tsx`) |
 | Import Link | `src/app/import.tsx` (needs `linkImport`) |
 | Search Recipes | `/recipes?focus=search` |
-| Share Recipes | `/recipes?select=pdf` — pick recipes → one PDF → share sheet (needs `pdfExport`). Household sharing: More → Household / Settings → Household |
+| Share Recipes | `/recipes?select=pdf` — pick recipes → one PDF → share sheet (needs `pdfExport`). |
 | What Can I Make? | `src/app/pantry-match.tsx` (needs `pantry`: gate + Settings toggle; the screen still explains when hidden/empty on a deep link) |
 
 App icon (v1.0.5: yellow bowl `#FFD60A`): sources `assets/icons/*.svg`, PNGs `assets/images/*`, regenerate both with

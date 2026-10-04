@@ -2,7 +2,7 @@ import type { FeatureId } from './features';
 
 /**
  * Who has paid for what. v1 ships LocalFreeEntitlements (grants everything). Future implementations:
- * Google Play / App Store billing, RevenueCat, or a Supabase `entitlements` table keyed by user/household.
+ * Google Play / App Store billing, RevenueCat, or a Supabase `entitlements` table keyed by user.
  * Providers answer only "does the user hold the entitlement for this premium feature?" — tier/kill-switch
  * logic lives in the gate.
  */

@@ -51,7 +51,7 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
       };
     }, [load]),
   );
-  // Household sync (spec #25): reload when another member's changes land.
+  // Reload when data changes elsewhere (e.g. a Backup & restore).
   useOnDataChange(() => {
     void load().catch(() => undefined);
   });

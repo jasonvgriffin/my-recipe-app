@@ -1,12 +1,12 @@
 /**
- * Household / sync metadata carried by every synced record (spec #25, docs/SYNC.md).
- * Local-first: records work fully offline with householdId/createdBy unset (solo mode). When the user
- * signs in and joins a household, the sync engine stamps householdId on local records and uploads them.
+ * Sync metadata carried by every synced record (spec #25, docs/SYNC.md).
+ * Local-first: records work fully offline with createdBy unset. When the user signs in, the sync engine stamps
+ * createdBy and uploads them to their personal space. (Household sharing was removed in v1.0.6.)
  */
 export interface SyncMeta {
   /** Stable UUID v4 (same id locally and in Supabase). */
   id: string;
-  /** Household the record belongs to; undefined = local-only (solo / not signed in). */
+  /** Legacy: set by the household sharing feature removed in v1.0.6. The next sync drops it. */
   householdId?: string;
   /** Supabase auth user id of the author; undefined when created while signed out. */
   createdBy?: string;

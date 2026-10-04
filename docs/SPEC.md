@@ -2,11 +2,11 @@
 
 > ## 🍳 RECIPES ARE THE CORE (rule for every agent)
 >
-> Pantry, meal planning, shopping list, grocery run, barcode scanning, household sharing and other
+> Pantry, meal planning, shopping list, grocery run, barcode scanning and other
 > supporting features are **optional nice-to-haves**. A user must be able to use the app fully with only
 > recipes and never touch the pantry or meal planner.
 >
-> - The app **opens to Recipes**. No onboarding, sign-in or setup is ever required (household sync is opt-in
+> - The app **opens to Recipes**. No onboarding, sign-in or setup is ever required (nothing to sign in to since v1.0.6
 >   from Settings).
 > - No recipe flow ever requires or prompts pantry / meal-plan steps. Cross-links ("Plan for today", "pantry
 >   match", …) are optional, unobtrusive, and **absent** when that feature is hidden or empty.
@@ -33,8 +33,6 @@
 >   the gate allows it AND the user hasn't hidden it.
 > - **Core recipe CRUD / view / search is never gated** (recipes-first). Locked features disappear quietly;
 >   deep links to them show a neutral message.
-> - `mcpAccess` is the remote MCP server's own switch (#28; checked server-side; no in-app UI).
-> - `cloudSync` (v1.0.6) gates the personal account + cloud sync, independent of `householdSync`.
 > - New optional feature = new `FeatureId` + registry/config row + gated entry points + a test.
 > - **Acceptance:** flipping features to premium with no entitlement hides/locks their entry points and the
 >   recipe workflow still works — `__tests__/entitlements.test.tsx`.
@@ -45,7 +43,7 @@ Source: Jason Griffin, 2026-10-02/03 (items 15–27 added later). **v1 = this sp
 > No incremental/rolling APK releases before that — CI builds an APK artifact on every push/PR only to
 > prove the build stays green. Releases are published only from a `v*` tag (or a manual `publish` run).
 
-The remote MCP server (#28) **is in v1.0** (approved by Jason, Oct 3 2026), as is household sync (#25). MCP uses OAuth on the app's email-code account (recipes synced to Supabase; since v1.0.6 a personal account is enough, no household needed), has its own paywall switch (`mcpAccess`) in `src/entitlements`, and per-user rate limits. See [MCP.md](MCP.md).
+**v1.0.6:** household sharing (#25) and the remote MCP server (#28) were removed at Jason's request; the app is local-first (no sign-in, no sync) with Backup & restore (#29).
 Design rules every PR must follow: [DESIGN.md](DESIGN.md). Standing product rules: diabetic-friendly recipes, **allulose is the only
 sugar-free sweetener — never monk fruit**.
 
@@ -81,10 +79,10 @@ Status legend: ✅ done · 🟡 data layer / partial UI ready · ⬜ not started
 | 22  | **Five-star ratings** per recipe, sortable and filterable.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | ✅ stars on list and detail, sort by rating, minimum-rating filter                                                                                                                       | `src/components/star-rating.tsx`                                        |
 | 23  | **Android foldable optimization:** layouts adapt live on fold/unfold (no restart, no lost state); window size classes compact <600 / medium 600–839 / expanded ≥840 dp; side-by-side panes in medium/expanded (recipes list+detail, meal plan calendar+day, shopping+pantry, cooking ingredients+steps); max content widths (nothing stretched across the hinge); nav rail in expanded. **Acceptance:** each screen tested at compact and expanded widths.                                                                                                             | ✅ `useWindowSizeClass`, `TwoPaneLayout`, `MaxWidthContainer`, nav rail; two panes for recipes, meal plan, shopping + pantry, cooking, grocery run, pantry, scanners, household; every screen tested at compact and expanded                                             | [DESIGN.md](DESIGN.md) §2, `__tests__/responsive.test.tsx`              |
 | 24  | **Cook-with-me voice mode:** the app owns step-by-step cooking state; **no in-app TTS**. The user's own AI reads steps with its own TTS, queries the current step and advances on "next". UI-free `src/cooking/session.ts` (`startSession`, `getCurrentStep`, `next`, `previous`, `repeat`, `startStepTimer`, `endSession`), persisted across restarts; cooking mode UI (#19) drives the same module. Deep links `myrecipeapp://cook/{recipeId}`, `/cook/next`, `/cook/previous`, `/cook/current`.                                                                     | ✅ Session, deep links (`cook/{id}`, `next`, `previous`, `current`, `repeat`, `timer`, `end`) and cooking mode share `cookSession`; no in-app TTS | `src/cooking/` ([COOK_API.md](COOK_API.md)), `src/app/cook/[action].tsx` |
-| 25  | **Shared family/household version:** several people contribute recipes to one household; shared pantry, meal plan and shopping list. Supabase (free project): email OTP / magic link auth, `households` + `household_members` (owner/member) + invite codes; all synced records carry `household_id`, `created_by`, `updated_at`, `deleted_at` (tombstones), stable UUIDs; RLS so members only see their household; offline-first local store, last-write-wins by `updated_at`; realtime optional. Opt-in from Settings; app works fully offline/solo when signed out. | ✅ v1.0.6: personal account + cloud sync without a household (Settings → AI assistants → Sign in, `cloudSync` gate; household = optional sharing on top, docs/SYNC.md "Personal space"). Settings → Household: email OTP (magic link optional; `myrecipeapp://auth` route completes it and returns to Household, v1.0.1), create/join/leave, invite code (show/copy/share/rotate), members and roles, sign out; sync on sign-in, foreground, debounced writes, pull-to-refresh, optional realtime; offline queue and status; LWW; full app works solo when signed out | `src/app/household.tsx`, `src/sync/`, `supabase/migrations/` ([SYNC.md](SYNC.md)) |
+| 25  | ~~**Shared family/household version**~~: **removed in v1.0.6 at Jason's request.** More → Household, the Household screens, invite/join flows, the `householdSync` gate and its optional-feature toggle, and all household UI are gone. Existing household-scoped rows in Supabase were moved to their author's personal scope by migration `20261006000000_remove_household_sharing.sql` (nobody loses data); the `households` / `household_members` tables are left in place for now. With the MCP server also cut (#28), the app no longer signs in or syncs: it is local-first, with Backup & restore (#29) for moving phones. | Removed | — |
 | 26  | ~~**Receipt scanning**~~: **removed in v1.0.1** (Jason). Code, UI, ML Kit module, tests and the sync of `receipt_aliases` are gone; the Supabase table from the applied migration is left unused (never edit an applied migration). | Removed | — |
 | 27  | **Barcode scanning** (pantry **and shopping list**): scan EAN-13 / EAN-8 / UPC-A / UPC-E with `expo-camera`. Pantry: add or increment a pantry item, then return to the Pantry tab. Shopping list (v1.0.1): add the product name as a line, then return to the list. Lookup via Open Food Facts (`/api/v2/product/{barcode}.json`, no key, User-Agent `MyRecipeApp/1.0 (github.com/jasonvgriffin)`) for the **name and brand only**; results cached locally; offline / not found → user types a name once and the barcode→item mapping is saved (household-shared). The product name is the item title; brand is secondary. | ✅ One shared `BarcodeScanner` component; pantry and shopping scan routes return to their screen with an “Added …” confirmation; type-a-name once when missing or offline. Gate `barcodeScan` (no longer requires pantry); each route also needs its own feature visible. Compact/expanded tested | `src/components/barcode-scanner.tsx`, `src/app/pantry/scan.tsx`, `src/app/shopping/scan.tsx`, `src/pantry/barcodeLookup.ts` |
-| 28  | **AI assistant access (remote MCP server):** Grok / Claude / ChatGPT can search, add (via `importRecipe`) and edit recipes, plan meals and manage the shopping list. Streamable HTTP on Supabase Edge Functions (free), OAuth 2.1 + PKCE (Supabase Auth OAuth server, consent page on GitHub Pages) on the app's email-code account (v1.0.6: personal account, household optional; recipes must be synced), `mcpAccess` entitlement (free in v1), per-user rate limits (429). No nutrition tools. | ✅ Server core + 12 tools + OAuth + rate limits, tested (`__tests__/mcp.test.ts`); deployed; OAuth discovery/DCR/consent/token verified end to end with a spec-compliant client simulation (Oct 3 2026, after Grok rejected the self-hosted OAuth discovery); rate-limit migration applied by CI | `src/mcp/`, `supabase/functions/mcp/`, [MCP.md](MCP.md) |
+| 28  | ~~**AI assistant access (remote MCP server)**~~: **deliberately cut in v1.0.6 at Jason's request; may be revisited in a future version.** The Settings “AI assistants (MCP)” section, the email-code sign-in, the OAuth consent page, `src/mcp/`, the `mcp` Edge Function (deleted from the live project) and the `mcpAccess` / `cloudSync` gates are gone (git history keeps them). | Removed | — |
 | 29  | **Backup & restore (v1.0.6):** export all app data (recipes with photos, categories, tags, ratings, cooked history, meal plans, shopping lists, pantry, settings/appearance) to one versioned file via the share sheet or a folder picker; import it on a new phone with a preview, merge or replace (confirmed). Offline, no account, no storage permissions. | ✅ Settings → Backup & restore; `.myrecipe` JSON v1 with base64 photos; zod validation + version check; merge (LWW, category dedupe) / replace (tombstones); tests | `src/backup/`, `src/app/backup.tsx`, [BACKUP.md](BACKUP.md) |
 | 30  | **App icon picker (v1.0.6):** Settings → Appearance → App icon: six launcher icons (Classic yellow bowl on dark green = default, Sunset, Midnight, Cream, Tomato, Garden) with previews; switching warns that some launchers take a moment or move the shortcut; choice persisted. Android only. | ✅ `plugins/with-alternate-icons.js` (MainActivity keeps deep-link/auth/share filters; one MAIN/LAUNCHER `<activity-alias>` per icon, only the default enabled on install), RecipeShare `getAppIcon`/`setAppIcon` (PackageManager component state), assets from `assets/icons/make-alt-icons.py`; adaptive foreground at 1.12×72/108 so round launchers match the v1.0.5 round preview; tests | `src/lib/app-icons.ts`, `src/app/settings.tsx`, `assets/app-icons/` |
 
@@ -212,3 +210,15 @@ follow the Recipes-are-the-core rule above.
   Slate (gray by design).
 - **App icon:** the bowl is bright yellow `#FFD60A` (was green); steam, background, monochrome unchanged
   (`assets/icons/make-icons.py`).
+
+## v1.0.6 (Oct 2026)
+
+- **Backup & restore** (#29) and the **app icon picker** (#30), see the table.
+- **Recipe detail saving:** rating, category, tags and Mark cooked save immediately and reliably (edits run in order
+  against the latest saved recipe; collection writes are serialized per key). A sticky save bar shows the status
+  (“Saving…”, “✓ Saved”, “All changes saved”, “Unsaved tag …”) and a **Save** button that adds a typed-but-not-added
+  tag. Leaving with an unsaved tag asks Keep editing / Discard / Save. The bottom safe-area inset pads the whole screen,
+  so Mark cooked / Cook and the save bar never sit under the Android navigation bar.
+- **Household sharing removed** (#25) at Jason's request. More lists just Pantry and Settings.
+- **MCP server deliberately cut** (#28) at Jason's request; may be revisited in a future version. No sign-in or cloud
+  sync remains; the app is local-first.

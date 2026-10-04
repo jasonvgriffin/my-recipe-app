@@ -37,10 +37,6 @@ env:
   NODE_VERSION: '22'
   # Build only the ABIs that matter (real phones + x86_64 emulators) to keep CI fast.
   RN_ARCHS: arm64-v8a,x86_64
-  # Household sync (spec #25). Public values only (anon key, never service_role). Empty → offline/solo build.
-  # Set as repo variable EXPO_PUBLIC_SUPABASE_URL and secret EXPO_PUBLIC_SUPABASE_ANON_KEY.
-  EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
-  EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
 
 jobs:
   build:

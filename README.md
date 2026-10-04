@@ -16,7 +16,7 @@ Full v1 feature spec: [docs/SPEC.md](docs/SPEC.md).
 - Add recipe: title, ingredients, steps, tags, servings
 - Recipe detail (servings, ingredients, steps) and delete
 - Cook-with-me step session (`myrecipeapp://cook/...` deep links) for voice assistants
-- Stored on-device (AsyncStorage), household-sync-ready (Supabase backend; sign-in UI pending)
+- Stored on-device (AsyncStorage), local-first: no account; Settings → Backup & restore moves everything to a new phone
 - Barcode scanning for the pantry and the shopping list (Open Food Facts name/brand lookup)
 - Validation enforces the house rule: **allulose is the only sugar-free sweetener (no monk fruit)**
 

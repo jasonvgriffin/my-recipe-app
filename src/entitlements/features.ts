@@ -11,12 +11,6 @@ export const FeatureId = {
   groceryRun: 'groceryRun',
   pantry: 'pantry',
   barcodeScan: 'barcodeScan',
-  householdSync: 'householdSync',
-  /**
-   * Personal account + cloud sync of your own data (v1.0.6, docs/SYNC.md "Personal space"). Separate from
-   * householdSync: signing in and syncing never needs a household. The MCP server reads/writes this space.
-   */
-  cloudSync: 'cloudSync',
   cookingMode: 'cookingMode',
   cookWithMe: 'cookWithMe',
   timers: 'timers',
@@ -29,8 +23,6 @@ export const FeatureId = {
   pdfExport: 'pdfExport',
   photos: 'photos',
   linkImport: 'linkImport',
-  /** Remote MCP server (spec #28, docs/MCP.md): assistant read/write access. Checked server-side; no in-app UI. */
-  mcpAccess: 'mcpAccess',
 } as const;
 // eslint-disable-next-line @typescript-eslint/no-redeclare -- const + type pair (enum-like)
 export type FeatureId = (typeof FeatureId)[keyof typeof FeatureId];
@@ -54,8 +46,6 @@ export const FEATURES: Record<FeatureId, FeatureInfo> = {
   // Pantry and shopping list both scan (v1.0.1), so barcodeScan no longer requires pantry; each entry point
   // also needs its own screen's feature (pantry / shoppingList) to be visible.
   barcodeScan: { id: 'barcodeScan', label: 'Barcode scanning', spec: [27] },
-  householdSync: { id: 'householdSync', label: 'Household sharing', spec: [25] },
-  cloudSync: { id: 'cloudSync', label: 'Cloud sync (personal account)', spec: [25, 28] },
   cookingMode: { id: 'cookingMode', label: 'Cooking mode', spec: [19] },
   cookWithMe: { id: 'cookWithMe', label: 'Cook-with-me (voice assistant)', spec: [24] },
   timers: { id: 'timers', label: 'Step timers', spec: [15] },
@@ -67,7 +57,6 @@ export const FEATURES: Record<FeatureId, FeatureInfo> = {
   pdfExport: { id: 'pdfExport', label: 'Export PDF', spec: [14], requires: ['share'] },
   photos: { id: 'photos', label: 'Recipe photos', spec: [4] },
   linkImport: { id: 'linkImport', label: 'Import from link / text', spec: [1] },
-  mcpAccess: { id: 'mcpAccess', label: 'AI assistant access (MCP server)', spec: [28] },
 };
 
 export type FeatureTier = 'free' | 'premium';

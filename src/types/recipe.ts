@@ -3,7 +3,7 @@
  *
  * This is the single source of truth for the recipe shape. It is used by the
  * app's local storage, the add-recipe form, and (later) JSON export/import and
- * the remote MCP server. Keep it JSON-serializable (no Dates, functions, etc.).
+ * any external tool. Keep it JSON-serializable (no Dates, functions, etc.).
  *
  * v1 feature spec: docs/SPEC.md. Fields marked (spec #N) map to items in that spec.
  */

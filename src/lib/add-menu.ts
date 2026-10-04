@@ -57,7 +57,7 @@ export function addMenuHref(id: AddMenuItemId, ctx: { today: string }): string {
     case 'plan-meal':
       return `/meal-plan/${ctx.today}`;
     case 'share-recipe':
-      // v1.0.3: share as a PDF (pick recipes → share sheet). Household sharing lives under More → Household.
+      // v1.0.3: share as a PDF (pick recipes → share sheet).
       return '/recipes?select=pdf';
     case 'what-can-i-make':
       return '/pantry-match';
