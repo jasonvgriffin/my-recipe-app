@@ -1,8 +1,8 @@
 import { Link, router, useFocusEffect, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Pressable, Text, View } from 'react-native';
 
-import { useBottomInset } from '@/components/layout';
+import { KeyboardAwareScrollView, useBottomInset } from '@/components/layout';
 import { CategoryChips } from '@/components/category-chips';
 import { FeatureGate } from '@/components/feature-gate';
 import { ServingsUnits } from '@/components/servings-units';
@@ -287,10 +287,9 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
     // The bottom inset pads the whole screen (not just the scroll content) so nothing — the action
     // buttons or the save bar — ever sits under the Android navigation bar.
     <View style={[styles.screen, { paddingBottom: bottomInset }]} testID="recipe-detail-screen">
-      <ScrollView
+      <KeyboardAwareScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
         testID="recipe-detail">
         {photos && recipe.photoUri ? (
           <Image
@@ -506,7 +505,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
         <Pressable style={styles.delete} onPress={() => confirmDelete(recipe)}>
           <Text style={styles.deleteText}>Delete recipe</Text>
         </Pressable>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       {ratingsOn || categoriesOn || tagsOn ? (
         <View style={styles.saveBar} testID="recipe-save-bar">
           <Text

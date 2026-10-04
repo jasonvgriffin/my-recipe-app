@@ -3,10 +3,12 @@ Android mipmaps are generated from these PNGs by `expo prebuild` (app.json icon 
 import cairosvg
 # v1.0.5 (Jason): the bowl is bright yellow (was green #66BB6A); steam and background unchanged.
 G='#FFD60A'; L='#ECEFEC'; BG='#16211A'
-# v1.0.6 (Jason): on a round launcher the icon must look like the v1.0.5 preview's round render (the whole 108dp
-# canvas drawn in a circle at scale 1.12). Launchers only show the inner 72dp of the adaptive canvas, so the
-# adaptive foreground is drawn at 1.12 * 72 / 108 to give exactly that look on the device.
-ADAPTIVE_SCALE=round(1.12*72/108,4)
+# v1.0.9: the bowl fills the adaptive icon the way the other launcher art does. The old scale
+# (1.12 * 72/108 ≈ 0.75) left the bowl small inside the safe circle. 1.15 keeps steam and the foot
+# inside the 72dp mask. The legacy icon (full canvas, not cropped) uses a larger scale so the bowl
+# fills that square too.
+ADAPTIVE_SCALE=1.15
+LEGACY_SCALE=1.85
 def bowl(g,l):
     s=''.join(f'<path d="M{x},49 c-3,-3 3,-6 0,-9 c-3,-3 3,-6 0,-8" fill="none" stroke="{l}" stroke-width="2.6" stroke-linecap="round"/>' for x in (45,54,63))
     return s+f'<path d="M34,56 H74 A20 18 0 0 1 34,56 Z" fill="{g}"/><rect x="32" y="53" width="44" height="4.5" rx="2.25" fill="{g}"/><rect x="47" y="73" width="14" height="3.5" rx="1.75" fill="{g}"/>'
@@ -14,7 +16,7 @@ def svg(body,bg=None,scale=1.0):
     b=f'<rect width="108" height="108" fill="{bg}"/>' if bg else ''
     return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108">{b}<g transform="translate(54 54) scale({scale}) translate(-54 -54)">{body}</g></svg>'
 out={
- 'icon.svg':svg(bowl(G,L),BG,1.45),
+ 'icon.svg':svg(bowl(G,L),BG,LEGACY_SCALE),
  'android-icon-foreground.svg':svg(bowl(G,L),None,ADAPTIVE_SCALE),
  'android-icon-background.svg':svg('',BG),
  'android-icon-monochrome.svg':svg(bowl('#FFFFFF','#FFFFFF'),None,ADAPTIVE_SCALE),

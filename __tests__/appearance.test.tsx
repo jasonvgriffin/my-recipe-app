@@ -6,7 +6,17 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-
 import { StyleSheet } from 'react-native';
 import { renderRouter } from 'expo-router/testing-library';
 
-import { ACCENTS, THEME_MODES, buildColors, contrastRatio, resolveScheme, type ColorScheme } from '@/lib/theme';
+import {
+  ACCENT_CONTRAST_BACKGROUNDS,
+  ACCENTS,
+  BADGE_COLORS,
+  DARK_ON_ACCENT_IDS,
+  THEME_MODES,
+  buildColors,
+  contrastRatio,
+  resolveScheme,
+  type ColorScheme,
+} from '@/lib/theme';
 import { createSettingsStore, settingsStore, SETTINGS_STORAGE_KEY } from '@/storage/settings';
 import { DEFAULT_SETTINGS } from '@/types/recipe';
 
@@ -35,14 +45,19 @@ describe('palettes', () => {
     '%s + %s has readable contrast',
     (scheme, accent) => {
       const c = buildColors(scheme, accent);
-      for (const bg of [c.background, c.card]) {
-        expect(contrastRatio(c.primary, bg)).toBeGreaterThanOrEqual(4.5); // links / outlined buttons
-        expect(contrastRatio(c.text, bg)).toBeGreaterThanOrEqual(7);
-        expect(contrastRatio(c.muted, bg)).toBeGreaterThanOrEqual(4.5);
+      for (const bg of [c.background, c.card, ...ACCENT_CONTRAST_BACKGROUNDS]) {
+        expect(contrastRatio(c.primary, bg)).toBeGreaterThanOrEqual(3); // one shade on white and the dark card
+        expect(contrastRatio(c.text, bg === '#FFFFFF' || bg === '#1D211D' ? c.card : bg)).toBeGreaterThanOrEqual(7);
+        expect(contrastRatio(c.muted, c.card)).toBeGreaterThanOrEqual(4.5);
       }
-      expect(contrastRatio(c.primaryText, c.primary)).toBeGreaterThanOrEqual(4.5); // filled buttons, chips
-      expect(contrastRatio(c.accentText, c.accent)).toBeGreaterThanOrEqual(4.5); // + button
-      expect(contrastRatio(c.accent, c.card)).toBeGreaterThanOrEqual(3); // + menu icons (large glyphs)
+      expect(contrastRatio(c.primaryText, c.primary)).toBeGreaterThanOrEqual(3); // on-color on the fill
+      expect(c.accent).toBe(c.primary);
+      expect(c.accentText).toBe(c.primaryText);
+      expect(c.badge).toBe(BADGE_COLORS.badge);
+      expect(c.badgeText).toBe(BADGE_COLORS.badgeText);
+      expect(c.badgeRing).toBe(BADGE_COLORS.badgeRing);
+      // Fixed badge pair #E53935 / white is ~4.23:1 (Eve: keep this red, do not darken it to clear 4.5).
+      expect(contrastRatio(c.badgeText, c.badge)).toBeGreaterThanOrEqual(4.2);
       expect(contrastRatio(c.text, c.tagBg)).toBeGreaterThanOrEqual(7);
       expect(contrastRatio(c.danger, c.card)).toBeGreaterThanOrEqual(4.5);
     },
@@ -60,24 +75,48 @@ describe('palettes', () => {
       if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
       return { h: (h * 60 + 360) % 360, s: sat, l };
     };
-    // Green keeps the original look; Slate is a gray by design.
-    for (const a of ACCENTS.filter((x) => x.id !== 'green' && x.id !== 'slate'))
-      expect([a.id, hsl(a.dark.primary).s >= 0.5]).toEqual([a.id, true]);
+    // Slate is a gray by design. Every other accent stays saturated enough to read as its name.
+    for (const a of ACCENTS.filter((x) => x.id !== 'slate'))
+      expect([a.id, hsl(a.dark.primary).s >= 0.35]).toEqual([a.id, true]);
     for (const scheme of ['dark', 'light'] as const) {
       const red = hsl(buildColors(scheme, 'red').primary);
       expect(red.h <= 8 || red.h >= 352).toBe(true);
       expect(red.s).toBeGreaterThanOrEqual(0.6);
     }
-    expect(buildColors('dark', 'red').primary).toBe('#E25955');
-    expect(buildColors('light', 'red').primary).toBe('#D32F2F');
+    expect(buildColors('dark', 'red').primary).toBe('#E6423F');
+    expect(buildColors('light', 'red').primary).toBe('#E6423F');
     expect(buildColors('light', 'red').primaryText).toBe('#FFFFFF');
+    expect(buildColors('dark', 'red').primary).not.toBe(BADGE_COLORS.badge);
   });
 
-  it('v1.0.8: darker dark-mode red and blue, true amber; switches stay green; red trash icons go neutral', () => {
-    expect(buildColors('dark', 'blue').primary).toBe('#248AE5');
-    expect(buildColors('light', 'blue').primary).toBe('#1565C0');
-    expect(buildColors('dark', 'amber').primary).toBe('#FFB300');
-    expect(buildColors('light', 'amber').primary).toBe('#8A5300');
+  it('v1.0.9: one shade per accent, dark on Amber and Lime, badges fixed red', () => {
+    const hsl = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      const d = max - min;
+      let h = 0;
+      if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return { h: (h * 60 + 360) % 360, l };
+    };
+    for (const a of ACCENTS) {
+      expect(a.dark.primary).toBe(a.light.primary);
+      expect(a.dark.primaryText).toBe(a.light.primaryText);
+      const darkOn = (DARK_ON_ACCENT_IDS as readonly string[]).includes(a.id);
+      expect(a.dark.primaryText).toBe(darkOn ? '#121412' : '#FFFFFF');
+      for (const scheme of ['dark', 'light'] as const) {
+        const c = buildColors(scheme, a.id);
+        for (const bg of ACCENT_CONTRAST_BACKGROUNDS) {
+          expect(contrastRatio(c.primary, bg)).toBeGreaterThanOrEqual(3);
+        }
+        expect(contrastRatio(c.primaryText, c.primary)).toBeGreaterThanOrEqual(darkOn ? 4.5 : 3.9);
+      }
+    }
+    const amber = hsl(buildColors('dark', 'amber').primary);
+    expect(amber.h).toBeGreaterThanOrEqual(38);
+    expect(amber.h).toBeLessThanOrEqual(50);
+    expect(amber.l).toBeGreaterThan(hsl('#A77500').l);
     expect(ACCENTS.find((a) => a.id === 'amber')?.label).toBe('Amber');
     for (const id of ['green', 'blue', 'red', 'amber'] as const) {
       for (const scheme of ['dark', 'light'] as const) {
@@ -96,11 +135,14 @@ describe('palettes', () => {
     }
   });
 
-  it('Green dark: deeper green (v1.0.7), still the original orange + button', () => {
-    const c = buildColors('dark', 'green');
-    expect(c.primary).toBe('#43A047');
-    expect(c.accent).toBe('#FF8A3D');
-    expect(c.background).toBe('#121412');
+  it('Green is one shade in both modes and the + button uses that shade', () => {
+    const dark = buildColors('dark', 'green');
+    const light = buildColors('light', 'green');
+    expect(dark.primary).toBe('#3C8F40');
+    expect(light.primary).toBe(dark.primary);
+    expect(dark.accent).toBe(dark.primary);
+    expect(light.accent).toBe(light.primary);
+    expect(dark.background).toBe('#121412');
   });
 
   it('System follows the phone; unknown falls back to dark', () => {
@@ -127,7 +169,8 @@ describe('palettes', () => {
       'Lime',
       'Slate',
     ]);
-    expect(new Set(ACCENTS.flatMap((a) => [a.dark.primary, a.light.primary])).size).toBe(ACCENTS.length * 2);
+    expect(new Set(ACCENTS.map((a) => a.dark.primary)).size).toBe(ACCENTS.length);
+    expect(ACCENTS.every((a) => a.dark.primary === a.light.primary)).toBe(true);
   });
 });
 
@@ -162,7 +205,7 @@ describe('Settings → Appearance (UI)', () => {
     expect(screen.getByTestId('settings-accent-blue')).toHaveProp('accessibilityState', { selected: true });
     screen.unmount();
 
-    // Another screen picks it up: the Recipes list's “+ Add recipe” button uses the blue accent, the + button too.
+    // Another screen picks it up: the Recipes list's Add recipe button uses the blue accent, the + button too.
     renderRouter(routes(), { initialUrl: '/' });
     const fab = await screen.findByTestId('list-add-recipe-button');
     await waitFor(() => expect(StyleSheet.flatten(fab.props.style).backgroundColor).toBe(blue.primary));

@@ -193,18 +193,12 @@ describe('accent colors (v1.0.7)', () => {
     const d = max - min;
     let h = 0;
     if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-    return { h: (h * 60 + 360) % 360, l };
+    const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    return { h: (h * 60 + 360) % 360, s: sat, l };
   };
-  const OLD = {
-    green: { dark: '#66BB6A', light: '#2E7D32' },
-    orange: { dark: '#FF9E5E', light: '#B54708' },
-    purple: { dark: '#B47CFF', light: '#6A1B9A' },
-  } as const;
-
-  it.each(['green', 'orange', 'purple'] as const)('%s is darker/deeper in both modes', (id) => {
-    for (const scheme of ['dark', 'light'] as const) {
-      expect(hsl(buildColors(scheme, id).primary).l).toBeLessThan(hsl(OLD[id][scheme]).l);
-    }
+  it.each(['green', 'orange', 'purple'] as const)('%s is one mid-tone in both modes (v1.0.9)', (id) => {
+    expect(buildColors('dark', id).primary).toBe(buildColors('light', id).primary);
+    expect(hsl(buildColors('dark', id).primary).s).toBeGreaterThanOrEqual(0.35);
   });
 
   it('Lime is a truer, brighter lime green (less yellow)', () => {
@@ -217,30 +211,20 @@ describe('accent colors (v1.0.7)', () => {
     expect(hsl('#C6D93F').h).toBeLessThan(70); // the old one leaned yellow
   });
 
-  it('light shades stay; dark blue, red and amber are the v1.0.8 colors', () => {
-    const light: Record<string, string> = {
-      blue: '#1565C0',
-      red: '#D32F2F',
-      teal: '#00796B',
-      pink: '#AD1457',
-      amber: '#8A5300',
-      indigo: '#3949AB',
-      brown: '#6D4C41',
-      slate: '#455A64',
+  it('v1.0.9: light and dark share one shade', () => {
+    const shades: Record<string, string> = {
+      blue: '#1981DC',
+      red: '#E6423F',
+      teal: '#008F80',
+      pink: '#EB3271',
+      amber: '#C1810A',
+      indigo: '#6C7AC6',
+      brown: '#AC714F',
+      slate: '#69838F',
     };
-    const dark: Record<string, string> = {
-      blue: '#248AE5',
-      red: '#E25955',
-      teal: '#26BFB0',
-      pink: '#FF5CA8',
-      amber: '#FFB300',
-      indigo: '#7C8CFF',
-      brown: '#CD8E62',
-      slate: '#B0BEC5',
-    };
-    for (const id of Object.keys(light)) {
+    for (const id of Object.keys(shades)) {
       const a = ACCENTS.find((x) => x.id === id)!;
-      expect([id, a.dark.primary, a.light.primary]).toEqual([id, dark[id], light[id]]);
+      expect([id, a.dark.primary, a.light.primary]).toEqual([id, shades[id], shades[id]]);
     }
   });
 });

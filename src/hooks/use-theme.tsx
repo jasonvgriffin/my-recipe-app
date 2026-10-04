@@ -74,7 +74,7 @@ export function buildNavigationTheme(colors: ThemeColors, scheme: ColorScheme): 
       card: colors.card,
       text: colors.text,
       border: colors.border,
-      notification: colors.accent,
+      notification: colors.primary,
     },
   };
 }

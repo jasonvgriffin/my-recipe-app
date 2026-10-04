@@ -62,7 +62,7 @@ export default function MoreScreen() {
               onPress={() => router.push(row.href)}
               style={({ pressed }) => [styles.row, pressed && styles.pressed]}
               testID={row.testID}>
-              <Ionicons name={row.icon} size={24} color={colors.accent} />
+              <Ionicons name={row.icon} size={24} color={colors.primary} />
               <View style={styles.flex}>
                 <Text style={styles.label}>{row.label}</Text>
                 <Text style={styles.hint}>{row.hint}</Text>

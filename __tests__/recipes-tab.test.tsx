@@ -132,8 +132,12 @@ describe('Recipes tab categories (v1.0.5)', () => {
     expect(await screen.findByText('Brunch')).toBeTruthy();
     expect((await categoryByName('Brunch')).id).toBe(breakfast.id);
 
+    expect(screen.getByTestId('add-category-button')).toHaveTextContent('New category');
+    expect(screen.getByTestId('list-add-recipe-button')).toHaveTextContent('Add recipe');
     await act(async () => fireEvent.press(screen.getByTestId('add-category-button')));
     fireEvent.changeText(screen.getByTestId('new-category-input'), 'Snacks');
+    // Typing a category name must keep Add recipe on screen (v1.0.9).
+    expect(screen.getByTestId('list-add-recipe-button')).toHaveTextContent('Add recipe');
     await act(async () => fireEvent.press(screen.getByTestId('save-new-category')));
     expect(await screen.findByText('Snacks')).toBeTruthy();
     expect((await recipeStore.listCategories()).map((c) => c.name)).toEqual(['Brunch', 'Lunch', 'Dinner', 'Snacks']);
@@ -293,6 +297,7 @@ describe('search and Advanced search (spec #8 #9 #10 #22)', () => {
     await recipeStore.save({ ...chicken, notes: 'serve with a side salad' });
     renderRouter(routes(), { initialUrl: '/recipes' });
     await screen.findByTestId('recipe-categories');
+    expect(screen.getByTestId('search-input').props.placeholder).toBe('Search recipes');
 
     fireEvent.changeText(screen.getByTestId('search-input'), 'side salad');
     await waitFor(() => expect(screen.getByTestId(`recipe-item-${chicken.id}`)).toBeTruthy());

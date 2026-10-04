@@ -145,6 +145,12 @@ describe('barcode camera (spec #27)', () => {
     expect(screen.getByTestId('manual-input').props.placeholder).toBe('Type here & press Add');
     expect(screen.getByTestId('build-list')).toHaveTextContent('Build from Meal Plan');
     expect(screen.getByTestId('grocery-run-button')).toHaveTextContent('View Shopping List');
+    const { StyleSheet } = require('react-native');
+    const actions = StyleSheet.flatten(screen.getByTestId('shopping-actions').props.style);
+    expect(actions.width).toBe('78%');
+    expect(actions.alignSelf).toBe('center');
+    expect(actions.maxWidth).toBe(420);
+    expect(actions.gap).toBeGreaterThanOrEqual(12);
     const tree = testIdsInOrder(screen.toJSON());
     const order = [
       'week-label',

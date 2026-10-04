@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
 import { FeatureLocked } from '@/components/feature-gate';
@@ -134,7 +134,10 @@ export function BarcodeScanner({ visible, hiddenLabel, onProduct, testID = 'barc
   );
 
   const panel = (
-    <View style={[styles.panel, { paddingBottom: 16 + bottomInset }]} testID="barcode-result">
+    <KeyboardAvoidingView
+      style={[styles.panel, { paddingBottom: 16 + bottomInset }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      testID="barcode-result">
       {state.kind === 'idle' ? <Text style={styles.muted}>Point the camera at a barcode.</Text> : null}
       {state.kind === 'saving' ? <ActivityIndicator color={colors.primary} testID="barcode-saving" /> : null}
       {state.kind === 'error' ? (
@@ -178,7 +181,7 @@ export function BarcodeScanner({ visible, hiddenLabel, onProduct, testID = 'barc
           </Pressable>
         </View>
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 
   return <TwoPaneLayout testID={testID} compact="stack" primary={camera} secondary={panel} primaryWidth={420} />;

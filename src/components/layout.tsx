@@ -1,5 +1,19 @@
-import { createContext, useContext, type ReactNode } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { createContext, forwardRef, useContext, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
+import {
+  findNodeHandle,
+  FlatList,
+  Keyboard,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type FlatListProps,
+  type ScrollViewProps,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
@@ -62,11 +76,15 @@ export function SystemNavFrame({ children }: { children: ReactNode }) {
 
 /**
  * v1.0.7 (Jason): the bottom bar is ~33% bigger — bar height, icons, labels and the + scale together
- * (60→80dp bar, 22→29dp icons, 10→13sp labels, 44→58dp +). The bar adds the safe-area bottom inset so it stays
- * clear of the gesture pill / 3-button nav bar. The bar is in normal flow; tab scenes add `TAB_PLUS_CLEARANCE`
- * (`useBottomInset`) so content and floating buttons clear the raised +, not the whole bar.
+ * (60→80dp bar, 22→29dp icons, 10→13sp labels, 44→58dp +). v1.0.9: icons are 24dp so the labels have room.
+ * The bar adds the safe-area bottom inset so it stays clear of the gesture pill / 3-button nav bar. The bar is
+ * in normal flow; tab scenes add `TAB_PLUS_CLEARANCE` (`useBottomInset`) so content and floating buttons clear
+ * the raised +, not the whole bar.
  */
-export const TAB_BAR = { height: 80, icon: 29, label: 13, plus: 58, plusIcon: 31 } as const;
+export const TAB_BAR = { height: 80, icon: 24, label: 13, plus: 58, plusIcon: 31 } as const;
+
+/** Tab labels shrink to fit instead of truncating (v1.0.9). */
+export const TAB_LABEL_MIN_SCALE = 0.85;
 
 /** Max readable widths so content never stretches across a wide unfolded screen / hinge (spec #23). */
 export const MAX_CONTENT_WIDTH = { text: 720, list: 560, form: 640 } as const;
@@ -144,6 +162,110 @@ export function TwoPaneLayout({
         </View>
       ) : null}
     </View>
+  );
+}
+
+type Measurable = {
+  measureLayout: (
+    relative: number,
+    onSuccess: (x: number, y: number, width: number, height: number) => void,
+    onFail: () => void,
+  ) => void;
+};
+
+/** Height of the open software keyboard (0 when hidden). */
+export function useKeyboardHeight(): number {
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, (e) => setHeight(e.endCoordinates?.height ?? 0));
+    const hide = Keyboard.addListener(hideEvent, () => setHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+  return height;
+}
+
+function scrollFocusedIntoView(scroll: ScrollView | null) {
+  const input = TextInput.State.currentlyFocusedInput() as Measurable | null;
+  const node = scroll ? findNodeHandle(scroll) : null;
+  if (!scroll || !input || !node || typeof input.measureLayout !== 'function') return;
+  input.measureLayout(
+    node,
+    (_x, y) => scroll.scrollTo({ y: Math.max(0, y - 24), animated: true }),
+    () => undefined,
+  );
+}
+
+function withKeyboardPadding(style: ScrollViewProps['contentContainerStyle'], keyboard: number) {
+  if (keyboard <= 0) return style;
+  const flat = StyleSheet.flatten(style) ?? {};
+  const base = typeof flat.paddingBottom === 'number' ? flat.paddingBottom : 0;
+  return [style, { paddingBottom: base + keyboard }];
+}
+
+/**
+ * ScrollView that keeps the focused TextInput above the keyboard (v1.0.9). Android also sets
+ * `softwareKeyboardLayoutMode: "resize"` so the window shrinks; the extra padding lets the field scroll
+ * clear of the keyboard. iOS adds the keyboard inset. Web scrolls the focused field on focusin.
+ */
+export const KeyboardAwareScrollView = forwardRef<ScrollView, ScrollViewProps>(function KeyboardAwareScrollView(
+  { contentContainerStyle, ...rest },
+  ref,
+) {
+  const keyboard = useKeyboardHeight();
+  const inner = useRef<ScrollView>(null);
+  useImperativeHandle(ref, () => inner.current as ScrollView);
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      requestAnimationFrame(() => scrollFocusedIntoView(inner.current));
+    });
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onFocus = () => requestAnimationFrame(() => scrollFocusedIntoView(inner.current));
+    document.addEventListener('focusin', onFocus);
+    return () => document.removeEventListener('focusin', onFocus);
+  }, []);
+  return (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      {...rest}
+      ref={inner}
+      contentContainerStyle={withKeyboardPadding(contentContainerStyle, keyboard)}
+    />
+  );
+});
+
+/** FlatList with the same keyboard behavior as `KeyboardAwareScrollView`. */
+export function KeyboardAwareFlatList<T>({ contentContainerStyle, ...rest }: FlatListProps<T>) {
+  const keyboard = useKeyboardHeight();
+  const inner = useRef<FlatList<T>>(null);
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      requestAnimationFrame(() => scrollFocusedIntoView(inner.current as unknown as ScrollView));
+    });
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onFocus = () => requestAnimationFrame(() => scrollFocusedIntoView(inner.current as unknown as ScrollView));
+    document.addEventListener('focusin', onFocus);
+    return () => document.removeEventListener('focusin', onFocus);
+  }, []);
+  return (
+    <FlatList
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+      {...rest}
+      ref={inner}
+      contentContainerStyle={withKeyboardPadding(contentContainerStyle, keyboard)}
+    />
   );
 }
 

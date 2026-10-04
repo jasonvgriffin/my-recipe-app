@@ -1,8 +1,8 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
-import { useBottomInset } from '@/components/layout';
+import { KeyboardAwareScrollView, useBottomInset } from '@/components/layout';
 import { Chip } from '@/components/chip';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { addDays, formatLongDate } from '@/lib/dates';
@@ -106,9 +106,8 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
   ].filter((g) => g.items.length > 0);
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]}
-      keyboardShouldPersistTaps="handled"
       testID="day-plan">
       <Text style={styles.heading}>{formatLongDate(date)}</Text>
       {entries.length === 0 ? <Text style={styles.empty}>Nothing planned</Text> : null}
@@ -225,7 +224,7 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
           <Text style={styles.addMeta}>Add to {SLOT_LABEL[slot]}</Text>
         </Pressable>
       ))}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 

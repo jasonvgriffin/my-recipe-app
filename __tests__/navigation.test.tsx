@@ -205,10 +205,11 @@ describe('section title below the banner (v1.0.4)', () => {
     const appTitle = within(banner).getByText('My Recipe App');
     const appStyle = StyleSheet.flatten(appTitle.props.style);
     expect(appStyle.fontSize).toBeGreaterThanOrEqual(26);
-    expect(['#43A047', '#1B5E20']).toContain(appStyle.color);
+    expect(appStyle.color).toBe('#3C8F40');
     const slot = StyleSheet.flatten(screen.getByTestId('tab-add-slot').props.style);
     expect(slot.width).toBe(58);
-    expect(slot.flex).toBeUndefined();
+    expect(slot.flexGrow).toBe(0);
+    expect(slot.flexShrink).toBe(0);
     const style = StyleSheet.flatten(title.props.style);
     expect(style.fontSize).toBeGreaterThanOrEqual(20);
     expect(style.fontSize).toBeLessThanOrEqual(23);
@@ -294,15 +295,39 @@ describe('Contact Us (v1.0.7)', () => {
   });
 });
 
-describe('bottom bar (v1.0.7: ~33% bigger)', () => {
-  it('scales bar, icons, labels and + together and adds the gesture/nav-bar inset', () => {
-    const { TAB_BAR } = require('@/components/layout');
-    expect(TAB_BAR).toEqual({ height: 80, icon: 29, label: 13, plus: 58, plusIcon: 31 });
-    // ~33% over v1.0.6 (60dp bar, 22dp icons, 10sp labels, 44dp +, 23dp glyph).
-    for (const [now, was] of [[TAB_BAR.height, 60], [TAB_BAR.icon, 22], [TAB_BAR.label, 10], [TAB_BAR.plus, 44], [TAB_BAR.plusIcon, 23]]) {
+describe('bottom bar (v1.0.9)', () => {
+  it('keeps the tall bar and uses 24dp icons', () => {
+    const { TAB_BAR, TAB_LABEL_MIN_SCALE } = require('@/components/layout');
+    expect(TAB_BAR).toEqual({ height: 80, icon: 24, label: 13, plus: 58, plusIcon: 31 });
+    expect(TAB_LABEL_MIN_SCALE).toBe(0.85);
+    // Bar, label and + stay at the v1.0.7 scale (~33% over v1.0.6). Icons are 24dp so labels fit.
+    for (const [now, was] of [[TAB_BAR.height, 60], [TAB_BAR.label, 10], [TAB_BAR.plus, 44], [TAB_BAR.plusIcon, 23]]) {
       expect(now / was).toBeGreaterThanOrEqual(1.3);
       expect(now / was).toBeLessThanOrEqual(1.36);
     }
+  });
+
+  it('shows Meal Plan and Shopping in full, with no item padding, and a narrow + slot', async () => {
+    renderRouter(routes(), { initialUrl: '/' });
+    const meal = await screen.findByTestId('tab-meal-plan');
+    const shopping = screen.getByTestId('tab-shopping');
+    const label = within(meal).getByText('Meal Plan');
+    expect(label.props.numberOfLines).toBe(1);
+    expect(label.props.adjustsFontSizeToFit).toBe(true);
+    expect(label.props.minimumFontScale).toBe(0.85);
+    expect(within(shopping).getByText('Shopping').props.adjustsFontSizeToFit).toBe(true);
+    const { StyleSheet } = require('react-native');
+    for (const tab of [meal, shopping, screen.getByTestId('tab-recipes'), screen.getByTestId('tab-more')]) {
+      const flat = StyleSheet.flatten(tab.props.style);
+      expect(flat.paddingHorizontal).toBe(0);
+    }
+    const { TAB_BAR } = require('@/components/layout');
+    const slot = StyleSheet.flatten(screen.getByTestId('tab-add-slot').props.style);
+    expect(slot.width).toBe(TAB_BAR.plus);
+    expect(slot.minWidth).toBe(TAB_BAR.plus);
+    expect(slot.flexGrow).toBe(0);
+    expect(slot.flexShrink).toBe(0);
+    expect(slot.paddingHorizontal).toBe(0);
   });
 });
 

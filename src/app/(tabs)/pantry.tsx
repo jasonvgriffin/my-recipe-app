@@ -1,10 +1,10 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
 import { FeatureLocked } from '@/components/feature-gate';
-import { MAX_CONTENT_WIDTH, MaxWidthContainer, useBottomInset } from '@/components/layout';
+import { KeyboardAwareScrollView, MAX_CONTENT_WIDTH, MaxWidthContainer, useBottomInset } from '@/components/layout';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import {
@@ -200,7 +200,7 @@ export default function PantryScreen() {
   const shownItems = filterSortPantry(items, { category: activeFilter, sort });
 
   const list = (
-    <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 48 + bottomInset }]} keyboardShouldPersistTaps="handled" testID="pantry-list">
+    <KeyboardAwareScrollView contentContainerStyle={[styles.list, { paddingBottom: 48 + bottomInset }]} testID="pantry-list">
       {justAdded || (typeof added === 'string' && added) ? (
         <Text style={styles.added} testID="pantry-added-banner">
           Added {justAdded || added}
@@ -390,7 +390,7 @@ export default function PantryScreen() {
           </Pressable>
         );
       })}
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 
   return (

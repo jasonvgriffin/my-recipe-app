@@ -229,6 +229,18 @@ follow the Recipes-are-the-core rule above.
   Import PDF: the categories picked on its screen) all carry several ids.
 - **Import PDF** (#31), see the table.
 
+## v1.0.9 UI changes (Jason, Oct 4 2026)
+
+Polish on theme, the tab bar, keyboard, and the Classic icon. Version `1.0.9`, Android `versionCode` 10. No new features, no nutrition, no sync, no MCP.
+
+- **Accents:** one mid-tone per accent in both light and dark (about 3:1 on white and on `#1D211D`). Amber is golden and Lime is a bright lime, with dark text; the other ten use white text. The old orange “+” color is gone (`accent` aliases `primary`). Badges stay `#E53935` with white text and a white ring.
+- **Tab bar:** icons 24dp. “Meal Plan” and “Shopping” shrink to fit (minimum scale 0.85) instead of truncating. Tab items have no horizontal padding. The center + uses the accent and its on-color.
+- **Recipes:** “New category” and “Add recipe” have no + glyph. Add recipe stays on screen while a new category name is typed. The search hint stays “Search recipes”.
+- **Shopping List:** Scan Item, Build from Meal Plan, and View Shopping List are narrower, centered, and a little farther apart.
+- **Keyboard:** Android resizes for the software keyboard, and every text field scrolls above it.
+- **Classic icon:** the yellow bowl fills the icon the way the other launcher art does.
+- **Docs:** `docs/DESIGN.md` §8 is the visual spec. `AGENTS.md` requires reading it before a UI change, and records the plan → work → review → lessons workflow.
+
 ## v1.0.8 UI changes (Jason, Oct 4 2026)
 
 Polish on the existing screens (no new features, no nutrition, no sync, no MCP). Version `1.0.8`, Android `versionCode` 9.

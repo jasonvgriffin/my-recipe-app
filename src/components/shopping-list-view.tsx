@@ -1,9 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { ItemNotesSheet, SeeNotesLink } from '@/components/grocery-run-view';
-import { useBottomInset } from '@/components/layout';
+import { KeyboardAwareFlatList, useBottomInset } from '@/components/layout';
 import { formatShortDate } from '@/lib/dates';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import type { IsoDate, ShoppingList, ShoppingListItem } from '@/types/meal-plan';
@@ -166,32 +166,34 @@ export function ShoppingListView({
       <Text style={styles.or} testID="shopping-scan-or">
         or
       </Text>
-      {onScan ? (
+      <View style={styles.actions} testID="shopping-actions">
+        {onScan ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Scan Item"
+            accessibilityHint="Scan a barcode to add the product to this list"
+            onPress={onScan}
+            style={styles.primary}
+            testID="shopping-scan-button">
+            <Text style={styles.primaryText}>Scan Item</Text>
+          </Pressable>
+        ) : null}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Scan Item"
-          accessibilityHint="Scan a barcode to add the product to this list"
-          onPress={onScan}
+          accessibilityHint={
+            list ? 'Rebuilds this week’s list from your meal plan, keeping items you added' : 'Builds this week’s list from your meal plan'
+          }
+          onPress={onBuild}
           style={styles.primary}
-          testID="shopping-scan-button">
-          <Text style={styles.primaryText}>Scan Item</Text>
+          testID="build-list">
+          <Text style={styles.primaryText}>Build from Meal Plan</Text>
         </Pressable>
-      ) : null}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityHint={
-          list ? 'Rebuilds this week’s list from your meal plan, keeping items you added' : 'Builds this week’s list from your meal plan'
-        }
-        onPress={onBuild}
-        style={styles.primary}
-        testID="build-list">
-        <Text style={styles.primaryText}>Build from Meal Plan</Text>
-      </Pressable>
-      {showGroceryRun ? (
-        <Pressable accessibilityRole="button" onPress={onGroceryRun} style={styles.primary} testID="grocery-run-button">
-          <Text style={styles.primaryText}>View Shopping List</Text>
-        </Pressable>
-      ) : null}
+        {showGroceryRun ? (
+          <Pressable accessibilityRole="button" onPress={onGroceryRun} style={styles.primary} testID="grocery-run-button">
+            <Text style={styles.primaryText}>View Shopping List</Text>
+          </Pressable>
+        ) : null}
+      </View>
       {checked ? (
         <Pressable accessibilityRole="button" onPress={onClearChecked} style={styles.clear} testID="clear-checked">
           <Text style={styles.clearText}>Clear checked</Text>
@@ -202,7 +204,7 @@ export function ShoppingListView({
 
   return (
     <View style={styles.fill}>
-      <FlatList
+      <KeyboardAwareFlatList
         style={styles.scroller}
         data={list?.items ?? []}
         keyExtractor={(item) => item.id}
@@ -315,9 +317,9 @@ const useStyles = makeStyles((colors) => ({
   navLabel: { flex: 1, alignItems: 'center' },
   week: { color: colors.text, fontWeight: '700', fontSize: 16 },
   meta: { color: colors.muted, fontSize: 13 },
+  actions: { width: '78%', maxWidth: 420, alignSelf: 'center', gap: 14, marginTop: 4 },
   primary: {
     minHeight: 44,
-    marginTop: 8,
     backgroundColor: colors.primary,
     borderRadius: 8,
     alignItems: 'center',

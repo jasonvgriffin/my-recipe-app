@@ -1,10 +1,26 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link, router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  type ScrollView,
+} from 'react-native';
 
 import { AdvancedSearchSheet } from '@/components/advanced-search-sheet';
-import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout, useBottomInset } from '@/components/layout';
+import {
+  KeyboardAwareFlatList,
+  KeyboardAwareScrollView,
+  MaxWidthContainer,
+  MAX_CONTENT_WIDTH,
+  TwoPaneLayout,
+  useBottomInset,
+} from '@/components/layout';
 import { RecipeCategories } from '@/components/recipe-categories';
 import { RecipeDetail } from '@/components/recipe-detail';
 import { StarRating } from '@/components/star-rating';
@@ -59,6 +75,7 @@ export function RecipeList() {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   /** Selected recipe for the detail pane (medium/expanded). Kept across fold/unfold. */
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const categoryScroll = useRef<ScrollView>(null);
   const { isTwoPane } = useWindowSizeClass();
 
   const showRatings = useFeature('ratings').available;
@@ -187,7 +204,6 @@ export function RecipeList() {
   const addRecipeButton = selecting ? null : (
     <Link href="/add" asChild>
       <Pressable style={styles.addRecipe} accessibilityRole="button" testID="list-add-recipe-button">
-        <Ionicons name="add" size={20} color={colors.primaryText} />
         <Text style={styles.addRecipeText}>Add recipe</Text>
       </Pressable>
     </Link>
@@ -221,7 +237,7 @@ export function RecipeList() {
   );
 
   const list = (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {searchRow}
       {sharePdfMode ? <Stack.Screen options={{ title: 'Share recipes' }} /> : null}
       {pdf.available && selecting ? (
@@ -260,9 +276,9 @@ export function RecipeList() {
         </Pressable>
       ) : null}
       {byCategory ? (
-        <ScrollView
+        <KeyboardAwareScrollView
+          ref={categoryScroll}
           contentContainerStyle={[styles.list, { paddingBottom: listBottom }]}
-          keyboardShouldPersistTaps="handled"
           testID="recipe-category-scroll">
           <RecipeCategories
             {...groupRecipesByCategory(visible, categories)}
@@ -270,19 +286,19 @@ export function RecipeList() {
             selectedId={isTwoPane ? selectedId : null}
             onOpen={openRecipe}
             onChanged={() => void reload()}
+            onFieldFocus={() => categoryScroll.current?.scrollToEnd({ animated: true })}
             accessory={addRecipeButton}
           />
           {recipes.length === 0 ? (
             <Text style={styles.hint}>No recipes yet. Tap “Add recipe” or the + button to create or import one.</Text>
           ) : null}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
-        <FlatList
+        <KeyboardAwareFlatList
           data={visible}
           keyExtractor={(r) => r.id}
           extraData={[selectedId, selecting, picked]}
           contentContainerStyle={[styles.list, { paddingBottom: listBottom }]}
-          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <Text style={styles.empty}>
               {searching ? 'No recipes match.' : 'No recipes yet. Tap “Add recipe” or the + button to create or import one.'}
@@ -363,7 +379,7 @@ export function RecipeList() {
         showTags={showTags}
         showRatings={showRatings}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 
   return (
@@ -415,14 +431,14 @@ const useStyles = makeStyles((colors) => ({
   filterBtnActive: { backgroundColor: colors.primary },
   filterDot: {
     position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.accent,
-    borderWidth: 1,
-    borderColor: colors.card,
+    top: 4,
+    right: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.badge,
+    borderWidth: 2,
+    borderColor: colors.badgeRing,
   },
   filtersOn: { marginHorizontal: 12, marginTop: 8, minHeight: 32, justifyContent: 'center' },
   filtersOnText: { color: colors.primary, fontWeight: '600' },

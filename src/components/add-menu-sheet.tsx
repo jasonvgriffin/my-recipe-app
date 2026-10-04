@@ -55,7 +55,7 @@ export function AddMenuSheet({ visible, onClose }: { visible: boolean; onClose: 
                 style={({ pressed }) => [styles.cell, pressed && styles.pressed]}
                 testID={`add-menu-${item.id}`}>
                 <View style={styles.circle}>
-                  <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={28} color={colors.accent} />
+                  <Ionicons name={item.icon as keyof typeof Ionicons.glyphMap} size={28} color={colors.primary} />
                 </View>
                 {/* v1.0.5: never truncate (“Add to Shopping Li…”): labels wrap to as many lines as they need. */}
                 <Text style={styles.label}>
