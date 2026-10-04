@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, useBottomInset } from '@/components/layout';
 import { FeatureGate } from '@/components/feature-gate';
@@ -12,6 +12,15 @@ import { useFeature } from '@/hooks/use-feature';
 import { useHousehold } from '@/hooks/use-household';
 import { useSettings } from '@/hooks/use-settings';
 import { makeStyles, useColorSchemeResolved, useColors } from '@/hooks/use-theme';
+import {
+  APP_ICONS,
+  canChangeAppIcon,
+  changeAppIcon,
+  currentAppIcon,
+  DEFAULT_APP_ICON,
+  isAppIconId,
+  type AppIconId,
+} from '@/lib/app-icons';
 import { ACCENTS, THEME_MODES } from '@/lib/theme';
 import { settingsStore } from '@/storage/settings';
 import { syncStatusLabel } from '@/sync/status';
@@ -215,6 +224,73 @@ function AppearanceSection() {
           );
         })}
       </View>
+      <AppIconPicker />
+    </>
+  );
+}
+
+/**
+ * App icon (v1.0.6, Android): previews of every launcher icon; tapping one warns that launchers may take a moment
+ * or move the shortcut, then switches the activity-alias and saves the choice. Hidden where it can't work (iOS).
+ */
+function AppIconPicker() {
+  const styles = useStyles();
+  const colors = useColors();
+  const { appearance } = useSettings();
+  const [current, setCurrent] = useState<AppIconId>(() => currentAppIcon() ?? (isAppIconId(appearance.appIcon) ? appearance.appIcon : DEFAULT_APP_ICON));
+  const [error, setError] = useState<string | undefined>();
+  if (!canChangeAppIcon()) return null;
+
+  function pick(id: AppIconId) {
+    if (id === current) return;
+    const label = APP_ICONS.find((i) => i.id === id)?.label ?? id;
+    Alert.alert(
+      `Use the ${label} icon?`,
+      'Your home screen updates in a moment. Some launchers take a little while, or move the shortcut to the app drawer — add it back if it disappears.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Change icon',
+          onPress: () => {
+            setError(undefined);
+            changeAppIcon(id)
+              .then(() => {
+                setCurrent(id);
+                return settingsStore.update({ appearance: { appIcon: id } });
+              })
+              .catch(() => setError('Could not change the icon on this phone.'));
+          },
+        },
+      ],
+    );
+  }
+
+  return (
+    <>
+      <Text style={styles.help}>App icon</Text>
+      <View style={styles.accents} accessibilityRole="radiogroup" accessibilityLabel="App icon" testID="app-icon-picker">
+        {APP_ICONS.map((icon) => {
+          const selected = icon.id === current;
+          return (
+            <Pressable
+              key={icon.id}
+              accessibilityRole="radio"
+              accessibilityLabel={`${icon.label} app icon`}
+              accessibilityState={{ selected }}
+              testID={`settings-app-icon-${icon.id}`}
+              style={[styles.accent, selected && { borderColor: colors.primary }]}
+              onPress={() => pick(icon.id)}>
+              <Image source={icon.preview} style={styles.iconPreview} accessibilityIgnoresInvertColors />
+              <Text style={styles.accentLabel}>{icon.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {error ? (
+        <Text style={styles.help} testID="app-icon-error">
+          {error}
+        </Text>
+      ) : null}
     </>
   );
 }
@@ -344,5 +420,6 @@ const useStyles = makeStyles((colors) => ({
     backgroundColor: colors.card,
   },
   swatch: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  iconPreview: { width: 48, height: 48, borderRadius: 24 },
   accentLabel: { color: colors.text, fontSize: 13, fontWeight: '600' },
 }));

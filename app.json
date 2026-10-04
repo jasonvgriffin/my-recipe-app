@@ -108,7 +108,8 @@
           }
         }
       ],
-      "./plugins/with-release-signing"
+      "./plugins/with-release-signing",
+      "./plugins/with-alternate-icons"
     ],
     "experiments": {
       "typedRoutes": true,
