@@ -4,6 +4,8 @@ Guidance for Cursor cloud agents (and any other coding agent) working in this re
 
 ## Before building anything (mandatory)
 
+Read `LESSONS.md` first and follow every rule in it. After finishing, add any new lesson learned to `LESSONS.md`.
+
 **Before building anything, read docs/INVENTORY.md, docs/SPEC.md and search the codebase. If something similar exists, extend it instead of creating a duplicate (no second helper, component, store, hook, or screen for the same job). Update docs/INVENTORY.md in your PR.**
 
 ## Rule #1: RECIPES ARE THE CORE
