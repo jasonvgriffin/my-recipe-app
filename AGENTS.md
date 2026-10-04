@@ -4,7 +4,7 @@ Guidance for Cursor cloud agents (and any other coding agent) working in this re
 
 ## Before building anything (mandatory)
 
-Read `LESSONS.md` first and follow every rule in it. After finishing, add any new lesson learned to `LESSONS.md`.
+Read `LESSONS.md` first and follow every rule in it, including "Working with Eve". After finishing, add any new lesson learned to `LESSONS.md`. Recipe-only rules stay there. A rule that applies to any of Jason's apps goes to Eve (`eve.chief_of_staff@agentmail.to`) for the shared app-build-lessons skill. If that skill is not installed, follow `LESSONS.md` and say so.
 
 **Before building anything, read docs/INVENTORY.md, docs/SPEC.md and search the codebase. If something similar exists, extend it instead of creating a duplicate (no second helper, component, store, hook, or screen for the same job). Update docs/INVENTORY.md in your PR.**
 

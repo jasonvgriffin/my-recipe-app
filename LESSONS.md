@@ -3,6 +3,16 @@
 Read this before every build. Add a dated lesson after each version: what went wrong, the rule that prevents it.
 General lessons that apply to any app are copied into the last section of this file from Eve's shared skill, which cloud agents can't read directly. When you find a lesson that applies to any app, add it under General lessons and mention it in your PR so Eve can sync it to the shared skill.
 
+## Working with Eve
+
+Jason asked the coding agent to get better with Eve as we go. The loop is:
+
+- Read this file before writing code. Follow every rule in it.
+- When a review or a bug shows a rule that would have prevented it, add that lesson here in the same change. One rule, what went wrong, the version.
+- Recipe-app rules stay in this file (layout, theme, allulose only, no nutrition, recipes first).
+- A rule that would apply to any of Jason's apps goes to Eve at `eve.chief_of_staff@agentmail.to` so she can add it to app-build-lessons. Do not copy that skill into this repo.
+- If app-build-lessons is not installed in the environment, follow this file and say that the shared skill was missing. Do not invent a second lessons file.
+
 ## Layout and screens
 - **Verify layout from a real render, never width math.** (1.0.8: tab labels "Meal Plan"/"Shopping" passed the math but were truncated on Jason's phone.) Render key screens at 360dp wide and at the default width, attach screenshots to the PR.
 - **Text must never truncate.** Tab/button labels: allow shrink-to-fit (adjustsFontSizeToFit, minimumFontScale ~0.85) and remove default horizontal padding before shortening text.
