@@ -17,6 +17,7 @@ General lessons that apply to any app also live in Eve's shared "app-build-lesso
 - Check every accent in both light and dark mode for ~3:1 contrast on icons/borders before shipping.
 
 ## Process
+- **Cloud agents: put Node on `/usr/local/bin`.** (2026-10-04) Login shells skip `~/.bashrc`, so nvm is invisible after install. Expo web binds IPv6 `localhost` (`::1`); `127.0.0.1:8081` does not connect. Open `http://localhost:8081`.
 - Put reviewer (Spec/Pixel) checks into the build prompt up front so one cloud-agent run is enough; avoid fix-up runs.
 - Batch changes into fewer versions; every build + review costs usage.
 - Releases: one tag push builds and publishes. Docs-only commits use `[skip ci]`.
