@@ -55,7 +55,8 @@ type AccentSwatch = Pick<ThemeColors, 'primary' | 'primaryText' | 'accent' | 'ac
 /**
  * Accent themes. Each has a dark- and light-mode shade chosen for WCAG AA contrast (≥ 4.5:1) as text on the
  * background/card and against its own `primaryText`. Green is the original look (green + orange + button);
- * every other accent tints the + button and + menu icons with the same hue.
+ * every other accent tints the + button and + menu icons with the same hue. v1.0.5: dark shades are saturated so each
+ * accent reads as its name (no washed-out pastels); Slate is intentionally a cool gray.
  */
 export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch; light: AccentSwatch }[] = [
   {
@@ -79,26 +80,28 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
   {
     id: 'purple',
     label: 'Purple',
-    dark: { primary: '#B39DDB', primaryText: '#1A1030', accent: '#B39DDB', accentText: '#1A1030' },
+    dark: { primary: '#B47CFF', primaryText: '#1E0A33', accent: '#B47CFF', accentText: '#1E0A33' }, // v1.0.5: was pastel #B39DDB
     light: { primary: '#6A1B9A', primaryText: '#FFFFFF', accent: '#6A1B9A', accentText: '#FFFFFF' },
   },
   {
     id: 'red',
     label: 'Red',
-    dark: { primary: '#F28B82', primaryText: '#2B0B09', accent: '#F28B82', accentText: '#2B0B09' },
-    light: { primary: '#C62828', primaryText: '#FFFFFF', accent: '#C62828', accentText: '#FFFFFF' },
+    // v1.0.5: a true, saturated red (was salmon #F28B82 in dark). Dark mode keeps near-black text on it: white on a red
+    // bright enough to read on the dark card would be < 4.5:1.
+    dark: { primary: '#FF4444', primaryText: '#1F0000', accent: '#FF4444', accentText: '#1F0000' },
+    light: { primary: '#D32F2F', primaryText: '#FFFFFF', accent: '#D32F2F', accentText: '#FFFFFF' },
   },
   {
     id: 'teal',
     label: 'Teal',
-    dark: { primary: '#4DB6AC', primaryText: '#06201D', accent: '#4DB6AC', accentText: '#06201D' },
+    dark: { primary: '#26BFB0', primaryText: '#04201D', accent: '#26BFB0', accentText: '#04201D' }, // v1.0.5: was #4DB6AC
     light: { primary: '#00796B', primaryText: '#FFFFFF', accent: '#00796B', accentText: '#FFFFFF' },
   },
   // v1.0.5: six more (Jason). Light shades are deepened so links stay ≥ 4.5:1 on white; dark shades are lightened.
   {
     id: 'pink',
     label: 'Pink',
-    dark: { primary: '#F48FB1', primaryText: '#2B0A17', accent: '#F48FB1', accentText: '#2B0A17' },
+    dark: { primary: '#FF5CA8', primaryText: '#2B0A17', accent: '#FF5CA8', accentText: '#2B0A17' },
     light: { primary: '#AD1457', primaryText: '#FFFFFF', accent: '#AD1457', accentText: '#FFFFFF' },
   },
   {
@@ -110,13 +113,13 @@ export const ACCENTS: readonly { id: AccentId; label: string; dark: AccentSwatch
   {
     id: 'indigo',
     label: 'Indigo',
-    dark: { primary: '#9FA8DA', primaryText: '#121633', accent: '#9FA8DA', accentText: '#121633' },
+    dark: { primary: '#7C8CFF', primaryText: '#0E1440', accent: '#7C8CFF', accentText: '#0E1440' },
     light: { primary: '#3949AB', primaryText: '#FFFFFF', accent: '#3949AB', accentText: '#FFFFFF' },
   },
   {
     id: 'brown',
     label: 'Brown',
-    dark: { primary: '#C8A99A', primaryText: '#21140F', accent: '#C8A99A', accentText: '#21140F' },
+    dark: { primary: '#CD8E62', primaryText: '#21120A', accent: '#CD8E62', accentText: '#21120A' },
     light: { primary: '#6D4C41', primaryText: '#FFFFFF', accent: '#6D4C41', accentText: '#FFFFFF' },
   },
   {

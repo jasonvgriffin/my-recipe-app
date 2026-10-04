@@ -202,5 +202,10 @@ follow the Recipes-are-the-core rule above.
   Slate join Green, Orange, Blue, Purple, Red, Teal (12). Each has a light and a dark shade passing the palette contrast
   tests (links ≥ 4.5:1 on background/card, text on filled buttons ≥ 4.5:1, + menu icons ≥ 3:1). Swatches are
   equal-width tiles that wrap into rows.
+- **Saturated accents / true red:** Red is `#D32F2F` (white text) in light and `#FF4444` (near-black `#1F0000` text) in
+  dark, replacing the salmon `#F28B82`. White on a red bright enough to read as a link on the dark card can't reach
+  4.5:1, so dark buttons use dark text. Dark Purple `#B47CFF`, Indigo `#7C8CFF`, Pink `#FF5CA8`, Brown `#CD8E62`, Teal
+  `#26BFB0` replace pastels; a test enforces HSL saturation ≥ 50% for every dark accent except Green (original) and
+  Slate (gray by design).
 - **App icon:** the bowl is bright yellow `#FFD60A` (was green); steam, background, monochrome unchanged
   (`assets/icons/make-icons.py`).

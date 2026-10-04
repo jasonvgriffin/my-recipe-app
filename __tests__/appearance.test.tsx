@@ -48,6 +48,31 @@ describe('palettes', () => {
     },
   );
 
+  it('v1.0.5: dark-mode accents are saturated, not pastel; Red is a true red in both modes', () => {
+    const hsl = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      const d = max - min;
+      const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+      let h = 0;
+      if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return { h: (h * 60 + 360) % 360, s: sat, l };
+    };
+    // Green keeps the original look; Slate is a gray by design.
+    for (const a of ACCENTS.filter((x) => x.id !== 'green' && x.id !== 'slate'))
+      expect([a.id, hsl(a.dark.primary).s >= 0.5]).toEqual([a.id, true]);
+    for (const scheme of ['dark', 'light'] as const) {
+      const red = hsl(buildColors(scheme, 'red').primary);
+      expect(red.h <= 8 || red.h >= 352).toBe(true);
+      expect(red.s).toBeGreaterThanOrEqual(0.6);
+    }
+    expect(buildColors('dark', 'red').primary).toBe('#FF4444');
+    expect(buildColors('light', 'red').primary).toBe('#D32F2F');
+    expect(buildColors('light', 'red').primaryText).toBe('#FFFFFF');
+  });
+
   it('Green dark is the original palette (green links, orange + button)', () => {
     const c = buildColors('dark', 'green');
     expect(c.primary).toBe('#66BB6A');
