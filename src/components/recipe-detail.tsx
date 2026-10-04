@@ -17,7 +17,7 @@ import { usePdfExport } from '@/hooks/use-pdf-export';
 import { useSettings } from '@/hooks/use-settings';
 import { formatCookedOn, toIsoDate } from '@/lib/dates';
 import { presentIngredient } from '@/lib/ingredients';
-import { addRecipeTags, removeRecipeTag, setCooked, setRating, toggleRecipeCategory } from '@/lib/recipe-utils';
+import { addRecipeTags, removeRecipeTag, setCooked, setRating, setRecipeCategory } from '@/lib/recipe-utils';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { formatDuration } from '@/lib/timers';
 import { effectiveUnitSystem } from '@/lib/units';
@@ -230,12 +230,13 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
       ) : null}
       {categoriesOn && categories.length > 0 ? (
         <View style={styles.block}>
-          <Text style={styles.section}>Categories</Text>
+          <Text style={styles.section}>Category</Text>
           <CategoryChips
+            single
             categories={categories}
             selectedIds={recipe.categoryIds}
             onToggle={(categoryId) => {
-              void persist(toggleRecipeCategory(recipe, categoryId));
+              void persist(setRecipeCategory(recipe, categoryId));
             }}
             testIDPrefix="assign-category"
           />
@@ -280,7 +281,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
         {showGroceryRun ? (
           <Link href={{ pathname: '/grocery-run', params: { recipeId: recipe.id } }} asChild>
             <Pressable style={styles.action} accessibilityRole="button" testID="grocery-run-button">
-              <Text style={styles.actionText}>Shopping List</Text>
+              <Text style={styles.actionText}>View Shopping List</Text>
             </Pressable>
           </Link>
         ) : null}

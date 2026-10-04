@@ -222,17 +222,19 @@ describe('grocery run (spec #18)', () => {
 });
 
 describe('gates (spec #11, #12, #18)', () => {
-  it('v1.0.4: the grocery-run button reads “Shopping List” on the Shopping screen and recipe detail', async () => {
+  it('v1.0.5: the grocery-run button reads “View Shopping List” on the Shopping screen and recipe detail', async () => {
     const recipe = await chicken();
     const shop = renderRouter({ index: Shopping() }, { initialUrl: '/' });
     const button = await screen.findByTestId('grocery-run-button');
-    expect(within(button).getByText('Shopping List')).toBeTruthy();
+    expect(within(button).getByText('View Shopping List')).toBeTruthy();
+    expect(screen.getByTestId('build-list')).toHaveTextContent('Build from Meal Plan');
+    expect(screen.queryByText(/this week’s plan/)).toBeNull();
     expect(screen.queryByText(/grocery run/i)).toBeNull();
     shop.unmount();
 
     renderRouter({ 'recipe/[id]': Recipe() }, { initialUrl: `/recipe/${recipe.id}` });
     const detailButton = await screen.findByTestId('grocery-run-button');
-    expect(within(detailButton).getByText('Shopping List')).toBeTruthy();
+    expect(within(detailButton).getByText('View Shopping List')).toBeTruthy();
     expect(screen.queryByText(/grocery run/i)).toBeNull();
   });
 

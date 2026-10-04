@@ -10,7 +10,7 @@ import { ACCENTS, THEME_MODES, buildColors, contrastRatio, resolveScheme, type C
 import { createSettingsStore, settingsStore, SETTINGS_STORAGE_KEY } from '@/storage/settings';
 import { DEFAULT_SETTINGS } from '@/types/recipe';
 
-jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.4' } } }));
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.5' } } }));
 
 const routes = () => ({
   _layout: require('@/app/_layout').default,
@@ -48,6 +48,31 @@ describe('palettes', () => {
     },
   );
 
+  it('v1.0.5: dark-mode accents are saturated, not pastel; Red is a true red in both modes', () => {
+    const hsl = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      const d = max - min;
+      const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+      let h = 0;
+      if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return { h: (h * 60 + 360) % 360, s: sat, l };
+    };
+    // Green keeps the original look; Slate is a gray by design.
+    for (const a of ACCENTS.filter((x) => x.id !== 'green' && x.id !== 'slate'))
+      expect([a.id, hsl(a.dark.primary).s >= 0.5]).toEqual([a.id, true]);
+    for (const scheme of ['dark', 'light'] as const) {
+      const red = hsl(buildColors(scheme, 'red').primary);
+      expect(red.h <= 8 || red.h >= 352).toBe(true);
+      expect(red.s).toBeGreaterThanOrEqual(0.6);
+    }
+    expect(buildColors('dark', 'red').primary).toBe('#FF4444');
+    expect(buildColors('light', 'red').primary).toBe('#D32F2F');
+    expect(buildColors('light', 'red').primaryText).toBe('#FFFFFF');
+  });
+
   it('Green dark is the original palette (green links, orange + button)', () => {
     const c = buildColors('dark', 'green');
     expect(c.primary).toBe('#66BB6A');
@@ -63,9 +88,23 @@ describe('palettes', () => {
     expect(resolveScheme('dark', 'light')).toBe('dark');
   });
 
-  it('offers System / Light / Dark and six accents', () => {
+  it('offers System / Light / Dark and twelve accents (six more in v1.0.5)', () => {
     expect(THEME_MODES.map((m) => m.label)).toEqual(['System', 'Light', 'Dark']);
-    expect(ACCENTS.map((a) => a.label)).toEqual(['Green', 'Orange', 'Blue', 'Purple', 'Red', 'Teal']);
+    expect(ACCENTS.map((a) => a.label)).toEqual([
+      'Green',
+      'Orange',
+      'Blue',
+      'Purple',
+      'Red',
+      'Teal',
+      'Pink',
+      'Amber',
+      'Indigo',
+      'Brown',
+      'Lime',
+      'Slate',
+    ]);
+    expect(new Set(ACCENTS.flatMap((a) => [a.dark.primary, a.light.primary])).size).toBe(ACCENTS.length * 2);
   });
 });
 
@@ -112,6 +151,21 @@ describe('Settings → Appearance (UI)', () => {
     renderRouter(routes(), { initialUrl: '/settings' });
     expect(await screen.findByText('Appearance')).toBeTruthy();
     for (const a of ACCENTS) expect(screen.getByTestId(`settings-accent-${a.id}`)).toBeTruthy();
+  });
+
+  it('v1.0.5: picks one of the new accents (dark pink) and lays the 12 swatches out as equal-width wrapping tiles', async () => {
+    await settingsStore.update({ appearance: { themeMode: 'dark' } });
+    renderRouter(routes(), { initialUrl: '/settings' });
+    const pink = await screen.findByTestId('settings-accent-pink');
+    await act(async () => fireEvent.press(pink));
+    await waitFor(async () => expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'dark', accent: 'pink' }));
+    const widths = new Set(
+      ACCENTS.map((a) => StyleSheet.flatten(screen.getByTestId(`settings-accent-${a.id}`).props.style).width),
+    );
+    expect(widths.size).toBe(1);
+    expect(StyleSheet.flatten(screen.getByTestId('settings-accent-pink').props.style).borderColor).toBe(
+      buildColors('dark', 'pink').primary,
+    );
   });
 });
 

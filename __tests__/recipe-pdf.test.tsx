@@ -217,18 +217,20 @@ describe('UI', () => {
     expect(html).not.toContain('Beta Stew');
   });
 
-  it('Existing Recipes: “Select recipes for PDF”, All, Cancel', async () => {
+  it('v1.0.5: no “Select recipes for PDF” link on the Recipes tab; the + menu picker still has All', async () => {
     await recipeStore.save(soup({ title: 'Alpha Soup' }));
     await recipeStore.save(soup({ title: 'Beta Stew' }));
     renderRouter(routes(), { initialUrl: '/recipes' });
+    await screen.findByTestId('recipe-categories');
+    expect(screen.queryByTestId('pdf-select-button')).toBeNull();
+    expect(screen.queryByText('Select recipes for PDF')).toBeNull();
     expect(screen.queryByTestId('pdf-select-bar')).toBeNull();
-    const select = await screen.findByTestId('pdf-select-button');
-    await act(async () => fireEvent.press(select));
+    screen.unmount();
+    renderRouter(routes(), { initialUrl: '/recipes?select=pdf' });
+    await screen.findByTestId('pdf-select-bar');
     await act(async () => fireEvent.press(screen.getByTestId('pdf-select-all')));
     expect(screen.getByTestId('pdf-share-button')).toHaveTextContent('Share PDF (2)');
-    await act(async () => fireEvent.press(screen.getByTestId('pdf-select-cancel')));
-    expect(screen.queryByTestId('pdf-select-bar')).toBeNull();
-    expect(screen.getByTestId('list-add-recipe-button')).toBeTruthy();
+    expect(screen.queryByTestId('list-add-recipe-button')).toBeNull();
   });
 
   it('+ menu “Share Recipes” opens the PDF picker; household sharing stays under More', async () => {
@@ -259,6 +261,9 @@ describe('UI', () => {
     expect(screen.getByTestId('add-menu-add-recipe')).toBeTruthy();
     screen.unmount();
     renderRouter(routes(), { initialUrl: '/recipes?select=pdf' });
+    // Locked: the list behaves normally (v1.0.5: categories; the recipe is Uncategorized).
+    const uncategorized = await screen.findByTestId('category-header-uncategorized');
+    await act(async () => fireEvent.press(uncategorized));
     expect(await screen.findByTestId(`recipe-item-${r.id}`)).toBeTruthy();
     expect(screen.queryByTestId('pdf-select-bar')).toBeNull();
     expect(screen.queryByTestId('pdf-share-button')).toBeNull();

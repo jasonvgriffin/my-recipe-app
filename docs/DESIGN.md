@@ -23,7 +23,7 @@ Full rule: top of docs/SPEC.md.
 ## 1. Theme (spec #13; Appearance since v1.0.3)
 
 - Settings → Appearance: theme mode System / Light / Dark (default System; System follows the phone, unknown →
-  dark) and an accent color (Green = original look, Orange, Blue, Purple, Red, Teal). Saved in local settings
+  dark) and an accent color (Green = original look, Orange, Blue, Purple, Red, Teal; v1.0.5 adds Pink, Amber, Indigo, Brown, Lime, Slate). Saved in local settings
   (`AppSettings.appearance`); free, not gated.
 - Palettes: `src/lib/theme.ts` (`buildColors(scheme, accent)`, each accent has dark/light shades with WCAG AA
   contrast, checked in `__tests__/appearance.test.tsx`). Components read colors only via

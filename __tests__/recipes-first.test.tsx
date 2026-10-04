@@ -84,7 +84,10 @@ describe('recipes-first', () => {
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Layer\nBake 30 minutes');
     await act(async () => fireEvent.press(screen.getByText('Save recipe')));
 
-    // Back on the Recipes tab (the list) → open it → detail has recipe actions but no meal-plan cross-link
+    // Back on the Recipes tab (v1.0.5: categories) → Uncategorized → open it → detail has recipe actions but no
+    // meal-plan cross-link
+    const uncategorized = await screen.findByTestId('category-header-uncategorized');
+    await act(async () => fireEvent.press(uncategorized));
     const item = await screen.findByText('Zucchini Lasagna');
     await act(async () => fireEvent.press(item));
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();

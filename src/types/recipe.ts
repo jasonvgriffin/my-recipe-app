@@ -58,7 +58,10 @@ export interface Recipe extends SyncMeta {
   tags: string[];
   /** Number of servings the recipe makes (> 0). Base for scaling. */
   servings: number;
-  /** Ids of user-defined categories (spec #3). */
+  /**
+   * Ids of user-defined categories (spec #3). v1.0.5: the add/edit screens set ONE category (or none =
+   * "Uncategorized"); older data with several ids shows under each. Kept as an array for compatibility.
+   */
   categoryIds: string[];
   /** Local file URI of the optional recipe photo (spec #4). */
   photoUri?: string;
@@ -90,10 +93,22 @@ export type RecipeInput = Pick<Recipe, 'title' | 'ingredients' | 'steps' | 'tags
     >
   >;
 
-/** User-defined recipe category, e.g. "Breakfast" or "Breads" (spec #3). */
+/**
+ * User-defined recipe category, e.g. "Breakfast" or "Breads" (spec #3). v1.0.5: the Recipes tab opens grouped by
+ * category; `sortOrder` keeps the user's order (Breakfast, Lunch, Dinner first). Synced through the `categories`
+ * table (`data` jsonb; `sort_order` is mirrored server-side, migration 20261004000000).
+ */
 export interface Category extends SyncMeta {
   name: string;
+  /** Display order on the Recipes tab (ascending). Categories without one sort after, by name. */
+  sortOrder?: number;
 }
+
+/** Categories every device starts with (v1.0.5, Jason): Breakfast, Lunch, Dinner, in that order. */
+export const DEFAULT_CATEGORY_NAMES: readonly string[] = ['Breakfast', 'Lunch', 'Dinner'];
+
+/** Label for recipes that have no (existing) category. Not a stored category. */
+export const UNCATEGORIZED_LABEL = 'Uncategorized';
 
 /** Jason's sweetener rule: allulose is the only sugar-free sweetener used. */
 export const PREFERRED_SWEETENER = 'allulose';
@@ -196,7 +211,11 @@ export function migrateRecipe(value: unknown): Recipe | undefined {
 export function isCategory(value: unknown): value is Category {
   if (typeof value !== 'object' || value === null) return false;
   const c = value as Record<string, unknown>;
-  return typeof c.id === 'string' && typeof c.name === 'string';
+  return (
+    typeof c.id === 'string' &&
+    typeof c.name === 'string' &&
+    (c.sortOrder === undefined || (typeof c.sortOrder === 'number' && Number.isFinite(c.sortOrder)))
+  );
 }
 
 /** Item on hand in the pantry (spec #21). */

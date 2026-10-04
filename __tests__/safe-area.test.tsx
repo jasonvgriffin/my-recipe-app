@@ -25,7 +25,7 @@ jest.mock('react-native-safe-area-context', () => {
   return { ...actual, SafeAreaProvider, initialWindowMetrics: { insets, frame } };
 });
 
-jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.4' } } }));
+jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '1.0.5' } } }));
 
 const { SafeAreaProvider } = jest.requireMock('react-native-safe-area-context');
 
@@ -80,13 +80,16 @@ describe('screens', () => {
     renderRouter(routes(), { initialUrl: '/settings' });
     const scroll = await screen.findByTestId('settings-screen');
     expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(16 + NAV_BAR);
-    expect(await screen.findByTestId('app-version')).toHaveTextContent('Version 1.0.4');
+    expect(await screen.findByTestId('app-version')).toHaveTextContent('Version 1.0.5');
   });
 
   it('Recipes tab (inside the bottom bar): no extra inset', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    // v1.0.4: the Recipes tab is the recipe list; its “+ Add recipe” button sits 24dp above the bar (no nav-bar inset).
-    const fab = await screen.findByTestId('list-add-recipe-button');
-    expect(StyleSheet.flatten(fab.props.style).bottom).toBe(24);
+    // v1.0.5: the Recipes tab lists categories; “Add recipe” is the last item of the list (no floating button over
+    // the list), and the list ends 24dp above the bar (no nav-bar inset inside the tabs).
+    const add = await screen.findByTestId('list-add-recipe-button');
+    expect(StyleSheet.flatten(add.props.style).position).toBeUndefined();
+    const scroll = screen.getByTestId('recipe-category-scroll');
+    expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(24);
   });
 });

@@ -50,7 +50,7 @@ export default function AddRecipeScreen() {
     if (!name) return;
     const created = await recipeStore.addCategory(name);
     setCategories(await recipeStore.listCategories());
-    setCategoryIds((ids) => (ids.includes(created.id) ? ids : [...ids, created.id]));
+    setCategoryIds([created.id]);
     setNewCategory('');
   }
 
@@ -130,17 +130,14 @@ export default function AddRecipeScreen() {
           />
         </Field>
         {categoriesOn ? (
-          <Field label="Categories">
-            {categories.length > 0 ? (
-              <CategoryChips
-                categories={categories}
-                selectedIds={categoryIds}
-                testIDPrefix="add-category"
-                onToggle={(id) =>
-                  setCategoryIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
-                }
-              />
-            ) : null}
+          <Field label="Category">
+            <CategoryChips
+              single
+              categories={categories}
+              selectedIds={categoryIds}
+              testIDPrefix="add-category"
+              onToggle={(id) => setCategoryIds(id ? [id] : [])}
+            />
             <View style={styles.categoryAdd}>
               <TextInput
                 placeholderTextColor={colors.placeholder}
@@ -173,6 +170,7 @@ export default function AddRecipeScreen() {
               value={tags}
               onChangeText={setTags}
               autoCapitalize="none"
+              testID="add-form-tags-input"
             />
           </Field>
         ) : null}

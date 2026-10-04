@@ -44,7 +44,7 @@ interface RecipeDraft {
   // timers auto-detected from text when durationSeconds absent (spec #15)
   description?: string;
   tags?: string[]; // lower-cased + deduped
-  categories?: string[]; // category NAMES; created if missing (spec #3)
+  categories?: string[]; // category NAMES; structured imports only: the FIRST name is used (created if missing). URL/text imports ignore page categories → Uncategorized (v1.0.5)
   servings?: number; // > 0; defaults to 1 with a warning
   rating?: number; // 1–5 (spec #22)
   notes?: string;
@@ -86,8 +86,8 @@ type ImportErrorCode =
 5. **Dedupe by source URL**: `normalizeSourceUrl` (https, lower-case host, no `www.`, no hash, no
    `utm_*`/`fbclid`/… params, sorted query, no trailing slash). Policy `skip` returns the existing recipe
    (`status: 'duplicate'`); `update` replaces content but keeps id, createdAt, cooked history, notes/photo if
-   the import has none, and merges categories; `create` always adds a new one.
-6. **Normalize + save**: whitespace collapsed, tags lower-cased, categories resolved to ids, `createRecipe`,
+   the import has none, and keeps the existing category (an uncategorized recipe takes the import's); `create` always adds a new one.
+6. **Normalize + save**: whitespace collapsed, tags lower-cased, categories resolved to ids (structured: first name only; URL/text: none — Uncategorized), `createRecipe`,
    `store.save`.
 
 ## Dependencies (`ImportDeps`)
