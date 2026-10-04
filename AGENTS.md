@@ -183,3 +183,9 @@ Same codebase; `ios.bundleIdentifier` is already set. Options:
 
 Either way installing on a real iPhone / TestFlight requires an **Apple Developer Program account ($99/yr)**.
 Do not create accounts or purchase anything — ask Jason first.
+
+## Cursor Cloud specific instructions
+
+- Install with `bash .cursor/setup.sh`. It puts Node 22 on `/usr/local/bin` and runs `npm ci`. Login shells do not load nvm, so do not rely on `~/.nvm` for `node`.
+- `bash .cursor/start.sh` serves Expo web at http://127.0.0.1:8081. Android SDK and Gradle builds stay in GitHub Actions.
+- Prove the app from Recipes: add a recipe (title, one ingredient, one step, servings) and confirm it shows in the list. Automated checks are `npm test`, `npm run lint`, and `npm run typecheck`.
