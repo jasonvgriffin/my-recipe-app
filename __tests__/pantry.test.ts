@@ -1,5 +1,5 @@
 import { compileItems } from '@/lib/shopping';
-import { expiryState, filterSortPantry, pantryCategories, rankRecipesByPantry } from '@/lib/pantry';
+import { expiryState, filterSortPantry, pantryCardText, pantryCategories, rankRecipesByPantry } from '@/lib/pantry';
 import { isInPantry } from '@/pantry/isInPantry';
 import { createRecipe } from '@/lib/recipe-utils';
 import { PANTRY_STORAGE_KEY, createPantryStore } from '@/storage/pantry';
@@ -57,7 +57,7 @@ describe('pantry store details', () => {
       expiresAt: '2026-10-20',
     });
     expect(saved).toMatchObject({
-      name: 'chicken breast',
+      name: 'Chicken Breast',
       quantity: 1,
       unit: 'lb',
       category: 'Meat',
@@ -132,5 +132,43 @@ describe('pantry store details', () => {
     expect(expiryState('2026-10-05', today)).toBe('soon');
     expect(expiryState('2026-12-01', today)).toBe('ok');
     expect(expiryState(undefined, today)).toBe('none');
+  });
+});
+
+describe('pantry names (v1.0.8)', () => {
+  it('keeps the casing typed into the form', async () => {
+    const pantry = createPantryStore(memoryStore());
+    const saved = await pantry.saveDetails({ name: 'Chicken Breast' });
+    expect(saved.name).toBe('Chicken Breast');
+    const again = await pantry.saveDetails({ id: saved.id, name: 'M&M\'s' });
+    expect(again.name).toBe("M&M's");
+  });
+
+  it('shows a stored brand as the title when the saved name is the generic description', () => {
+    expect(
+      pantryCardText({
+        name: 'Chocolate Candies',
+        brand: "M&M's",
+        barcode: '0040000004325',
+        quantity: 1,
+        unit: 'package',
+      }),
+    ).toEqual({ title: "M&M's", detail: 'Chocolate Candies · 1 package' });
+    expect(
+      pantryCardText({
+        name: "Peanut M&M's",
+        brand: "M&M's",
+        barcode: '0040000004325',
+        description: 'Chocolate Candies',
+        quantity: 1,
+        unit: 'package',
+      }).title,
+    ).toBe("Peanut M&M's");
+    expect(
+      pantryCardText({ name: 'Chicken breast', brand: 'Perdue', quantity: 2, unit: 'lb', category: 'Meat' }).detail,
+    ).toBe('2 lb · Perdue · Meat');
+    expect(
+      pantryCardText({ name: 'Almond Flour', brand: 'Bob’s', barcode: '3017620422003', quantity: 1, unit: 'package' }),
+    ).toEqual({ title: 'Almond Flour', detail: '1 package · Bob’s' });
   });
 });

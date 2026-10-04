@@ -2,9 +2,9 @@
  * v1.0.7 barcode product names (UI-free, unit-tested in __tests__/product-name.test.ts).
  *
  * Open Food Facts often has both a specific product name ("peanut m&m's") and generic text ("CHOCOLATE CANDIES",
- * from generic_name / categories, or a USDA-imported product_name). Prefer the specific name; fall back to the
- * generic text only when there is no product name. ALL-CAPS (and all-lowercase) names become title case, keeping
- * things like M&M's sensible. Name and brand only — never nutrition.
+ * from generic_name / categories, or a USDA-imported product_name). Prefer the specific name; when that is missing,
+ * use the brand before the generic description (v1.0.8). ALL-CAPS (and all-lowercase) names become title case,
+ * keeping things like M&M's sensible. Name and brand only — never nutrition.
  */
 
 const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
@@ -65,4 +65,35 @@ export function pickProductName(product: Record<string, unknown>): string {
 /** First brand from OFF's comma-separated `brands`, tidied the same way. */
 export function pickBrand(product: Record<string, unknown>): string {
   return tidyProductName(str(product.brands).split(',')[0] ?? '');
+}
+
+/**
+ * Fields to store for a scanned product (v1.0.8). `name` is the specific product name, or the brand when the
+ * only product text repeats the generic description. `description` is that generic text when it differs from
+ * the name ("Chocolate Candies" under a title of "M&M's"). Title-case cleanup still applies.
+ */
+export function scannedProductFields(product: Record<string, unknown>): {
+  name: string;
+  brand?: string;
+  description?: string;
+} {
+  const specific = [product.product_name_en, product.product_name, product.abbreviated_product_name].map(str).filter(Boolean);
+  const generic = [product.generic_name_en, product.generic_name].map(str).filter(Boolean);
+  const categories = str(product.categories)
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const genericKeys = new Set([...generic, ...categories].map(norm));
+  const brand = pickBrand(product);
+  const specificChosen = specific.find((s) => !genericKeys.has(norm(s)));
+  const genericTidy = generic[0] ? tidyProductName(generic[0]) : '';
+  const name = specificChosen
+    ? tidyProductName(specificChosen)
+    : brand || tidyProductName(specific[0] ?? genericTidy);
+  const description = genericTidy && norm(genericTidy) !== norm(name) ? genericTidy : '';
+  return {
+    name,
+    ...(brand ? { brand } : {}),
+    ...(description ? { description } : {}),
+  };
 }

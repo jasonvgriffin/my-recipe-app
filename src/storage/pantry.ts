@@ -16,7 +16,9 @@ export interface PantryWrite {
   barcode?: string;
   /** v1.0.7: optional plain notes (blank clears on replace). */
   notes?: string;
-  /** v1.0.7: keep `name` exactly as given (a reviewed barcode scan keeps the product name, e.g. "Peanut M&M's"). */
+  /** v1.0.8: generic scan description (e.g. "Chocolate Candies"). Blank clears on replace. */
+  description?: string;
+  /** v1.0.7: kept for callers. Typed and scanned names are stored trimmed, not lowercased (v1.0.8). */
   keepName?: boolean;
 }
 
@@ -152,7 +154,8 @@ async function writeItem(
     ...(existing ? slimPantryItem(existing) : {}),
     id: existing?.id ?? uuid(),
     // Keep a scanned item's display name when the form leaves it unchanged; typed names are normalized.
-    name: draft.keepName ? draft.name.trim() : existing && draft.name.trim() === existing.name ? existing.name : key,
+    // Typed names keep the user's casing. Incrementing an existing item does not rename it.
+    name: mode === 'add' && existing ? existing.name : draft.name.trim(),
     createdAt: existing?.createdAt ?? ts,
     updatedAt: ts,
     brand: draft.brand ?? existing?.brand,
@@ -175,6 +178,11 @@ async function writeItem(
   if (notes) next.notes = notes;
   else if (mode === 'replace') delete next.notes;
   else if (existing?.notes) next.notes = existing.notes;
+  if (draft.description !== undefined) {
+    const description = clean(draft.description);
+    if (description) next.description = description;
+    else delete next.description;
+  } else if (existing?.description) next.description = existing.description;
   return items.save(next, now);
 }
 

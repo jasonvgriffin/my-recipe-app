@@ -2,10 +2,11 @@
  * Meal plan, shopping list, and grocery run (spec #11, #12, #18, #23).
  * Each screen is exercised at compact (411dp) and expanded (900dp).
  */
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 import { useKeepAwake } from 'expo-keep-awake';
 
+import { GroceryRunView } from '@/components/grocery-run-view';
 import { featureGate, LocalFreeEntitlements, NoEntitlements } from '@/entitlements';
 import { addDays, formatMonthYear, formatShortDate, startOfWeek, toIsoDate } from '@/lib/dates';
 import { mealPlanStore } from '@/storage/meal-plan';
@@ -218,6 +219,32 @@ describe('grocery run (spec #18)', () => {
     renderRouter({ 'grocery-run': Grocery() }, { initialUrl: `/grocery-run?recipeId=${recipe.id}` });
     expect(await screen.findByText(/green beans/i)).toBeTruthy();
     expect(screen.getByTestId('grocery-layout-dual')).toBeTruthy();
+  });
+
+  it('opens notes without checking the item off; only the checkbox toggles', () => {
+    const onToggle = jest.fn();
+    const item = {
+      id: '1',
+      weekStart: '2026-10-05' as const,
+      text: "Peanut M&M's",
+      checked: false,
+      recipeIds: [],
+      quantity: '1',
+      notes: 'Party size',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      updatedAt: '2026-10-01T00:00:00.000Z',
+    };
+    render(<GroceryRunView items={[item]} canUndo={false} onToggle={onToggle} onUndo={() => undefined} />);
+    expect(screen.getByText('Qty: 1')).toBeTruthy();
+    expect(screen.queryByText('Party size')).toBeNull();
+    fireEvent.press(screen.getByText('(see notes)'));
+    expect(onToggle).not.toHaveBeenCalled();
+    expect(screen.getByText('Party size')).toBeTruthy();
+    fireEvent.press(screen.getAllByText("Peanut M&M's")[0]);
+    fireEvent.press(screen.getByText('Qty: 1'));
+    expect(onToggle).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByTestId('grocery-check-1'));
+    expect(onToggle).toHaveBeenCalledTimes(1);
   });
 });
 

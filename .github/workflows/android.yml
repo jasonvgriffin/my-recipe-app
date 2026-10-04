@@ -1,6 +1,8 @@
 name: Android APK
 
-# Every push / PR builds the APK and uploads it as a CI artifact (proves the build stays green).
+# Every push to main, every pull request, and every v* tag builds the APK and uploads it as a CI artifact.
+# A feature-branch PR matches only `pull_request` (push is limited to main and tags), and pull_request
+# is limited to opened/synchronize/reopened so closing or merging a PR does not build that head commit again.
 # A GitHub Release with the APK is published ONLY for:
 #   - a pushed tag matching v* (e.g. v1.0.0), or
 #   - a manual run (workflow_dispatch) with `publish: true` and a `tag` (e.g. v1.0.0).
@@ -13,6 +15,7 @@ on:
     branches: [main]
     tags: ['v*']
   pull_request:
+    types: [opened, synchronize, reopened]
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -26,7 +29,9 @@ on:
         required: false
 
 concurrency:
-  group: android-${{ github.ref }}
+  # One in-flight APK build per commit. A push and a pull_request that share a SHA queue on the same
+  # group instead of building twice in parallel. Tag releases are never cancelled.
+  group: android-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 permissions:

@@ -90,8 +90,13 @@ describe('shopping quantity + notes (screen)', () => {
     renderRouter({ index: Shopping() }, { initialUrl: '/' });
     const qty = await screen.findByTestId('manual-quantity');
     const notes = screen.getByTestId('manual-notes');
-    expect(qty.props.placeholder).toBe('Quantity (optional)');
-    expect(notes.props.placeholder).toBe('Notes (optional)');
+    expect(qty.props.placeholder).toBe('Quantity');
+    expect(notes.props.placeholder).toBe('Notes');
+    const { StyleSheet } = require('react-native');
+    const filled = buildColors('dark', 'green').primary;
+    for (const id of ['shopping-scan-button', 'build-list', 'add-manual']) {
+      expect(StyleSheet.flatten(screen.getByTestId(id).props.style).backgroundColor).toBe(filled);
+    }
     expect(JSON.stringify(screen.toJSON())).not.toMatch(/Generic is fine|e\.g\./);
     fireEvent.changeText(screen.getByTestId('manual-input'), 'Paper towels');
     fireEvent.changeText(qty, '2');
@@ -133,6 +138,10 @@ describe('pantry Notes (v1.0.7)', () => {
     fireEvent.press(await screen.findByTestId('pantry-add-button'));
     const notes = screen.getByTestId('pantry-notes-input');
     expect(notes.props.placeholder).toBe('Notes (optional)');
+    expect(notes.props.multiline).toBe(true);
+    expect(notes.props.scrollEnabled).toBe(true);
+    const { StyleSheet } = require('react-native');
+    expect(StyleSheet.flatten(notes.props.style).height).toBe(192);
     fireEvent.changeText(screen.getByTestId('pantry-name-input'), 'Rice');
     fireEvent.changeText(notes, 'Use the big bag first');
     await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
@@ -194,20 +203,30 @@ describe('accent colors (v1.0.7)', () => {
     expect(hsl('#C6D93F').h).toBeLessThan(70); // the old one leaned yellow
   });
 
-  it('the other eight are unchanged', () => {
-    const expected: Record<string, [string, string]> = {
-      blue: ['#64B5F6', '#1565C0'],
-      red: ['#FF4444', '#D32F2F'],
-      teal: ['#26BFB0', '#00796B'],
-      pink: ['#FF5CA8', '#AD1457'],
-      amber: ['#FFCA28', '#8A5300'],
-      indigo: ['#7C8CFF', '#3949AB'],
-      brown: ['#CD8E62', '#6D4C41'],
-      slate: ['#B0BEC5', '#455A64'],
+  it('light shades stay; dark blue, red and amber are the v1.0.8 colors', () => {
+    const light: Record<string, string> = {
+      blue: '#1565C0',
+      red: '#D32F2F',
+      teal: '#00796B',
+      pink: '#AD1457',
+      amber: '#8A5300',
+      indigo: '#3949AB',
+      brown: '#6D4C41',
+      slate: '#455A64',
     };
-    for (const [id, [dark, light]] of Object.entries(expected)) {
+    const dark: Record<string, string> = {
+      blue: '#248AE5',
+      red: '#E25955',
+      teal: '#26BFB0',
+      pink: '#FF5CA8',
+      amber: '#FFB300',
+      indigo: '#7C8CFF',
+      brown: '#CD8E62',
+      slate: '#B0BEC5',
+    };
+    for (const id of Object.keys(light)) {
       const a = ACCENTS.find((x) => x.id === id)!;
-      expect([id, a.dark.primary, a.light.primary]).toEqual([id, dark, light]);
+      expect([id, a.dark.primary, a.light.primary]).toEqual([id, dark[id], light[id]]);
     }
   });
 });

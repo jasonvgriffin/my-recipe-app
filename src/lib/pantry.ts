@@ -1,3 +1,4 @@
+import { formatQuantity } from '@/lib/ingredients';
 import { isInPantry } from '@/pantry/isInPantry';
 import type { PantryItem, Recipe } from '@/types/recipe';
 
@@ -27,6 +28,67 @@ export function filterSortPantry(
     return out.sort((a, b) => (a.expiresAt ?? '9999').localeCompare(b.expiresAt ?? '9999') || byName(a, b));
   }
   return out.sort(byName);
+}
+
+function fold(value: string): string {
+  return value.toLowerCase().replace(/[’‘]/g, "'");
+}
+
+/** True when `needle` appears in `haystack`, ignoring case and straight vs curly apostrophes. */
+function containsText(haystack: string, needle: string): boolean {
+  const n = fold(needle).trim();
+  return n.length > 0 && fold(haystack).includes(n);
+}
+
+/**
+ * Category-style labels Open Food Facts uses as a generic name ("Chocolate Candies"). A real product name
+ * ("Almond Flour", "Peanut M&M's") has a word outside this set, so it stays the card title.
+ */
+const GENERIC_LABEL_WORDS = new Set(
+  'chocolate chocolates candy candies sweet sweets snack snacks confection confectionery food foods product products bar bars drink drinks beverage beverages treat treats milk dark white'.split(
+    ' ',
+  ),
+);
+
+function isGenericLabel(name: string): boolean {
+  const words = fold(name)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  return words.length > 0 && words.every((word) => GENERIC_LABEL_WORDS.has(word));
+}
+
+function qtyLine(quantity: number | undefined, unit: string | undefined): string {
+  if (quantity === undefined) return unit ? `some ${unit}` : 'on hand';
+  const qty = formatQuantity(quantity);
+  return unit ? `${qty} ${unit}` : qty;
+}
+
+/**
+ * Pantry card copy (v1.0.8). The big title is the product the person bought (brand + product name, or the
+ * typed name). A generic description ("Chocolate Candies") and the quantity sit on the smaller line.
+ * Legacy scans stored the generic text as `name` and the brand separately: when a barcode item's name
+ * does not already contain its brand, the brand is the title and the stored name is the generic line.
+ * Manual items (no barcode) keep the typed name as the title.
+ */
+export function pantryCardText(
+  item: Pick<PantryItem, 'name' | 'quantity' | 'unit' | 'category' | 'brand' | 'barcode' | 'description'>,
+): { title: string; detail: string } {
+  const name = item.name.trim();
+  const brand = item.brand?.trim() ?? '';
+  const category = item.category?.trim() ?? '';
+  const qty = qtyLine(item.quantity, item.unit);
+  let title = name;
+  let generic = item.description?.trim() ?? '';
+  if (!generic && item.barcode && brand && !containsText(name, brand) && isGenericLabel(name)) {
+    title = brand;
+    generic = name;
+  } else if (generic && brand && !containsText(title, brand)) {
+    title = `${brand} ${title}`.trim();
+  }
+  const detail = generic
+    ? [generic, qty, category].filter(Boolean).join(' · ')
+    : [qty, containsText(title, brand) ? '' : brand, category].filter(Boolean).join(' · ');
+  return { title, detail };
 }
 
 /** How close `expiresAt` (YYYY-MM-DD) is to today. `soon` is within 3 days. */

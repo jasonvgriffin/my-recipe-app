@@ -9,7 +9,7 @@ import { createBarcodeLookup, withoutNutrition, type BarcodeItem } from './barco
 import { createPantryMatcher } from './match';
 
 export * from './barcodeLookup';
-export { pickBrand, pickProductName, tidyProductName } from './product-name';
+export { pickBrand, pickProductName, scannedProductFields, tidyProductName } from './product-name';
 export { isInPantry } from './isInPantry';
 export { createPantryMatcher, type PantryMatcher, type PantryMatcherDeps } from './match';
 

@@ -197,7 +197,7 @@ export function RecipeList() {
     <View style={styles.searchRow}>
       <TextInput
         style={styles.search}
-        placeholder="Search title, ingredients, notes, or tags"
+        placeholder="Search recipes"
         value={browse.keyword}
         onChangeText={(keyword) => setBrowse((b) => ({ ...b, keyword }))}
         autoCapitalize="none"
@@ -270,11 +270,11 @@ export function RecipeList() {
             selectedId={isTwoPane ? selectedId : null}
             onOpen={openRecipe}
             onChanged={() => void reload()}
+            accessory={addRecipeButton}
           />
           {recipes.length === 0 ? (
             <Text style={styles.hint}>No recipes yet. Tap “Add recipe” or the + button to create or import one.</Text>
           ) : null}
-          {addRecipeButton}
         </ScrollView>
       ) : (
         <FlatList
@@ -442,10 +442,10 @@ const useStyles = makeStyles((colors) => ({
   tags: { marginTop: 6, color: colors.primary, fontSize: 13 },
   addRecipe: {
     flexDirection: 'row',
-    alignSelf: 'flex-start',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    marginTop: 6,
+    width: '100%',
     backgroundColor: colors.primary,
     paddingHorizontal: 18,
     minHeight: 48,

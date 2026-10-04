@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { AppHeaderTitle, SectionLayout } from '@/components/app-header';
+import { SystemNavFrame } from '@/components/layout';
 import { AppThemeProvider, useColorSchemeResolved, useColors, useNavigationTheme } from '@/hooks/use-theme';
 import { configureStepTimerNotifications } from '@/notifications/step-timers';
 import { recipeStore } from '@/storage/recipes';
@@ -32,9 +33,11 @@ function ThemedRoot() {
     <ThemeProvider value={navigationTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack
-        screenLayout={({ route, children }) => (
-          <SectionLayout section={STACK_SECTIONS[route.name]}>{children}</SectionLayout>
-        )}
+        screenLayout={({ route, children }) => {
+          const body = <SectionLayout section={STACK_SECTIONS[route.name]}>{children}</SectionLayout>;
+          // The tab navigator owns its bar and the system inset. Every other screen ends above the nav bar.
+          return route.name === '(tabs)' ? body : <SystemNavFrame>{body}</SystemNavFrame>;
+        }}
         screenOptions={{
           headerStyle: { backgroundColor: colors.card },
           headerTintColor: colors.text,

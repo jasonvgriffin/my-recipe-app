@@ -34,7 +34,7 @@ function PlusTabButton({ onPress, rail }: { onPress: () => void; rail: boolean }
   const styles = useStyles();
   const colors = useColors();
   return (
-    <View style={styles.plusSlot}>
+    <View style={rail ? styles.plusSlotRail : styles.plusSlot} testID="tab-add-slot">
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Add"
@@ -78,7 +78,10 @@ export default function TabsLayout() {
             borderRightColor: colors.border,
             ...(useNavigationRail ? null : { height: TAB_BAR.height + insets.bottom, paddingTop: 6 }),
           },
-          tabBarLabelStyle: useNavigationRail ? undefined : { fontSize: TAB_BAR.label, fontWeight: '600' },
+          tabBarAllowFontScaling: false,
+          tabBarLabelStyle: useNavigationRail
+            ? undefined
+            : { fontSize: TAB_BAR.label, fontWeight: '600', paddingHorizontal: 0 },
           tabBarIconStyle: useNavigationRail ? undefined : { width: TAB_BAR.icon + 4, height: TAB_BAR.icon + 2 },
           // Forms (e.g. Pantry Save / Cancel / Remove) keep the whole screen above the keyboard.
           tabBarHideOnKeyboard: true,
@@ -108,6 +111,8 @@ export default function TabsLayout() {
           options={{
             title: 'Add',
             tabBarLabel: () => null,
+            // The + slot is only as wide as the button so Meal Plan and Shopping keep a full 13sp label (v1.0.8).
+            tabBarItemStyle: useNavigationRail ? undefined : { flex: 0, width: TAB_BAR.plus },
             tabBarButton: () => <PlusTabButton rail={useNavigationRail} onPress={() => setMenuOpen(true)} />,
           }}
           listeners={{ tabPress: (e) => e.preventDefault() }}
@@ -143,7 +148,8 @@ export default function TabsLayout() {
 const PLUS_ICON = TAB_BAR.plusIcon;
 
 const useStyles = makeStyles((colors) => ({
-  plusSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 72 },
+  plusSlot: { width: TAB_BAR.plus, alignItems: 'center', justifyContent: 'center' },
+  plusSlotRail: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   plus: {
     width: 52,
     height: 52,

@@ -74,7 +74,8 @@ export default function SettingsScreen() {
               onValueChange={(v) => {
                 void settingsStore.update({ features: { [f.key]: v } });
               }}
-              trackColor={{ true: colors.primary, false: colors.border }}
+              trackColor={{ true: colors.switchTrack, false: colors.border }}
+              thumbColor={settings.features[f.key] ? colors.switchThumb : colors.card}
             />
           </View>
         ))}
@@ -116,7 +117,8 @@ export default function SettingsScreen() {
               onValueChange={(v) => {
                 void settingsStore.update({ cookingModeKeepAwake: v });
               }}
-              trackColor={{ true: colors.primary, false: colors.border }}
+              trackColor={{ true: colors.switchTrack, false: colors.border }}
+              thumbColor={settings.cookingModeKeepAwake ? colors.switchThumb : colors.card}
             />
           </View>
         ) : null}
@@ -191,6 +193,7 @@ function AppearanceSection() {
                 {selected ? <Ionicons name="checkmark" size={20} color={a[scheme].primaryText} /> : null}
               </View>
               <Text style={styles.accentLabel}>{a.label}</Text>
+              {a.id === 'green' ? <Text style={styles.accentHint}>Default</Text> : null}
             </Pressable>
           );
         })}
@@ -256,6 +259,7 @@ function AppIconPicker() {
               <Text style={styles.accentLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
                 {icon.label}
               </Text>
+              {icon.id === 'default' ? <Text style={styles.accentHint}>Default</Text> : null}
             </Pressable>
           );
         })}
@@ -318,4 +322,5 @@ const useStyles = makeStyles((colors) => ({
   iconTile: { width: 100 },
   iconPreview: { width: 48, height: 48, borderRadius: 24 },
   accentLabel: { color: colors.text, fontSize: 13, fontWeight: '600' },
+  accentHint: { color: colors.muted, fontSize: 11, marginTop: -2 },
 }));

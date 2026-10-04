@@ -58,7 +58,30 @@ describe('pickProductName (Open Food Facts)', () => {
         nutriments: { 'energy-kcal_100g': 500 },
       },
     });
-    expect(product).toEqual({ barcode: '0040000004325', name: "Peanut M&M's", brand: "M&M's" });
+    expect(product).toEqual({
+      barcode: '0040000004325',
+      name: "Peanut M&M's",
+      brand: "M&M's",
+      description: 'Chocolate Candies',
+    });
+  });
+
+  it('uses the brand as the item name when the product text is only the generic description', () => {
+    expect(
+      parseOpenFoodFacts('0040000004325', {
+        status: 1,
+        product: {
+          product_name: 'CHOCOLATE CANDIES',
+          generic_name: 'CHOCOLATE CANDIES',
+          brands: "M&M'S",
+        },
+      }),
+    ).toEqual({
+      barcode: '0040000004325',
+      name: "M&M's",
+      brand: "M&M's",
+      description: 'Chocolate Candies',
+    });
   });
 });
 

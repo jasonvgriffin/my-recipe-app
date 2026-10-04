@@ -1,4 +1,5 @@
-import { Pressable, SectionList, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, SectionList, Text, View } from 'react-native';
 
 import { useBottomInset } from '@/components/layout';
 import { groupByAisle, shoppingProgress } from '@/lib/shopping';
@@ -19,6 +20,7 @@ export interface GroceryRunViewProps {
 export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunViewProps) {
   const bottomInset = useBottomInset();
   const styles = useStyles();
+  const [notesFor, setNotesFor] = useState<ShoppingListItem | null>(null);
   const progress = shoppingProgress(items);
   const percent = Math.round(progress.fraction * 100);
   const sections = groupByAisle(items).map((group) => ({
@@ -55,6 +57,7 @@ export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunV
   );
 
   return (
+    <>
     <SectionList
       style={styles.list}
       contentContainerStyle={[styles.content, { paddingBottom: 48 + bottomInset }]}
@@ -70,24 +73,52 @@ export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunV
         </Text>
       )}
       renderItem={({ item }) => (
-        <Pressable
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: item.checked }}
-          accessibilityLabel={item.text}
-          onPress={() => onToggle(item)}
-          style={styles.row}
-          testID={`grocery-item-${item.id}`}>
-          <View style={[styles.box, item.checked && styles.boxOn]}>
-            {item.checked ? <Text style={styles.mark}>✓</Text> : null}
-          </View>
+        <View style={styles.row} testID={`grocery-item-${item.id}`}>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: item.checked }}
+            accessibilityLabel={item.text}
+            onPress={() => onToggle(item)}
+            hitSlop={8}
+            style={styles.checkHit}
+            testID={`grocery-check-${item.id}`}>
+            <View style={[styles.box, item.checked && styles.boxOn]}>
+              {item.checked ? <Text style={styles.mark}>✓</Text> : null}
+            </View>
+          </Pressable>
           <View style={styles.itemBody}>
             <Text style={[styles.itemText, item.checked && styles.itemChecked]}>{item.text}</Text>
             {item.quantity ? <Text style={styles.itemDetail}>Qty: {item.quantity}</Text> : null}
-            {item.notes ? <Text style={styles.itemDetail}>{item.notes}</Text> : null}
+            {item.notes ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`See notes for ${item.text}`}
+                onPress={() => setNotesFor(item)}
+                hitSlop={6}
+                testID={`grocery-notes-${item.id}`}>
+                <Text style={styles.seeNotes}>(see notes)</Text>
+              </Pressable>
+            ) : null}
           </View>
-        </Pressable>
+        </View>
       )}
     />
+      <Modal visible={notesFor != null} transparent animationType="fade" onRequestClose={() => setNotesFor(null)}>
+        <Pressable style={styles.backdrop} accessibilityLabel="Close notes" onPress={() => setNotesFor(null)}>
+          <Pressable style={styles.notesCard} onPress={() => undefined} testID="grocery-notes-modal">
+            <Text style={styles.notesTitle}>{notesFor?.text}</Text>
+            <Text style={styles.notesBody}>{notesFor?.notes}</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setNotesFor(null)}
+              style={styles.notesClose}
+              testID="grocery-notes-close">
+              <Text style={styles.notesCloseText}>Close</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -144,6 +175,7 @@ const useStyles = makeStyles((colors) => ({
     paddingVertical: 12,
     marginBottom: 8,
   },
+  checkHit: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   box: {
     width: 32,
     height: 32,
@@ -158,6 +190,34 @@ const useStyles = makeStyles((colors) => ({
   itemBody: { flex: 1 },
   itemText: { color: colors.text, fontSize: 20, fontWeight: '600' },
   itemDetail: { color: colors.muted, fontSize: 15, marginTop: 2 },
+  seeNotes: { color: colors.primary, fontSize: 14, fontWeight: '600', marginTop: 2 },
+  backdrop: {
+    flex: 1,
+    backgroundColor: colors.backdrop,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  notesCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 20,
+    gap: 12,
+  },
+  notesTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  notesBody: { color: colors.text, fontSize: 16, lineHeight: 22 },
+  notesClose: {
+    alignSelf: 'flex-end',
+    minHeight: 44,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesCloseText: { color: colors.primaryText, fontWeight: '700' },
   itemChecked: { color: colors.muted, textDecorationLine: 'line-through' },
   empty: { color: colors.muted, textAlign: 'center', marginTop: 24 },
   summary: { padding: 16, gap: 8 },

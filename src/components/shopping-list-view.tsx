@@ -10,8 +10,8 @@ import type { IsoDate, ShoppingList, ShoppingListItem } from '@/types/meal-plan'
 /** Placeholder of the add-item box (v1.0.5, Jason's exact wording). */
 export const SHOPPING_ADD_PLACEHOLDER = 'Type here & press Add';
 /** v1.0.7 optional fields (plain labels, no example text). */
-export const SHOPPING_QTY_PLACEHOLDER = 'Quantity (optional)';
-export const SHOPPING_NOTES_PLACEHOLDER = 'Notes (optional)';
+export const SHOPPING_QTY_PLACEHOLDER = 'Quantity';
+export const SHOPPING_NOTES_PLACEHOLDER = 'Notes';
 
 export interface ShoppingItemEdit {
   text: string;
@@ -41,8 +41,8 @@ export interface ShoppingListViewProps {
   onClearChecked: () => void;
   onGroceryRun: () => void;
   /**
-   * Barcode scan entry point (shown when barcodeScan is visible): a full-width outlined “Scan Item” button, the
-   * first one under “or” (below the type-and-Add row, v1.0.5). The scanner adds the product name.
+   * Barcode scan entry point (shown when barcodeScan is visible): a full-width filled “Scan Item” button, the
+   * first one under “or” (below the type-and-Add row). The scanner adds the product name.
    */
   onScan?: () => void;
   /** Product name just added by a scan, confirmed at the top. */
@@ -140,7 +140,7 @@ export function ShoppingListView({
           placeholder={SHOPPING_QTY_PLACEHOLDER}
           placeholderTextColor={colors.placeholder}
           style={[styles.input, styles.qtyInput]}
-          accessibilityLabel="Quantity (optional)"
+          accessibilityLabel="Quantity"
           testID="manual-quantity"
           returnKeyType="next"
         />
@@ -150,7 +150,7 @@ export function ShoppingListView({
           placeholder={SHOPPING_NOTES_PLACEHOLDER}
           placeholderTextColor={colors.placeholder}
           style={styles.input}
-          accessibilityLabel="Notes (optional)"
+          accessibilityLabel="Notes"
           testID="manual-notes"
           onSubmitEditing={onAddManual}
           returnKeyType="done"
@@ -170,9 +170,9 @@ export function ShoppingListView({
           accessibilityLabel="Scan Item"
           accessibilityHint="Scan a barcode to add the product to this list"
           onPress={onScan}
-          style={styles.secondary}
+          style={styles.primary}
           testID="shopping-scan-button">
-          <Text style={styles.secondaryText}>Scan Item</Text>
+          <Text style={styles.primaryText}>Scan Item</Text>
         </Pressable>
       ) : null}
       <Pressable
@@ -181,9 +181,9 @@ export function ShoppingListView({
           list ? 'Rebuilds this week’s list from your meal plan, keeping items you added' : 'Builds this week’s list from your meal plan'
         }
         onPress={onBuild}
-        style={styles.secondary}
+        style={styles.primary}
         testID="build-list">
-        <Text style={styles.secondaryText}>Build from Meal Plan</Text>
+        <Text style={styles.primaryText}>Build from Meal Plan</Text>
       </Pressable>
       {showGroceryRun ? (
         <Pressable accessibilityRole="button" onPress={onGroceryRun} style={styles.primary} testID="grocery-run-button">
@@ -223,7 +223,7 @@ export function ShoppingListView({
                 placeholder={SHOPPING_QTY_PLACEHOLDER}
                 placeholderTextColor={colors.placeholder}
                 style={styles.input}
-                accessibilityLabel="Quantity (optional)"
+                accessibilityLabel="Quantity"
                 testID="shop-edit-quantity"
               />
               <TextInput
@@ -232,7 +232,7 @@ export function ShoppingListView({
                 placeholder={SHOPPING_NOTES_PLACEHOLDER}
                 placeholderTextColor={colors.placeholder}
                 style={styles.input}
-                accessibilityLabel="Notes (optional)"
+                accessibilityLabel="Notes"
                 testID="shop-edit-notes"
                 multiline
               />
@@ -304,15 +304,6 @@ const useStyles = makeStyles((colors) => ({
     paddingHorizontal: 12,
   },
   primaryText: { color: colors.primaryText, fontWeight: '700' },
-  secondary: {
-    minHeight: 44,
-    marginTop: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   secondaryText: { color: colors.primary, fontWeight: '700' },
   or: { color: colors.muted, textAlign: 'center', marginTop: 8 },
   manualRow: { flexDirection: 'row', gap: 8 },
@@ -332,13 +323,11 @@ const useStyles = makeStyles((colors) => ({
     minHeight: 44,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addBtnText: { color: colors.text, fontWeight: '700' },
+  addBtnText: { color: colors.primaryText, fontWeight: '700' },
   clear: { minHeight: 44, marginTop: 8, alignItems: 'center', justifyContent: 'center' },
   clearText: { color: colors.danger, fontWeight: '700' },
   list: { paddingVertical: 12, gap: 6 },

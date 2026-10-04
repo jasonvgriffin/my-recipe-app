@@ -221,8 +221,8 @@ export function isCategory(value: unknown): value is Category {
 /** Item on hand in the pantry (spec #21). */
 export interface PantryItem extends SyncMeta {
   /**
-   * Item title. Typed items are stored normalized ("almond flour"); scanned items keep the product name as
-   * scanned. Matching always compares `ingredientKey(name)`.
+   * Item title. Typed items keep the casing the user entered (v1.0.8). Scanned items keep the product or
+   * brand name. Matching always compares `ingredientKey(name)`.
    */
   name: string;
   /** Optional — unknown quantity is left unset (never stored as 0 to mean "some"). */
@@ -236,6 +236,11 @@ export interface PantryItem extends SyncMeta {
   brand?: string;
   /** EAN/UPC of the product when added by barcode scan (spec #27) — lets a re-scan increment this item. */
   barcode?: string;
+  /**
+   * Generic description from a barcode scan (e.g. "Chocolate Candies") when `name` is the specific product
+   * or brand (v1.0.8). Absent on older items and on typed items.
+   */
+  description?: string;
   /** v1.0.7: optional plain notes. Absent on older items. */
   notes?: string;
 }

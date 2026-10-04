@@ -36,7 +36,7 @@ describe('pantry screen (spec #21)', () => {
     fireEvent.changeText(screen.getByTestId('pantry-expiry-input'), '2020-01-01');
     await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
 
-    expect(await screen.findByText('chicken breast')).toBeTruthy();
+    expect(await screen.findByText('Chicken breast')).toBeTruthy();
     expect(screen.getByText(/2 lb · Perdue · Meat/)).toBeTruthy();
     expect(screen.getByText(/Expired 2020-01-01/)).toBeTruthy();
 
@@ -89,15 +89,15 @@ describe('pantry list filter and sort (spec #21)', () => {
     await pantryStore.saveDetails({ name: 'Apples', category: 'Produce', expiresAt: '2030-01-02' });
     await pantryStore.saveDetails({ name: 'Cheese', category: 'Dairy' });
     renderPantry();
-    expect(await screen.findByText('yogurt')).toBeTruthy();
+    expect(await screen.findByText('Yogurt')).toBeTruthy();
     fireEvent.press(screen.getByTestId('pantry-filter-Dairy'));
-    expect(screen.queryByText('apples')).toBeNull();
-    expect(screen.getByText('cheese')).toBeTruthy();
+    expect(screen.queryByText('Apples')).toBeNull();
+    expect(screen.getByText('Cheese')).toBeTruthy();
     fireEvent.press(screen.getByTestId('pantry-filter-all'));
     fireEvent.press(screen.getByTestId('pantry-sort'));
     expect(screen.getByText('Sort: expiring first')).toBeTruthy();
-    const names = screen.getAllByText(/^(apples|yogurt|cheese)$/).map((el) => el.props.children);
-    expect(names).toEqual(['apples', 'yogurt', 'cheese']);
+    const names = screen.getAllByText(/^(Apples|Yogurt|Cheese)$/).map((el) => el.props.children);
+    expect(names).toEqual(['Apples', 'Yogurt', 'Cheese']);
   });
 });
 

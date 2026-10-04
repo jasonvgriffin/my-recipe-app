@@ -228,3 +228,15 @@ follow the Recipes-are-the-core rule above.
   `recipes.category_ids`, Backup & restore (ids remapped per category) and imports (structured: every named category;
   Import PDF: the categories picked on its screen) all carry several ids.
 - **Import PDF** (#31), see the table.
+
+## v1.0.8 UI changes (Jason, Oct 4 2026)
+
+Polish on the existing screens (no new features, no nutrition, no sync, no MCP). Version `1.0.8`, Android `versionCode` 9.
+
+- **Bottom bar:** “Meal Plan” and “Shopping” stay those names and draw in full at 13sp on a ~411dp phone. The center + slot is only as wide as the button (`src/app/(tabs)/_layout.tsx`).
+- **Recipes:** the search hint is “Search recipes” (one line). “New category” is a filled pill to the left of “Add recipe”.
+- **Bottom clearance:** `SystemNavFrame` ends every stack screen above the Android navigation bar. Tab lists pad by the tab-bar height plus the safe-area inset (`useBottomInset` in `src/components/layout.tsx`) so the last row can scroll clear of the bar.
+- **Filled buttons:** Shopping List “Scan Item”, “Build from Meal Plan” and Add match “View Shopping List”. Pantry “Scan barcode” is a full-width filled button matching “Add item”. Placeholders are “Quantity” and “Notes”.
+- **Appearance:** dark-mode Red, Blue and Amber are darker (`#E25955`, `#248AE5`, `#FFB300`); light mode is unchanged. The stored accent id stays `amber`. With the Red accent, trash icons use a neutral color. Switches use a green track and a matching green knob whatever the accent. “Default” sits under Green and under the Classic app icon. The banner title is larger and uses the accent; page headings are slightly smaller. The Cookbook icon’s cream plate is darker so it reads on a light background.
+- **Pantry:** typed names keep the user’s casing. Cards title the product or brand (“M&M’s”); the generic description (“Chocolate Candies”) and the quantity are on the line below. New scans fill the name from the product or brand first. The Notes box is about three times taller and scrolls inside itself.
+- **Shopping List checklist:** an item with notes shows a tappable “(see notes)” that opens the notes. Quantity still shows under the name. Only the checkbox checks an item off.
