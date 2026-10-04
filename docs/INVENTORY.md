@@ -91,7 +91,7 @@ App icon (v1.0.5: yellow bowl `#FFD60A`): sources `assets/icons/*.svg`, PNGs `as
 | Sync | `src/sync`, `src/household` | |
 | UI primitives | `Chip` (`src/components/chip.tsx`), `CategoryChips`, `TagEditor`, `StarRating`, `TwoPaneLayout` / `MaxWidthContainer` | Do not style ad-hoc chips |
 | Theme | `src/lib/theme.ts` (palettes), `src/hooks/use-theme.tsx` (`makeStyles`, `useColors`) | No module-level `colors`; styles are per palette |
-| Bottom safe area | `useBottomInset()` and `SystemNavFrame` in `src/components/layout.tsx` (+ `BottomBarCoversInsetProvider` in `(tabs)/_layout.tsx`). v1.0.8: the root stack wraps every non-tab screen in `SystemNavFrame` (viewport ends above the system nav bar; `useBottomInset` is then 0 so scroll padding is not doubled). Inside the bottom tab bar, `useBottomInset` is the tab-bar height plus the safe-area bottom inset so lists can scroll clear of the bar | Add `useBottomInset()` to the bottom padding of every scrolling screen / floating button |
+| Bottom safe area | `useBottomInset()` and `SystemNavFrame` in `src/components/layout.tsx` (+ `BottomBarCoversInsetProvider` in `(tabs)/_layout.tsx`). v1.0.8: the root stack wraps every non-tab screen in `SystemNavFrame` (viewport ends above the system nav bar; `useBottomInset` is then 0 so scroll padding is not doubled). The bottom tab bar is in normal flow, so inside it `useBottomInset` is `TAB_PLUS_CLEARANCE` (32dp) to clear the raised +, not the bar height | Add `useBottomInset()` to the bottom padding of every scrolling screen / floating button |
 | Durations in words | `formatDurationWords` (`src/lib/timers.ts`) | “20 min”, for print; `formatDuration` is the clock format |
 | Sample data | None in the app (v1.0.1). `src/storage/legacy-samples.ts` only identifies untouched v1.0.0 samples to delete. Test fixtures: `test-helpers/sample-recipes.ts` (`SAMPLE_RECIPES`, `addSampleRecipes`, `asLegacySample`) | |
 
@@ -109,7 +109,7 @@ App icon (v1.0.5: yellow bowl `#FFD60A`): sources `assets/icons/*.svg`, PNGs `as
 | Version 1.0.8, Android `versionCode` 9 | `app.json`, `package.json` |
 | Tab labels at 13sp: the center + slot is only the button wide | `src/app/(tabs)/_layout.tsx` (`tabBarItemStyle`, `tabBarAllowFontScaling: false`) |
 | Search hint “Search recipes” | `src/components/recipe-list.tsx` |
-| Shared bottom clearance (tab bar + system nav) | `useBottomInset` / `SystemNavFrame` in `src/components/layout.tsx`, root `screenLayout` in `src/app/_layout.tsx` |
+| Shared bottom clearance (stack nav frame; tab + clearance 32dp) | `useBottomInset` / `TAB_PLUS_CLEARANCE` / `SystemNavFrame` in `src/components/layout.tsx`, root `screenLayout` in `src/app/_layout.tsx` |
 | Filled accent buttons (Scan Item, Build from Meal Plan, Add, Scan barcode) and New category pill beside Add recipe | `src/components/shopping-list-view.tsx`, `src/app/(tabs)/pantry.tsx`, `src/components/recipe-categories.tsx` |
 | Shopping placeholders “Quantity” and “Notes” | `SHOPPING_QTY_PLACEHOLDER` / `SHOPPING_NOTES_PLACEHOLDER` |
 | Dark-mode Red `#E25955`, Blue `#248AE5`, Amber `#FFB300` (light shades unchanged; id stays `amber`) | `ACCENTS` in `src/lib/theme.ts` |
@@ -118,7 +118,7 @@ App icon (v1.0.5: yellow bowl `#FFD60A`): sources `assets/icons/*.svg`, PNGs `as
 | Cookbook icon cream plate darkened for light backgrounds | `assets/app-icons/icons.json` (`cream` background), regenerated `assets/app-icons/cream/` |
 | Pantry names keep typed casing; cards title the product/brand and put the generic description on the small line; Notes field is 3× taller and scrolls | `src/storage/pantry.ts`, `pantryCardText` in `src/lib/pantry.ts`, `src/app/(tabs)/pantry.tsx`, `PantryItem.description` |
 | Barcode scans name the product or brand first | `scannedProductFields` in `src/pantry/product-name.ts`, `parseOpenFoodFacts` |
-| Checklist “(see notes)” opens notes; only the checkbox toggles | `src/components/grocery-run-view.tsx` |
+| Checklist and shopping list “(see notes)” open one notes sheet; only the checkbox toggles | `ItemNotesSheet` / `SeeNotesLink` in `src/components/grocery-run-view.tsx`, used by `src/components/shopping-list-view.tsx` |
 | One APK build per PR commit (pull_request opened/synchronize/reopened; push is main and tags) | `.github/workflows/android.yml` |
 
 ## v1.0.7 additions

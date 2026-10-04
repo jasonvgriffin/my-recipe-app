@@ -74,8 +74,8 @@ export default function SettingsScreen() {
               onValueChange={(v) => {
                 void settingsStore.update({ features: { [f.key]: v } });
               }}
-              trackColor={{ true: colors.switchTrack, false: colors.border }}
-              thumbColor={settings.features[f.key] ? colors.switchThumb : colors.card}
+              trackColor={{ true: colors.switchTrack, false: colors.placeholder }}
+              thumbColor={settings.features[f.key] ? colors.switchThumb : colors.muted}
             />
           </View>
         ))}
@@ -117,8 +117,8 @@ export default function SettingsScreen() {
               onValueChange={(v) => {
                 void settingsStore.update({ cookingModeKeepAwake: v });
               }}
-              trackColor={{ true: colors.switchTrack, false: colors.border }}
-              thumbColor={settings.cookingModeKeepAwake ? colors.switchThumb : colors.card}
+              trackColor={{ true: colors.switchTrack, false: colors.placeholder }}
+              thumbColor={settings.cookingModeKeepAwake ? colors.switchThumb : colors.muted}
             />
           </View>
         ) : null}

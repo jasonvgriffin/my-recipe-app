@@ -31,9 +31,10 @@ Full rule: top of docs/SPEC.md.
   (`src/hooks/use-theme.tsx`, `AppThemeProvider` in `src/app/_layout.tsx`). Never hard-code colors; the test fails
   on hex/rgba literals outside `src/lib/theme.ts` (the printable PDF in `src/lib/recipe-pdf.ts` is exempt: always
   black on white). Inputs use `colors.input` + `placeholderTextColor={colors.placeholder}`.
-- Edge-to-edge: scrolling stack screens add `useBottomInset()` (`src/components/layout.tsx`) to their bottom padding
-  so the end of the content clears the Android navigation bar; bottom-tab screens get 0 (the tab bar already
-  clears it), the nav rail (expanded) gets the inset.
+- Edge-to-edge: stack screens sit in `SystemNavFrame`, which pads the viewport by the safe-area bottom inset
+  (so `useBottomInset()` is 0 there and padding is not doubled). Bottom-tab scenes already end above the in-flow
+  tab bar; `useBottomInset()` there is `TAB_PLUS_CLEARANCE` (32dp) so content clears the raised +. The nav rail
+  (expanded) gets the safe-area inset.
 
 ## 2. Foldables & large screens (spec #23)
 

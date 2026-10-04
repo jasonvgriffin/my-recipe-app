@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 
+import { ItemNotesSheet, SeeNotesLink } from '@/components/grocery-run-view';
 import { useBottomInset } from '@/components/layout';
 import { formatShortDate } from '@/lib/dates';
 import { makeStyles, useColors } from '@/hooks/use-theme';
@@ -77,6 +78,7 @@ export function ShoppingListView({
   const colors = useColors();
   const checked = list?.items.some((i) => i.checked) ?? false;
   const [editing, setEditing] = useState<{ id: string } & ShoppingItemEdit | null>(null);
+  const [notesFor, setNotesFor] = useState<ShoppingListItem | null>(null);
 
   function startEdit(item: ShoppingListItem) {
     setEditing({ id: item.id, text: item.text, quantity: item.quantity ?? '', notes: item.notes ?? '' });
@@ -88,8 +90,8 @@ export function ShoppingListView({
     onEditItem(id, edit);
     setEditing(null);
   }
-  return (
-    <View style={styles.fill}>
+  const header = (
+    <>
       <View style={styles.nav}>
         <Pressable
           accessibilityRole="button"
@@ -195,15 +197,28 @@ export function ShoppingListView({
           <Text style={styles.clearText}>Clear checked</Text>
         </Pressable>
       ) : null}
-      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: 12 + bottomInset }]} keyboardShouldPersistTaps="handled">
-        {(list?.items.length ?? 0) === 0 ? (
+    </>
+  );
+
+  return (
+    <View style={styles.fill}>
+      <FlatList
+        style={styles.scroller}
+        data={list?.items ?? []}
+        keyExtractor={(item) => item.id}
+        extraData={editing?.id ?? notesFor?.id}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[styles.list, { paddingBottom: 12 + bottomInset }]}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
           <Text style={styles.empty}>
             {list ? 'No ingredients — plan some recipes for this week first.' : 'No list yet for this week.'}
           </Text>
-        ) : null}
-        {list?.items.map((item) =>
+        }
+        testID="shopping-list"
+        renderItem={({ item }) =>
           editing?.id === item.id ? (
-            <View key={item.id} style={[styles.item, styles.editBox]} testID={`shop-edit-${item.id}`}>
+            <View style={[styles.item, styles.editBox]} testID={`shop-edit-${item.id}`}>
               {item.recipeIds.length === 0 ? (
                 <TextInput
                   value={editing.text}
@@ -246,29 +261,33 @@ export function ShoppingListView({
               </View>
             </View>
           ) : (
-            <View key={item.id} style={styles.item}>
+            <View style={styles.item}>
               <Pressable
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: item.checked }}
+                accessibilityLabel={item.text}
                 onPress={() => onToggle(item.id)}
-                style={styles.itemToggle}
+                hitSlop={8}
+                style={styles.checkHit}
                 testID={`shop-item-${item.id}`}>
                 <Text style={styles.check}>{item.checked ? '☑' : '☐'}</Text>
-                <View style={styles.itemBody}>
-                  <Text style={[styles.itemText, item.checked && styles.checked]}>{item.text}</Text>
-                  {item.quantity ? (
-                    <Text style={styles.detail} testID={`shop-item-qty-${item.id}`}>
-                      Qty: {item.quantity}
-                    </Text>
-                  ) : null}
-                  {item.notes ? (
-                    <Text style={styles.detail} testID={`shop-item-notes-${item.id}`}>
-                      {item.notes}
-                    </Text>
-                  ) : null}
-                  {item.recipeIds.length === 0 ? <Text style={styles.manual}>Added by you</Text> : null}
-                </View>
               </Pressable>
+              <View style={styles.itemBody}>
+                <Text style={[styles.itemText, item.checked && styles.checked]}>{item.text}</Text>
+                {item.quantity ? (
+                  <Text style={styles.detail} testID={`shop-item-qty-${item.id}`}>
+                    Qty: {item.quantity}
+                  </Text>
+                ) : null}
+                {item.notes ? (
+                  <SeeNotesLink
+                    label={`See notes for ${item.text}`}
+                    onPress={() => setNotesFor(item)}
+                    testID={`shop-item-notes-${item.id}`}
+                  />
+                ) : null}
+                {item.recipeIds.length === 0 ? <Text style={styles.manual}>Added by you</Text> : null}
+              </View>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Edit ${item.text}`}
@@ -278,9 +297,10 @@ export function ShoppingListView({
                 <Ionicons name="create-outline" size={22} color={colors.primary} />
               </Pressable>
             </View>
-          ),
-        )}
-      </ScrollView>
+          )
+        }
+      />
+      <ItemNotesSheet item={notesFor} onClose={() => setNotesFor(null)} />
     </View>
   );
 }
@@ -288,6 +308,7 @@ export function ShoppingListView({
 const useStyles = makeStyles((colors) => ({
   added: { color: colors.primary, fontWeight: '700', fontSize: 16, marginTop: 8 },
   fill: { flex: 1, padding: 12 },
+  scroller: { flex: 1 },
   nav: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   navBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   navText: { color: colors.primary, fontSize: 28, fontWeight: '600' },
@@ -343,7 +364,7 @@ const useStyles = makeStyles((colors) => ({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  itemToggle: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  checkHit: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   editBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   editBox: { flexDirection: 'column', alignItems: 'stretch', gap: 8 },
   editActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },

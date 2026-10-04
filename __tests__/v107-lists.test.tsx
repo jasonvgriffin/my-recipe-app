@@ -24,6 +24,19 @@ function memoryStore(seed: Record<string, unknown> = {}): KeyValueStore {
   return { getItem: async (k) => data.get(k) ?? null, setItem: async (k, v) => void data.set(k, v), removeItem: async (k) => void data.delete(k) };
 }
 
+/** Visible strings only. FlatList's test tree has circular refs, so JSON.stringify(screen.toJSON()) throws. */
+function plainVisibleText(node: unknown, seen = new WeakSet<object>()): string {
+  if (node == null || typeof node === 'boolean') return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (typeof node !== 'object') return '';
+  if (seen.has(node)) return '';
+  seen.add(node);
+  if (Array.isArray(node)) return node.map((child) => plainVisibleText(child, seen)).join(' ');
+  const el = node as { children?: unknown; props?: { placeholder?: unknown; accessibilityLabel?: unknown; value?: unknown } };
+  const bits = [el.props?.placeholder, el.props?.accessibilityLabel, el.props?.value, plainVisibleText(el.children, seen)];
+  return bits.filter((bit) => bit != null && bit !== '').join(' ');
+}
+
 const NOW = new Date('2026-10-04T12:00:00Z');
 const WEEK = toIsoDate(startOfWeek(new Date()));
 
@@ -97,7 +110,7 @@ describe('shopping quantity + notes (screen)', () => {
     for (const id of ['shopping-scan-button', 'build-list', 'add-manual']) {
       expect(StyleSheet.flatten(screen.getByTestId(id).props.style).backgroundColor).toBe(filled);
     }
-    expect(JSON.stringify(screen.toJSON())).not.toMatch(/Generic is fine|e\.g\./);
+    expect(plainVisibleText(screen.toJSON())).not.toMatch(/Generic is fine|e\.g\./);
     fireEvent.changeText(screen.getByTestId('manual-input'), 'Paper towels');
     fireEvent.changeText(qty, '2');
     fireEvent.changeText(notes, 'Big pack');
@@ -105,7 +118,8 @@ describe('shopping quantity + notes (screen)', () => {
     const [item] = (await mealPlanStore.getShoppingList(WEEK))!.items;
     expect(item).toMatchObject({ text: 'Paper towels', quantity: '2', notes: 'Big pack' });
     expect(await screen.findByTestId(`shop-item-qty-${item.id}`)).toHaveTextContent('Qty: 2');
-    expect(screen.getByTestId(`shop-item-notes-${item.id}`)).toHaveTextContent('Big pack');
+    expect(screen.getByTestId(`shop-item-notes-${item.id}`)).toHaveTextContent('(see notes)');
+    expect(screen.queryByText('Big pack')).toBeNull();
     expect(screen.getByTestId('manual-quantity').props.value).toBe('');
 
     await act(async () => fireEvent.press(screen.getByTestId(`shop-item-edit-${item.id}`)));

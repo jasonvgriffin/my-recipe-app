@@ -1,13 +1,13 @@
 /**
  * v1.0.8: stack screens pad their frame by the safe-area bottom inset (`SystemNavFrame`) so mid-screen controls
- * clear the Android navigation bar. Tab screens pad scroll content by the tab-bar height plus that inset
- * (`useBottomInset`) so the last row can scroll clear of the bar.
+ * clear the Android navigation bar. The bottom tab bar is in normal flow, so tab scenes already end above it.
+ * `useBottomInset` inside tabs is only `TAB_PLUS_CLEARANCE` (~32dp) so content clears the raised center +.
  */
 import { render, screen } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 import { StyleSheet, Text } from 'react-native';
 
-import { BottomBarCoversInsetProvider, TAB_BAR, useBottomInset } from '@/components/layout';
+import { BottomBarCoversInsetProvider, TAB_PLUS_CLEARANCE, useBottomInset } from '@/components/layout';
 
 const NAV_BAR = 48;
 
@@ -60,7 +60,7 @@ describe('useBottomInset', () => {
     expect(screen.getByTestId('probe')).toHaveTextContent(String(NAV_BAR));
   });
 
-  it('includes the tab bar height inside bottom tabs, and is 0 without a provider', () => {
+  it('is a small clearance for the raised + inside bottom tabs, and is 0 without a provider', () => {
     render(
       <SafeAreaProvider>
         <BottomBarCoversInsetProvider value>
@@ -68,7 +68,8 @@ describe('useBottomInset', () => {
         </BottomBarCoversInsetProvider>
       </SafeAreaProvider>,
     );
-    expect(screen.getByTestId('probe')).toHaveTextContent(String(TAB_BAR.height + NAV_BAR));
+    expect(screen.getByTestId('probe')).toHaveTextContent(String(TAB_PLUS_CLEARANCE));
+    expect(TAB_PLUS_CLEARANCE).toBe(32);
     screen.unmount();
     render(<Probe />);
     expect(screen.getByTestId('probe')).toHaveTextContent('0');
@@ -85,12 +86,12 @@ describe('screens', () => {
     expect(await screen.findByTestId('app-version')).toHaveTextContent('Version 1.0.5');
   });
 
-  it('Recipes tab (inside the bottom bar): no extra inset', async () => {
+  it('Recipes tab (inside the bottom bar): only enough padding to clear the raised +', async () => {
     renderRouter(routes(), { initialUrl: '/' });
-    // The list can scroll clear of the tab bar (bar height + system inset) with 24dp of breathing room.
+    // The bar is in flow. Scroll content and the absolute selection row sit just above it (24dp + ~32dp).
     const add = await screen.findByTestId('list-add-recipe-button');
     expect(StyleSheet.flatten(add.props.style).position).toBeUndefined();
     const scroll = screen.getByTestId('recipe-category-scroll');
-    expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(24 + TAB_BAR.height + NAV_BAR);
+    expect(StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom).toBe(24 + TAB_PLUS_CLEARANCE);
   });
 });

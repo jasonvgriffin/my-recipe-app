@@ -16,10 +16,17 @@ export const BottomBarCoversInsetProvider = BottomBarCoversInsetContext.Provider
 const FrameClearsInsetContext = createContext(false);
 
 /**
+ * Extra padding inside bottom-tab scenes. The tab bar is in normal flow (not absolute), so the scene
+ * already ends above it. This only clears the raised center + button (~29dp overlap).
+ */
+export const TAB_PLUS_CLEARANCE = 32;
+
+/**
  * Extra bottom space for scroll content and floating buttons (v1.0.3, extended in v1.0.8).
  *
- * - Inside a bottom tab bar: the tab bar's height plus the safe-area bottom inset, so the end of every tab
- *   list can scroll fully clear of the bar (the bar draws over the scene on Android).
+ * - Inside a bottom tab bar: `TAB_PLUS_CLEARANCE` only. Do not add the bar height or the system inset —
+ *   the bar is already in flow, and adding them lifts absolute controls (the recipe selection bar) far
+ *   above the bar.
  * - Inside `SystemNavFrame`: 0. The frame already ends the viewport above the system navigation bar, so
  *   scroll padding must not add that inset again.
  * - Otherwise: the safe-area bottom inset (stack screens rendered without the frame, and the side rail).
@@ -33,14 +40,14 @@ export function useBottomInset(): number {
   const frameClears = useContext(FrameClearsInsetContext);
   const tabBarCovers = useContext(BottomBarCoversInsetContext);
   if (frameClears) return 0;
-  if (tabBarCovers) return TAB_BAR.height + bottom;
+  if (tabBarCovers) return TAB_PLUS_CLEARANCE;
   return bottom;
 }
 
 /**
  * Pads a stack screen so its whole viewport — not only the end of the scroll — sits above the Android
  * system navigation bar (v1.0.8). One place for every stack screen, via the root `screenLayout`.
- * Tab scenes skip this: their bar already includes the system inset, and `useBottomInset` clears the bar.
+ * Tab scenes skip this: the bar is in normal flow, so the scene already ends above it.
  */
 export function SystemNavFrame({ children }: { children: ReactNode }) {
   const bottom = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
@@ -56,8 +63,8 @@ export function SystemNavFrame({ children }: { children: ReactNode }) {
 /**
  * v1.0.7 (Jason): the bottom bar is ~33% bigger — bar height, icons, labels and the + scale together
  * (60→80dp bar, 22→29dp icons, 10→13sp labels, 44→58dp +). The bar adds the safe-area bottom inset so it stays
- * clear of the gesture pill / 3-button nav bar. v1.0.8: tab lists also pad by this height (`useBottomInset`)
- * so the last row can scroll clear of the bar.
+ * clear of the gesture pill / 3-button nav bar. The bar is in normal flow; tab scenes add `TAB_PLUS_CLEARANCE`
+ * (`useBottomInset`) so content and floating buttons clear the raised +, not the whole bar.
  */
 export const TAB_BAR = { height: 80, icon: 29, label: 13, plus: 58, plusIcon: 31 } as const;
 

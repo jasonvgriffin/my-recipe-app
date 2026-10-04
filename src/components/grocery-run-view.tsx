@@ -90,35 +90,53 @@ export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunV
             <Text style={[styles.itemText, item.checked && styles.itemChecked]}>{item.text}</Text>
             {item.quantity ? <Text style={styles.itemDetail}>Qty: {item.quantity}</Text> : null}
             {item.notes ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`See notes for ${item.text}`}
+              <SeeNotesLink
+                label={`See notes for ${item.text}`}
                 onPress={() => setNotesFor(item)}
-                hitSlop={6}
-                testID={`grocery-notes-${item.id}`}>
-                <Text style={styles.seeNotes}>(see notes)</Text>
-              </Pressable>
+                testID={`grocery-notes-${item.id}`}
+              />
             ) : null}
           </View>
         </View>
       )}
     />
-      <Modal visible={notesFor != null} transparent animationType="fade" onRequestClose={() => setNotesFor(null)}>
-        <Pressable style={styles.backdrop} accessibilityLabel="Close notes" onPress={() => setNotesFor(null)}>
-          <Pressable style={styles.notesCard} onPress={() => undefined} testID="grocery-notes-modal">
-            <Text style={styles.notesTitle}>{notesFor?.text}</Text>
-            <Text style={styles.notesBody}>{notesFor?.notes}</Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setNotesFor(null)}
-              style={styles.notesClose}
-              testID="grocery-notes-close">
-              <Text style={styles.notesCloseText}>Close</Text>
-            </Pressable>
+      <ItemNotesSheet item={notesFor} onClose={() => setNotesFor(null)} />
+    </>
+  );
+}
+
+/** Tappable “(see notes)” used by the checklist and the shopping list. */
+export function SeeNotesLink({ label, testID, onPress }: { label: string; testID: string; onPress: () => void }) {
+  const styles = useStyles();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={6} testID={testID}>
+      <Text style={styles.seeNotes}>(see notes)</Text>
+    </Pressable>
+  );
+}
+
+/** Notes sheet shared by the checklist and the shopping list. */
+export function ItemNotesSheet({
+  item,
+  onClose,
+}: {
+  item: { text: string; notes?: string } | null;
+  onClose: () => void;
+}) {
+  const styles = useStyles();
+  if (!item) return null;
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} accessibilityLabel="Close notes" onPress={onClose}>
+        <Pressable style={styles.notesCard} onPress={() => undefined} testID="grocery-notes-modal">
+          <Text style={styles.notesTitle}>{item?.text}</Text>
+          <Text style={styles.notesBody}>{item?.notes}</Text>
+          <Pressable accessibilityRole="button" onPress={onClose} style={styles.notesClose} testID="grocery-notes-close">
+            <Text style={styles.notesCloseText}>Close</Text>
           </Pressable>
         </Pressable>
-      </Modal>
-    </>
+      </Pressable>
+    </Modal>
   );
 }
 

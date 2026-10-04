@@ -89,6 +89,11 @@ describe('palettes', () => {
     expect(buildColors('dark', 'red').dangerIcon).toBe(buildColors('dark', 'red').muted);
     expect(buildColors('light', 'red').dangerIcon).toBe(buildColors('light', 'red').muted);
     expect(buildColors('dark', 'green').dangerIcon).toBe(buildColors('dark', 'green').danger);
+    for (const scheme of ['dark', 'light'] as const) {
+      const c = buildColors(scheme, 'green');
+      expect(contrastRatio(c.placeholder, c.card)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(c.muted, c.card)).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it('Green dark: deeper green (v1.0.7), still the original orange + button', () => {
@@ -162,6 +167,28 @@ describe('Settings → Appearance (UI)', () => {
     const fab = await screen.findByTestId('list-add-recipe-button');
     await waitFor(() => expect(StyleSheet.flatten(fab.props.style).backgroundColor).toBe(blue.primary));
     expect(screen.getByTestId('tab-add-button')).toHaveStyle({ backgroundColor: blue.accent });
+  });
+
+  it('off switches use a visible knob and track (on stays green)', async () => {
+    await settingsStore.update({
+      appearance: { themeMode: 'dark' },
+      features: { mealPlan: false },
+      cookingModeKeepAwake: false,
+    });
+    renderRouter(routes(), { initialUrl: '/settings' });
+    const dark = buildColors('dark', 'green');
+    await screen.findByTestId('feature-toggle-mealPlan');
+    await waitFor(() => {
+      for (const id of ['feature-toggle-mealPlan', 'keep-awake-toggle']) {
+        const props = screen.getByTestId(id).props;
+        const thumb = props.thumbColor ?? props.thumbTintColor;
+        const off = props.trackColor?.false ?? props.tintColor ?? props.trackColorForFalse;
+        const on = props.trackColor?.true ?? props.onTintColor ?? props.trackColorForTrue;
+        expect(thumb).toBe(dark.muted);
+        expect(off).toBe(dark.placeholder);
+        expect(on).toBe('#43A047');
+      }
+    });
   });
 
   it('is never gated (shown with every optional feature hidden)', async () => {
