@@ -4,7 +4,7 @@
  * Recipes multi-select (and Recipes-tab “Share Recipes” / + menu “Share Recipe”, which open it) exports several
  * into one PDF. Gate: `pdfExport` (requires `share`).
  */
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 
 import { featureGate, LocalFreeEntitlements, NoEntitlements, canUse, type FeatureId } from '@/entitlements';
@@ -50,7 +50,7 @@ jest.mock('expo-file-system', () => {
 
 jest.mock('@/lib/present-share', () => ({ presentShare: jest.fn(async () => {}) }));
 
-const Print = jest.requireMock('expo-print') as { printToFileAsync: jest.Mock };
+const Print = jest.requireMock('expo-print') as { printToFileAsync: jest.Mock; printAsync: jest.Mock };
 const { presentShare } = jest.requireMock('@/lib/present-share') as { presentShare: jest.Mock };
 
 const premium = (...ids: FeatureId[]) =>
@@ -214,6 +214,25 @@ describe('UI', () => {
     expect(html).toContain('Alpha Soup');
     expect(html).toContain('Gamma Eggs');
     expect(html).not.toContain('Beta Stew');
+  });
+
+  it('v1.0.7: Share recipes has a Print button next to Share that opens the system print dialog for the PDF', async () => {
+    const a = await recipeStore.save(soup({ title: 'Alpha Soup' }));
+    await recipeStore.save(soup({ title: 'Beta Stew' }));
+    renderRouter(routes(), { initialUrl: '/recipes?select=pdf' });
+    await screen.findByTestId('pdf-select-bar');
+    const print = screen.getByTestId('pdf-print-button');
+    expect(within(print).getByText('Print')).toBeTruthy();
+    expect(print).toBeDisabled();
+    await act(async () => fireEvent.press(screen.getByTestId(`recipe-item-${a.id}`)));
+    expect(screen.getByTestId('pdf-print-button')).not.toBeDisabled();
+    Print.printAsync.mockClear();
+    await act(async () => fireEvent.press(screen.getByTestId('pdf-print-button')));
+    await waitFor(() => expect(Print.printAsync).toHaveBeenCalledTimes(1));
+    // Prints the generated (renamed) PDF file, not a share sheet.
+    expect(Print.printAsync.mock.calls[0][0].uri).toMatch(/recipe-pdfs\/.*\.pdf$/);
+    expect(Print.printToFileAsync.mock.calls.at(-1)[0].html).toContain('Alpha Soup');
+    expect(presentShare).not.toHaveBeenCalled();
   });
 
   it('v1.0.5: no “Select recipes for PDF” link on the Recipes tab; the + menu picker still has All', async () => {

@@ -186,9 +186,6 @@ export default function AddRecipeScreen() {
             </Field>
           </View>
         </View>
-        <Text style={styles.hint}>
-          Sweetener rule: {PREFERRED_SWEETENER} only (no monk fruit).
-        </Text>
         {errors.map((e) => (
           <Text key={e} style={styles.error}>
             • {e}
@@ -238,7 +235,6 @@ const useStyles = makeStyles((colors) => ({
     justifyContent: 'center',
   },
   smallButtonText: { color: colors.primaryText, fontWeight: '700' },
-  hint: { color: colors.muted, marginBottom: 8 },
   error: { color: colors.danger, marginBottom: 4 },
   button: {
     marginTop: 12,

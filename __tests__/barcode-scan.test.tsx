@@ -65,7 +65,7 @@ function renderScan(url = '/pantry/scan') {
 }
 
 describe('barcode camera (spec #27)', () => {
-  it('adds a found product (name as the title) and returns to the pantry; a re-scan increments it', async () => {
+  it('v1.0.7: a found product opens the pre-filled Edit item form for review; Save adds it; a re-scan opens it with +1', async () => {
     jest.spyOn(barcodeLookup, 'lookup').mockResolvedValue({
       status: 'found',
       source: 'openfoodfacts',
@@ -74,22 +74,37 @@ describe('barcode camera (spec #27)', () => {
     renderScan();
     expect(await screen.findByTestId('barcode-camera')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByTestId('mock-scan')));
-    expect(await screen.findByTestId('pantry-added-banner')).toHaveTextContent('Added Almond Flour');
+    expect(await screen.findByTestId('pantry-scan-review')).toBeTruthy();
     expect(screen).toHavePathname('/pantry');
+    expect(screen.getByTestId('pantry-form-heading')).toHaveTextContent('Edit item');
+    expect(screen.getByTestId('pantry-name-input').props.value).toBe('Almond Flour');
+    expect(screen.getByTestId('pantry-brand-input').props.value).toBe('Bob’s');
+    expect(screen.getByTestId('pantry-quantity-input').props.value).toBe('1');
+    expect(screen.getByTestId('pantry-notes-input').props.value).toBe('');
+    // Nothing is saved until the user reviews and taps Save.
+    expect(await pantryStore.list()).toHaveLength(0);
+    fireEvent.changeText(screen.getByTestId('pantry-notes-input'), 'Top shelf');
+    await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
+    expect(await screen.findByTestId('pantry-added-banner')).toHaveTextContent('Added Almond Flour');
     // Product name is the item title, brand secondary.
     expect(screen.getByText('Almond Flour')).toBeTruthy();
     expect(screen.getByText(/1 package · Bob’s/)).toBeTruthy();
+    expect(screen.getByText('Top shelf')).toBeTruthy();
 
     const { router } = require('expo-router');
     await act(async () => router.push('/pantry/scan'));
     await act(async () => fireEvent.press(await screen.findByTestId('mock-scan')));
+    await screen.findByTestId('pantry-scan-review');
+    expect(screen.getByTestId('pantry-quantity-input').props.value).toBe('2');
+    expect(screen.getByTestId('pantry-notes-input').props.value).toBe('Top shelf');
+    await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
     await screen.findByTestId('pantry-added-banner');
     const items = await pantryStore.list();
     expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ name: 'Almond Flour', brand: 'Bob’s', barcode: EAN, quantity: 2 });
+    expect(items[0]).toMatchObject({ name: 'Almond Flour', brand: 'Bob’s', barcode: EAN, quantity: 2, notes: 'Top shelf' });
   });
 
-  it('asks for a name once when the barcode is unknown, saves the mapping, and returns to the pantry', async () => {
+  it('asks for a name once when the barcode is unknown, saves the mapping, then opens the form for review', async () => {
     jest.spyOn(barcodeLookup, 'lookup').mockResolvedValue({ status: 'not_found', barcode: EAN });
     const save = jest.spyOn(barcodeLookup, 'saveUserProduct').mockResolvedValue({ barcode: EAN, name: 'Chicken breast' });
     renderScan();
@@ -98,8 +113,11 @@ describe('barcode camera (spec #27)', () => {
     expect(await screen.findByText(/No product found/)).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('barcode-name-input'), 'Chicken breast');
     await act(async () => fireEvent.press(screen.getByTestId('barcode-save-button')));
-    expect(await screen.findByText('Added Chicken breast')).toBeTruthy();
     expect(save).toHaveBeenCalledWith(EAN, 'Chicken breast');
+    expect(await screen.findByTestId('pantry-scan-review')).toBeTruthy();
+    expect(screen.getByTestId('pantry-name-input').props.value).toBe('Chicken breast');
+    await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
+    expect(await screen.findByText('Added Chicken breast')).toBeTruthy();
     expect(await pantryStore.list()).toEqual([
       expect.objectContaining({ name: 'Chicken breast', barcode: EAN, quantity: 1 }),
     ]);

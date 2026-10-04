@@ -1,15 +1,32 @@
 /**
- * Backup & restore file format (v1.0.6, docs/BACKUP.md). One self-contained, versioned JSON file
- * (`My-Recipe-App-backup-YYYY-MM-DD.myrecipe`) with every on-device collection, settings and the recipe photos
- * (base64). Works offline, no account. UI-free and runtime-neutral (jest, Hermes).
+ * Backup & restore file format (v1.0.6, docs/BACKUP.md). One self-contained, versioned JSON document with every
+ * on-device collection, settings and the recipe photos (base64). Works offline, no account. UI-free and
+ * runtime-neutral (jest, Hermes).
+ *
+ * v1.0.7: exports are a standard ZIP (`My-Recipe-App-backup-YYYY-MM-DD.zip`, application/zip) holding that JSON as
+ * `backup.json` — Google Drive and other share targets accept it (the bare `.myrecipe` JSON failed to save to Drive).
+ * Import accepts both the new .zip and old .myrecipe (plain JSON) files.
  */
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { z } from 'zod';
 
 export const BACKUP_FORMAT = 'my-recipe-app-backup';
 /** Bump when the shape changes; `parseBackup` upgrades older versions and rejects newer ones. */
 export const BACKUP_VERSION = 1;
-export const BACKUP_EXTENSION = 'myrecipe';
-export const BACKUP_MIME = 'application/json';
+export const BACKUP_EXTENSION = 'zip';
+export const BACKUP_MIME = 'application/zip';
+/** v1.0.6 backups: plain JSON files named *.myrecipe (still importable). */
+export const LEGACY_BACKUP_EXTENSION = 'myrecipe';
+/** The JSON document's name inside the ZIP. */
+export const BACKUP_ZIP_ENTRY = 'backup.json';
+/** MIME types the restore picker allows: the .zip, old .myrecipe (JSON / unknown binary), and anything else as a fallback. */
+export const BACKUP_PICKER_MIME_TYPES = [
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/json',
+  'application/octet-stream',
+  '*/*',
+];
 /** Refuse absurd files before JSON.parse (photos make backups big, but not this big). */
 export const MAX_BACKUP_BYTES = 150 * 1024 * 1024;
 
@@ -110,6 +127,50 @@ export function parseBackup(text: string): ParseResult {
 /** Schema upgrades between versions go here (v1 is the first). */
 function upgrade(raw: Record<string, unknown>): Record<string, unknown> {
   return raw;
+}
+
+/** v1.0.7: the backup as a ZIP archive with one entry, `backup.json`. */
+export function encodeBackupZip(backup: Backup): Uint8Array {
+  const mtime = new Date(backup.exportedAt);
+  return zipSync({ [BACKUP_ZIP_ENTRY]: [strToU8(JSON.stringify(backup)), { level: 6, mtime: isNaN(+mtime) ? new Date() : mtime }] });
+}
+
+const isZip = (bytes: Uint8Array) => bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04;
+
+/**
+ * Validate a backup file's bytes: a v1.0.7 .zip (reads `backup.json`, or the only .json / .myrecipe entry) or a
+ * v1.0.6 .myrecipe JSON file. Never throws.
+ */
+export function parseBackupFile(bytes: Uint8Array): ParseResult {
+  if (bytes.length > MAX_BACKUP_BYTES) return { ok: false, error: 'This file is too large to be a My Recipe App backup.' };
+  if (!isZip(bytes)) {
+    try {
+      return parseBackup(strFromU8(bytes));
+    } catch {
+      return { ok: false, error: 'This is not a My Recipe App backup file.' };
+    }
+  }
+  let entries: Record<string, Uint8Array>;
+  try {
+    let total = 0;
+    entries = unzipSync(bytes, {
+      filter: (f) => {
+        const wanted = /(^|\/)backup\.json$/i.test(f.name) || /\.(json|myrecipe)$/i.test(f.name);
+        if (wanted) total += f.originalSize;
+        return wanted && total <= MAX_BACKUP_BYTES;
+      },
+    });
+  } catch {
+    return { ok: false, error: 'This backup file is damaged or incomplete.' };
+  }
+  const names = Object.keys(entries);
+  const name = names.find((n) => /(^|\/)backup\.json$/i.test(n)) ?? (names.length === 1 ? names[0] : undefined);
+  if (!name) return { ok: false, error: 'This is not a My Recipe App backup file.' };
+  try {
+    return parseBackup(strFromU8(entries[name]));
+  } catch {
+    return { ok: false, error: 'This backup file is damaged or incomplete.' };
+  }
 }
 
 export function backupFileName(now: Date): string {

@@ -23,6 +23,14 @@ export function useBottomInset(): number {
   return useContext(BottomBarCoversInsetContext) ? 0 : bottom;
 }
 
+/**
+ * v1.0.7 (Jason): the bottom bar is ~33% bigger — bar height, icons, labels and the + scale together
+ * (60→80dp bar, 22→29dp icons, 10→13sp labels, 44→58dp +). The bar adds the safe-area bottom inset so it stays
+ * clear of the gesture pill / 3-button nav bar; tab scenes are laid out above it (not absolute), so nothing hides
+ * behind it.
+ */
+export const TAB_BAR = { height: 80, icon: 29, label: 13, plus: 58, plusIcon: 31 } as const;
+
 /** Max readable widths so content never stretches across a wide unfolded screen / hinge (spec #23). */
 export const MAX_CONTENT_WIDTH = { text: 720, list: 560, form: 640 } as const;
 

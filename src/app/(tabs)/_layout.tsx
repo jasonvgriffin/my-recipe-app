@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddMenuSheet } from '@/components/add-menu-sheet';
 import { AppHeaderTitle, SectionLayout, SettingsGearButton } from '@/components/app-header';
-import { BottomBarCoversInsetProvider } from '@/components/layout';
+import { BottomBarCoversInsetProvider, TAB_BAR } from '@/components/layout';
 import { useFeatureVisible } from '@/hooks/use-feature';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
 import { makeStyles, useColors } from '@/hooks/use-theme';
@@ -27,7 +27,7 @@ const TAB_SECTIONS: Record<string, string> = {
 };
 
 function TabIcon({ name, color }: { name: keyof typeof Ionicons.glyphMap; color: ColorValue }) {
-  return <Ionicons name={name} size={22} color={color} />;
+  return <Ionicons name={name} size={TAB_BAR.icon} color={color} />;
 }
 
 function PlusTabButton({ onPress, rail }: { onPress: () => void; rail: boolean }) {
@@ -76,8 +76,12 @@ export default function TabsLayout() {
             backgroundColor: colors.card,
             borderTopColor: colors.border,
             borderRightColor: colors.border,
-            ...(useNavigationRail ? null : { height: 60 + insets.bottom }),
+            ...(useNavigationRail ? null : { height: TAB_BAR.height + insets.bottom, paddingTop: 6 }),
           },
+          tabBarLabelStyle: useNavigationRail ? undefined : { fontSize: TAB_BAR.label, fontWeight: '600' },
+          tabBarIconStyle: useNavigationRail ? undefined : { width: TAB_BAR.icon + 4, height: TAB_BAR.icon + 2 },
+          // Forms (e.g. Pantry Save / Cancel / Remove) keep the whole screen above the keyboard.
+          tabBarHideOnKeyboard: true,
           tabBarActiveTintColor: colors.primary,
           tabBarInactiveTintColor: colors.muted,
           sceneStyle: { backgroundColor: colors.background },
@@ -135,15 +139,15 @@ export default function TabsLayout() {
   );
 }
 
-// v1.0.4 (Jason): the center + is 33% smaller (≈67% of v1.0.3's 66dp raised / 58dp rail circle and 34dp glyph).
-const PLUS_ICON = 23;
+// v1.0.4 made the + 33% smaller; v1.0.7 scales it back up with the rest of the bar (44→58dp, glyph 23→31dp).
+const PLUS_ICON = TAB_BAR.plusIcon;
 
 const useStyles = makeStyles((colors) => ({
-  plusSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 64 },
+  plusSlot: { flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 72 },
   plus: {
-    width: 39,
-    height: 39,
-    borderRadius: 19.5,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
@@ -154,12 +158,12 @@ const useStyles = makeStyles((colors) => ({
     shadowOffset: { width: 0, height: 2 },
   },
   plusRaised: {
-    marginTop: -22, // unchanged: keeps the circle centered where v1.0.3's was (scaled about its center, ~3dp raised)
+    marginTop: -29, // scaled with the circle (v1.0.4: -22 for 44dp), so it sits just as raised
     borderWidth: 3,
     borderColor: colors.background,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: TAB_BAR.plus,
+    height: TAB_BAR.plus,
+    borderRadius: TAB_BAR.plus / 2,
   },
   plusPressed: { opacity: 0.85 },
 }));

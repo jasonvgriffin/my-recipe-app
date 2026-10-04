@@ -65,7 +65,9 @@ describe('barcode lookup (spec #27)', () => {
       brand: 'Bob’s Red Mill',
     });
     expect(OFF_PRODUCT_URL(EAN)).not.toMatch(/nutri/);
-    expect(OFF_PRODUCT_URL(EAN)).toMatch(/fields=code,product_name,brands$/);
+    expect(OFF_PRODUCT_URL(EAN)).toMatch(
+      /fields=code,product_name,product_name_en,abbreviated_product_name,generic_name,generic_name_en,categories,brands$/,
+    );
     expect(parseOpenFoodFacts(EAN, { status: 0, status_verbose: 'product not found' })).toBeUndefined();
   });
 

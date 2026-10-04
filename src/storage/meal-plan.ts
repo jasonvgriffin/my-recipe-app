@@ -3,6 +3,7 @@ import { shoppingListChanges, shoppingListFromItems } from '@/lib/shopping';
 import {
   isMealPlanEntry,
   isShoppingListItem,
+  normalizeShoppingListItem,
   type IsoDate,
   type MealPlanEntry,
   type MealSlot,
@@ -22,7 +23,7 @@ export function createMealPlanStore(store: KeyValueStore = defaultStore) {
     isMealPlanEntry(v) ? withSyncDefaults(v) : undefined,
   );
   const items = createCollection<ShoppingListItem>(store, SHOPPING_ITEMS_STORAGE_KEY, (v) =>
-    isShoppingListItem(v) ? withSyncDefaults(v) : undefined,
+    isShoppingListItem(v) ? normalizeShoppingListItem(withSyncDefaults(v)) : undefined,
   );
 
   return {

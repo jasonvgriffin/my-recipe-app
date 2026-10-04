@@ -1,9 +1,13 @@
 /**
- * Phone side of backup & restore (v1.0.6): files via expo-file-system, sharing via the app's share sheet module,
- * the system file picker (Storage Access Framework) for import and "Save to…" for export. No storage
+ * Phone side of backup & restore (v1.0.6; v1.0.7 .zip + "Save as"): files via expo-file-system, sharing via the
+ * app's share sheet module, the system file picker (Storage Access Framework) for import and a single-file
+ * "Save as" (SAF ACTION_CREATE_DOCUMENT, RecipeShare.saveDocumentAsync) for export — so it saves straight to Google
+ * Drive or a phone folder (the v1.0.6 folder picker showed "Can't use this folder" on Drive's root). No storage
  * permissions: SAF and the share sheet grant access per file.
  */
 import { Directory, File, Paths } from 'expo-file-system';
+import { Platform } from 'react-native';
+import { saveDocumentAsync } from 'recipe-share';
 
 import { appVersion } from '@/config';
 import { presentShare } from '@/lib/present-share';
@@ -12,7 +16,15 @@ import { settingsStore } from '@/storage/settings';
 import { appCollections } from '@/storage/app-collections';
 
 import { createBackup, restoreBackup, type BackupDeps, type PhotoStore, type RestoreMode, type RestoreResult } from './backup';
-import { BACKUP_MIME, backupFileName, parseBackup, type Backup, type ParseResult } from './format';
+import {
+  BACKUP_MIME,
+  BACKUP_PICKER_MIME_TYPES,
+  backupFileName,
+  encodeBackupZip,
+  parseBackupFile,
+  type Backup,
+  type ParseResult,
+} from './format';
 
 function photoDir(): Directory {
   const dir = new Directory(Paths.document, RECIPE_PHOTO_DIR);
@@ -57,7 +69,7 @@ export async function writeBackupFile(deps: BackupDeps = deviceBackupDeps()): Pr
   const file = new File(dir, backupFileName(new Date()));
   if (file.exists) file.delete();
   file.create();
-  file.write(JSON.stringify(backup));
+  file.write(encodeBackupZip(backup));
   return { file, backup };
 }
 
@@ -68,26 +80,27 @@ export async function shareBackup(): Promise<Backup> {
   return backup;
 }
 
-/** Export → "Save to…" a folder the user picks (SAF). Returns null when the picker is cancelled. */
-export async function saveBackupToFolder(): Promise<Backup | null> {
-  let folder: Directory;
-  try {
-    folder = await Directory.pickDirectoryAsync();
-  } catch {
-    return null; // cancelled
-  }
+/**
+ * Export → "Save as…" (v1.0.7): one system save dialog where the user picks Google Drive, Downloads or any folder
+ * and the file name. Returns null when cancelled.
+ */
+export async function saveBackupAs(): Promise<Backup | null> {
   const { file, backup } = await writeBackupFile();
-  const out = folder.createFile(file.name, BACKUP_MIME);
-  out.write(await file.text());
+  if (Platform.OS === 'android') {
+    const saved = await saveDocumentAsync({ fileUri: file.uri, fileName: file.name, mimeType: BACKUP_MIME });
+    return saved ? backup : null;
+  }
+  // Other platforms: the share sheet's "Save to Files" covers it.
+  await presentShare({ fileUri: file.uri, mimeType: BACKUP_MIME, title: 'My Recipe App backup' });
   return backup;
 }
 
-/** Import step 1: pick a file (SAF) and validate it. Null when cancelled. */
+/** Import step 1: pick a file (SAF; .zip or old .myrecipe) and validate it. Null when cancelled. */
 export async function pickBackupFile(): Promise<ParseResult | null> {
-  const picked = await File.pickFileAsync({ mimeTypes: ['application/json', 'application/octet-stream', '*/*'] });
+  const picked = await File.pickFileAsync({ mimeTypes: BACKUP_PICKER_MIME_TYPES });
   if (picked.canceled || !picked.result) return null;
   try {
-    return parseBackup(await picked.result.text());
+    return parseBackupFile(await picked.result.bytes());
   } catch {
     return { ok: false, error: 'Could not read that file.' };
   }

@@ -41,6 +41,7 @@ const routes = () => ({
   'import-pdf': require('@/app/import-pdf').default,
   'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
   settings: require('@/app/settings').default,
+  contact: require('@/app/contact').default,
 });
 
 beforeAll(() => {
@@ -180,12 +181,12 @@ describe('Recipes tab (v1.0.4: the recipe list, no five-link home page)', () => 
     expect(within(screen.getByTestId('add-menu-search-recipes')).getByText('Search Recipes')).toBeTruthy();
   });
 
-  it('the smaller center + (v1.0.4: 44dp raised circle, ~67% of 66dp)', async () => {
+  it('the center + scales with the ~33% bigger bar (v1.0.7: 58dp raised circle, was 44dp)', async () => {
     const { StyleSheet } = require('react-native');
     renderRouter(routes(), { initialUrl: '/' });
     await screen.findByTestId('search-input');
     const style = StyleSheet.flatten(screen.getByTestId('tab-add-button').props.style);
-    expect(style).toMatchObject({ width: 44, height: 44, borderRadius: 22 });
+    expect(style).toMatchObject({ width: 58, height: 58, borderRadius: 29 });
   });
 });
 
@@ -233,7 +234,7 @@ describe('section title below the banner (v1.0.4)', () => {
 });
 
 describe('More screen', () => {
-  it('lists just Pantry and Settings (v1.0.6: Household removed)', async () => {
+  it('lists Pantry, Settings and Contact Us (v1.0.6: Household removed; v1.0.7: Contact Us)', async () => {
     renderRouter(routes(), { initialUrl: '/more' });
     expect(await screen.findByTestId('more-pantry')).toBeTruthy();
     expect(screen.queryByTestId('more-household')).toBeNull();
@@ -255,6 +256,46 @@ describe('More screen', () => {
     await act(async () => fireEvent.press(await screen.findByTestId('more-pantry')));
     await waitFor(() => expect(screen).toHavePathname('/pantry'));
     expect(screen.getByTestId('section-title')).toHaveTextContent('Pantry');
+  });
+});
+
+describe('Contact Us (v1.0.7)', () => {
+  it('More has a Contact Us card; Settings no longer mentions AI assistants', async () => {
+    renderRouter(routes(), { initialUrl: '/more' });
+    const contact = await screen.findByTestId('more-contact');
+    expect(contact).toHaveTextContent(/Contact Us/);
+    expect(screen.getByTestId('more-settings')).toHaveTextContent(/Appearance, units, optional features, backup/);
+    expect(screen.queryByText(/AI assistants/)).toBeNull();
+    const order = ['more-pantry', 'more-settings', 'more-contact'].map((id) => JSON.stringify(screen.toJSON()).indexOf(`"testID":"${id}"`));
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    await act(async () => fireEvent.press(contact));
+    await waitFor(() => expect(screen).toHavePathname('/contact'));
+    expect(screen.getByTestId('section-title')).toHaveTextContent('Contact Us');
+  });
+
+  it('shows exactly Jason’s text and the address opens a mailto: with the feedback subject', async () => {
+    const { Linking } = require('react-native');
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    renderRouter(routes(), { initialUrl: '/contact' });
+    const text = await screen.findByTestId('contact-text');
+    expect(text).toHaveTextContent(
+      "Want to report a bug or request a feature? Need something else? Email our AI assistant. She's keeping track and informs us when someone needs help. Send email to eve.chief_of_staff@agentmail.to",
+    );
+    await act(async () => fireEvent.press(screen.getByTestId('contact-email')));
+    expect(open).toHaveBeenCalledWith('mailto:eve.chief_of_staff@agentmail.to?subject=My%20Recipe%20App%20feedback');
+    open.mockRestore();
+  });
+});
+
+describe('bottom bar (v1.0.7: ~33% bigger)', () => {
+  it('scales bar, icons, labels and + together and adds the gesture/nav-bar inset', () => {
+    const { TAB_BAR } = require('@/components/layout');
+    expect(TAB_BAR).toEqual({ height: 80, icon: 29, label: 13, plus: 58, plusIcon: 31 });
+    // ~33% over v1.0.6 (60dp bar, 22dp icons, 10sp labels, 44dp +, 23dp glyph).
+    for (const [now, was] of [[TAB_BAR.height, 60], [TAB_BAR.icon, 22], [TAB_BAR.label, 10], [TAB_BAR.plus, 44], [TAB_BAR.plusIcon, 23]]) {
+      expect(now / was).toBeGreaterThanOrEqual(1.3);
+      expect(now / was).toBeLessThanOrEqual(1.36);
+    }
   });
 });
 

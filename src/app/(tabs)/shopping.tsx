@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, TwoPaneLayout } from '@/components/layout';
 import { OptionalFeature } from '@/components/optional-feature';
 import { PantryOnHand } from '@/components/pantry-on-hand';
-import { ShoppingListView } from '@/components/shopping-list-view';
+import { ShoppingListView, type ShoppingItemEdit } from '@/components/shopping-list-view';
 import { useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { addDays, startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
@@ -16,6 +16,7 @@ import {
   compileWeekShoppingList,
   emptyShoppingList,
   toggleItem,
+  updateItemDetails,
 } from '@/lib/shopping';
 import { pantryMatcher } from '@/pantry';
 import { mealPlanStore } from '@/storage/meal-plan';
@@ -44,6 +45,8 @@ function ShoppingBody() {
   const [list, setList] = useState<ShoppingList | undefined>();
   const [mealCount, setMealCount] = useState(0);
   const [manualText, setManualText] = useState('');
+  const [manualQuantity, setManualQuantity] = useState('');
+  const [manualNotes, setManualNotes] = useState('');
 
   const load = useCallback(async () => {
     const [stored, entries] = await Promise.all([
@@ -93,10 +96,17 @@ function ShoppingBody() {
 
   async function addManual() {
     const base = list ?? emptyShoppingList(weekStart);
-    const next = addManualItem(base, manualText);
+    const next = addManualItem(base, manualText, new Date(), { quantity: manualQuantity, notes: manualNotes });
     if (next === base) return;
     setManualText('');
+    setManualQuantity('');
+    setManualNotes('');
     await persist(next);
+  }
+
+  async function editItem(id: string, edit: ShoppingItemEdit) {
+    if (!list) return;
+    await persist(updateItemDetails(list, id, edit));
   }
 
   async function clearDone() {
@@ -111,6 +121,11 @@ function ShoppingBody() {
       list={list}
       manualText={manualText}
       onManualText={setManualText}
+      manualQuantity={manualQuantity}
+      onManualQuantity={setManualQuantity}
+      manualNotes={manualNotes}
+      onManualNotes={setManualNotes}
+      onEditItem={editItem}
       showGroceryRun={showGrocery}
       onPrevWeek={() => setWeekStart((w) => addDays(w, -7))}
       onNextWeek={() => setWeekStart((w) => addDays(w, 7))}

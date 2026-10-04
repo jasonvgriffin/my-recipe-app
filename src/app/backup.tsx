@@ -38,7 +38,7 @@ function confirm(title: string, message: string, action: string): Promise<boolea
 
 /**
  * Settings → Backup & restore (v1.0.6, docs/BACKUP.md). Export every recipe (with photos), category, tag, rating,
- * cooked history, meal plan, shopping list, pantry and the settings to one `.myrecipe` file; import it on a new
+ * cooked history, meal plan, shopping list, pantry and the settings to one `.zip` file (v1.0.7; was `.myrecipe`); import it on a new
  * phone with a preview, then merge or replace (replace asks first). Offline, no account, no storage permission
  * (share sheet + system file picker). Core data safety: not gated.
  */
@@ -122,19 +122,19 @@ export default function BackupScreen() {
         />
         <Button
           testID="backup-save"
-          label="Save to a folder…"
+          label="Save backup as…"
           kind="ghost"
           disabled={busy}
           onPress={() =>
             void run(async () => {
-              const b = await device().saveBackupToFolder();
+              const b = await device().saveBackupAs();
               if (b) setMessage(`Saved. ${exported(b.data.recipes.length)}`);
             })
           }
         />
 
         <Text style={styles.section}>Restore</Text>
-        <Text style={styles.help}>Pick a .myrecipe backup file. You’ll see what’s in it before anything changes.</Text>
+        <Text style={styles.help}>Pick a backup file (.zip, or an older .myrecipe). You’ll see what’s in it before anything changes.</Text>
         <Button
           testID="backup-pick"
           label="Choose backup file…"

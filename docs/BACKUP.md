@@ -1,12 +1,13 @@
-# Backup & restore (v1.0.6)
+# Backup & restore (v1.0.6; .zip + Save as since v1.0.7)
 
 Settings → **Backup & restore** (`src/app/backup.tsx`). Moves everything to a new phone, or keeps a copy.
 Offline, no account, no storage permission.
 
 ## What's in the file
 
-One JSON file, `My-Recipe-App-backup-YYYY-MM-DD.myrecipe` (`application/json`), built by `createBackup`
-(`src/backup/backup.ts`):
+A standard ZIP, `My-Recipe-App-backup-YYYY-MM-DD.zip` (`application/zip`, v1.0.7), holding one JSON document
+`backup.json` built by `createBackup` (`src/backup/backup.ts`). v1.0.6 wrote the same JSON as a bare `.myrecipe`
+file, which Google Drive refused to save from the share sheet; those files still import.
 
 | Field | Contents |
 |-------|----------|
@@ -25,11 +26,14 @@ session (step timers are not stored; they belong to a cooking session on the dev
 
 - **Share backup file…**: the Android share sheet (Drive, Gmail, Files, Nearby Share…), via the app's
   RecipeShare FileProvider (cache folder).
-- **Save to a folder…**: the system folder picker (Storage Access Framework) and `Directory.createFile`.
+- **Save backup as…** (v1.0.7): one system “save as” dialog (SAF `ACTION_CREATE_DOCUMENT`, `saveDocumentAsync` in the
+  RecipeShare module) — pick Google Drive, Downloads or any folder and the name. Replaces v1.0.6's folder picker,
+  which showed “Can't use this folder” on Drive's root.
 
 ## Import
 
-**Choose backup file…** opens the system file picker (SAF), then `parseBackup` validates it (zod schema, size cap,
+**Choose backup file…** opens the system file picker (SAF; accepts the .zip and old .myrecipe files), then
+`parseBackupFile` unzips if needed and `parseBackup` validates it (zod schema, size cap,
 format and version checks) and shows a preview (counts of recipes, photos, categories, plan, list, pantry,
 settings). Then:
 

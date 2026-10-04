@@ -120,6 +120,9 @@ export function reconcileShoppingList(compiled: ShoppingList, previous?: Shoppin
       id: matches[0].id,
       checked: matches.some((m) => m.checked),
       createdAt: matches[0].createdAt,
+      // v1.0.7: quantity / notes the user added survive a rebuild.
+      ...(matches[0].quantity ? { quantity: matches[0].quantity } : {}),
+      ...(matches[0].notes ? { notes: matches[0].notes } : {}),
     };
   });
   for (const item of previous.items) {
@@ -161,23 +164,74 @@ export function compileRecipeShoppingList(
   return reconcileShoppingList(compiled, previous);
 }
 
-export function addManualItem(list: ShoppingList, text: string, now: Date = new Date()): ShoppingList {
+/** Optional extras for a manually added / edited shopping line (v1.0.7). */
+export interface ShoppingItemDetails {
+  quantity?: string;
+  notes?: string;
+}
+
+function applyDetails(item: ShoppingListItem, details: ShoppingItemDetails): ShoppingListItem {
+  const next = { ...item };
+  for (const key of ['quantity', 'notes'] as const) {
+    if (!(key in details)) continue;
+    const v = details[key]?.trim();
+    if (v) next[key] = v;
+    else delete next[key];
+  }
+  return next;
+}
+
+export function addManualItem(
+  list: ShoppingList,
+  text: string,
+  now: Date = new Date(),
+  details: ShoppingItemDetails = {},
+): ShoppingList {
   const trimmed = text.trim();
   if (!trimmed) return list;
   const ing = parseIngredient(trimmed);
   const ts = now.toISOString();
-  const item: ShoppingListItem = {
-    id: uuid(),
-    weekStart: list.weekStart,
-    createdAt: ts,
-    updatedAt: ts,
-    text: trimmed,
-    name: ingredientKey(ing) || undefined,
-    checked: false,
-    recipeIds: [],
-    aisle: aisleForIngredient(trimmed),
-  };
+  const item: ShoppingListItem = applyDetails(
+    {
+      id: uuid(),
+      weekStart: list.weekStart,
+      createdAt: ts,
+      updatedAt: ts,
+      text: trimmed,
+      name: ingredientKey(ing) || undefined,
+      checked: false,
+      recipeIds: [],
+      aisle: aisleForIngredient(trimmed),
+    },
+    details,
+  );
   return { ...list, items: [...list.items, item], updatedAt: ts };
+}
+
+/**
+ * v1.0.7: edit a line's quantity / notes (and, for lines you added, its text). Blank values clear the field.
+ * Plan-compiled lines keep their text so a rebuild still matches them.
+ */
+export function updateItemDetails(
+  list: ShoppingList,
+  itemId: string,
+  patch: ShoppingItemDetails & { text?: string },
+  now: Date = new Date(),
+): ShoppingList {
+  const ts = now.toISOString();
+  return {
+    ...list,
+    items: list.items.map((i) => {
+      if (i.id !== itemId) return i;
+      let next = applyDetails(i, patch);
+      const text = patch.text?.trim();
+      if (text && text !== i.text && i.recipeIds.length === 0) {
+        next = { ...next, text, name: ingredientKey(parseIngredient(text)) || undefined, aisle: aisleForIngredient(text) };
+      }
+      return { ...next, updatedAt: ts };
+    }),
+    updatedAt: ts,
+  };
 }
 
 /** Drop every checked line (spec #12 "clear checked"). */
@@ -279,6 +333,8 @@ const sameItemContent = (a: ShoppingListItem, b: ShoppingListItem) =>
   a.checked === b.checked &&
   a.name === b.name &&
   a.aisle === b.aisle &&
+  a.quantity === b.quantity &&
+  a.notes === b.notes &&
   a.recipeIds.join() === b.recipeIds.join();
 
 /** Minimal writes to store `list`: changed/new items to save, and ids of that week's items to tombstone. */

@@ -143,7 +143,7 @@ export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (re
         </Field>
       ) : null}
       <Text style={styles.section}>Ingredients</Text>
-      <Text style={styles.hint}>Add, remove, reorder, or note a substitution ({PREFERRED_SWEETENER} only — no monk fruit).</Text>
+      <Text style={styles.hint}>Add, remove, reorder, or note a substitution.</Text>
       {state.ingredients.map((row, index) => (
         <IngredientRow
           key={index}

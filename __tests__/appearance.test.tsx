@@ -73,9 +73,9 @@ describe('palettes', () => {
     expect(buildColors('light', 'red').primaryText).toBe('#FFFFFF');
   });
 
-  it('Green dark is the original palette (green links, orange + button)', () => {
+  it('Green dark: deeper green (v1.0.7), still the original orange + button', () => {
     const c = buildColors('dark', 'green');
-    expect(c.primary).toBe('#66BB6A');
+    expect(c.primary).toBe('#43A047');
     expect(c.accent).toBe('#FF8A3D');
     expect(c.background).toBe('#121412');
   });

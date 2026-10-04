@@ -80,7 +80,11 @@ export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunV
           <View style={[styles.box, item.checked && styles.boxOn]}>
             {item.checked ? <Text style={styles.mark}>✓</Text> : null}
           </View>
-          <Text style={[styles.itemText, item.checked && styles.itemChecked]}>{item.text}</Text>
+          <View style={styles.itemBody}>
+            <Text style={[styles.itemText, item.checked && styles.itemChecked]}>{item.text}</Text>
+            {item.quantity ? <Text style={styles.itemDetail}>Qty: {item.quantity}</Text> : null}
+            {item.notes ? <Text style={styles.itemDetail}>{item.notes}</Text> : null}
+          </View>
         </Pressable>
       )}
     />
@@ -151,7 +155,9 @@ const useStyles = makeStyles((colors) => ({
   },
   boxOn: { backgroundColor: colors.primary },
   mark: { color: colors.primaryText, fontWeight: '800', fontSize: 18 },
-  itemText: { color: colors.text, fontSize: 20, flex: 1, fontWeight: '600' },
+  itemBody: { flex: 1 },
+  itemText: { color: colors.text, fontSize: 20, fontWeight: '600' },
+  itemDetail: { color: colors.muted, fontSize: 15, marginTop: 2 },
   itemChecked: { color: colors.muted, textDecorationLine: 'line-through' },
   empty: { color: colors.muted, textAlign: 'center', marginTop: 24 },
   summary: { padding: 16, gap: 8 },
