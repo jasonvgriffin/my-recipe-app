@@ -1,4 +1,5 @@
 {
+  "name": "My Recipe App",
   "install": "bash .cursor/setup.sh",
-  "terminals": []
+  "start": "bash .cursor/start.sh"
 }
