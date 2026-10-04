@@ -9,7 +9,7 @@ import { configureStepTimerNotifications } from '@/notifications/step-timers';
 import { recipeStore } from '@/storage/recipes';
 
 /** v1.0.4: section page title below the banner for the stack screens that show the app header. */
-const STACK_SECTIONS: Record<string, string> = { settings: 'Settings', household: 'Household', account: 'AI assistants' };
+const STACK_SECTIONS: Record<string, string> = { settings: 'Settings', household: 'Household', account: 'AI assistants', backup: 'Backup & restore' };
 
 function HouseholdSyncHost() {
   useHouseholdSync();
@@ -75,6 +75,14 @@ function ThemedRoot() {
           name="account"
           options={{
             title: 'AI assistants',
+            headerTitleAlign: 'center',
+            headerTitle: () => <AppHeaderTitle />,
+          }}
+        />
+        <Stack.Screen
+          name="backup"
+          options={{
+            title: 'Backup & restore',
             headerTitleAlign: 'center',
             headerTitle: () => <AppHeaderTitle />,
           }}

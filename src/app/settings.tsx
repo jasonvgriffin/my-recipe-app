@@ -140,6 +140,16 @@ export default function SettingsScreen() {
         <FeatureGate id="householdSync">
           <HouseholdSettingsLink />
         </FeatureGate>
+        <Text style={styles.section}>Backup & restore</Text>
+        <Link href="/backup" asChild>
+          <Pressable accessibilityRole="button" testID="backup-settings-link" style={styles.row}>
+            <View style={styles.flex}>
+              <Text style={styles.label}>Backup & restore</Text>
+              <Text style={styles.help}>Save all your recipes, photos, plans and settings to a file, or restore one.</Text>
+            </View>
+            <Text style={styles.label}>›</Text>
+          </Pressable>
+        </Link>
         {version ? (
           <Text style={styles.version} testID="app-version">
             Version {version}
