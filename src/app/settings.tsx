@@ -1,20 +1,25 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as Clipboard from 'expo-clipboard';
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, useBottomInset } from '@/components/layout';
-import { FeatureGate } from '@/components/feature-gate';
-import { appVersion, MCP_SERVER_URL } from '@/config';
+import { appVersion } from '@/config';
 import { featureGate, type FeatureId } from '@/entitlements';
 import { useFeature } from '@/hooks/use-feature';
-import { useHousehold } from '@/hooks/use-household';
 import { useSettings } from '@/hooks/use-settings';
 import { makeStyles, useColorSchemeResolved, useColors } from '@/hooks/use-theme';
+import {
+  APP_ICONS,
+  canChangeAppIcon,
+  changeAppIcon,
+  currentAppIcon,
+  DEFAULT_APP_ICON,
+  isAppIconId,
+  type AppIconId,
+} from '@/lib/app-icons';
 import { ACCENTS, THEME_MODES } from '@/lib/theme';
 import { settingsStore } from '@/storage/settings';
-import { syncStatusLabel } from '@/sync/status';
 import type { OptionalFeatures, UnitSystem } from '@/types/recipe';
 
 const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; help: string }[] = [
@@ -29,7 +34,7 @@ const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; h
 ];
 
 /**
- * Settings. Recipes are the core: everything here is optional. AI assistant (MCP) connection info, appearance
+ * Settings. Recipes are the core: everything here is optional. Appearance
  * (theme mode + accent color, v1.0.3; free, not gated), units,
  * cooking mode, and optional-feature toggles; the app version at the bottom. (The "cooked recently" window is
  * fixed at 14 days since v1.0.2 — `COOKED_RECENTLY_DAYS`.) Turning every optional feature off makes the
@@ -40,27 +45,6 @@ const UNIT_CHOICES: { id: UnitSystem | 'original'; label: string }[] = [
   { id: 'metric', label: 'Metric' },
   { id: 'imperial', label: 'Imperial' },
 ];
-
-function HouseholdSettingsLink() {
-  const styles = useStyles();
-  const { account, sync } = useHousehold();
-  const subtitle = !account.user
-    ? 'Share recipes with your household. Optional — recipes work without an account.'
-    : account.household
-      ? `${account.household.name} · ${syncStatusLabel(sync)}`
-      : 'Signed in, not in a household yet.';
-  return (
-    <Link href="/household" asChild>
-      <Pressable accessibilityRole="button" testID="household-settings-link" style={styles.row}>
-        <View style={styles.flex}>
-          <Text style={styles.label}>Household</Text>
-          <Text style={styles.help}>{subtitle}</Text>
-        </View>
-        <Text style={styles.label}>›</Text>
-      </Pressable>
-    </Link>
-  );
-}
 
 export default function SettingsScreen() {
   const bottomInset = useBottomInset();
@@ -75,7 +59,6 @@ export default function SettingsScreen() {
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
       <ScrollView contentContainerStyle={[styles.container, { paddingBottom: 16 + bottomInset }]} testID="settings-screen">
-        <McpServerSection />
         <AppearanceSection />
         <Text style={styles.section}>Optional features</Text>
         <Text style={styles.help}>Recipes always work on their own. Show only the extras you want.</Text>
@@ -137,9 +120,6 @@ export default function SettingsScreen() {
             />
           </View>
         ) : null}
-        <FeatureGate id="householdSync">
-          <HouseholdSettingsLink />
-        </FeatureGate>
         <Text style={styles.section}>Backup & restore</Text>
         <Link href="/backup" asChild>
           <Pressable accessibilityRole="button" testID="backup-settings-link" style={styles.row}>
@@ -215,67 +195,73 @@ function AppearanceSection() {
           );
         })}
       </View>
+      <AppIconPicker />
     </>
   );
 }
 
 /**
- * Sign-in row for cloud sync + AI assistants (v1.0.6): opens /account. Separate from More → Household — a
- * personal account syncs and works with the MCP server on its own. Gated by `cloudSync`, not `householdSync`.
+ * App icon (v1.0.6, Android): previews of every launcher icon; tapping one warns that launchers may take a moment
+ * or move the shortcut, then switches the activity-alias and saves the choice. Hidden where it can't work (iOS).
  */
-function AccountSettingsLink() {
-  const styles = useStyles();
-  const { account, sync } = useHousehold();
-  const title = account.user ? 'Cloud sync & AI assistants' : 'Sign in to sync and use with AI assistants';
-  const subtitle = !account.user
-    ? 'Back up your recipes and let Grok, Claude or ChatGPT use them. No household needed.'
-    : `${account.user.email ?? 'Signed in'} · ${syncStatusLabel(sync)}`;
-  return (
-    <Link href="/account" asChild>
-      <Pressable accessibilityRole="button" testID="account-settings-link" style={styles.row}>
-        <View style={styles.flex}>
-          <Text style={styles.label}>{title}</Text>
-          <Text style={styles.help}>{subtitle}</Text>
-        </View>
-        <Text style={styles.label}>›</Text>
-      </Pressable>
-    </Link>
-  );
-}
-
-/** AI assistants (MCP): the server URL (`MCP_SERVER_URL`, src/config) with a copy button. Spec #28, docs/MCP.md. */
-function McpServerSection() {
+function AppIconPicker() {
   const styles = useStyles();
   const colors = useColors();
-  const [copied, setCopied] = useState(false);
+  const { appearance } = useSettings();
+  const [current, setCurrent] = useState<AppIconId>(() => currentAppIcon() ?? (isAppIconId(appearance.appIcon) ? appearance.appIcon : DEFAULT_APP_ICON));
+  const [error, setError] = useState<string | undefined>();
+  if (!canChangeAppIcon()) return null;
+
+  function pick(id: AppIconId) {
+    if (id === current) return;
+    const label = APP_ICONS.find((i) => i.id === id)?.label ?? id;
+    Alert.alert(
+      `Use the ${label} icon?`,
+      'Your home screen updates in a moment. Some launchers take a little while, or move the shortcut to the app drawer — add it back if it disappears.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Change icon',
+          onPress: () => {
+            setError(undefined);
+            changeAppIcon(id)
+              .then(() => {
+                setCurrent(id);
+                return settingsStore.update({ appearance: { appIcon: id } });
+              })
+              .catch(() => setError('Could not change the icon on this phone.'));
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <>
-      <Text style={styles.section}>AI assistants (MCP)</Text>
-      <FeatureGate id="cloudSync">
-        <AccountSettingsLink />
-      </FeatureGate>
-      <Text style={styles.help}>
-        Add this server URL to Grok, Claude or ChatGPT as a connector, then sign in there with the same email, so
-        your assistant can work with your recipes.
-      </Text>
-      <View style={styles.mcpBox} testID="mcp-server">
-        <Text style={styles.url} selectable testID="mcp-server-url">
-          {MCP_SERVER_URL}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={copied ? 'Copied' : 'Copy MCP server URL'}
-          hitSlop={8}
-          onPress={async () => {
-            await Clipboard.setStringAsync(MCP_SERVER_URL);
-            setCopied(true);
-          }}
-          style={styles.copy}
-          testID="mcp-copy-button">
-          <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={20} color={colors.primary} />
-          <Text style={styles.copyText}>{copied ? 'Copied' : 'Copy'}</Text>
-        </Pressable>
+      <Text style={styles.help}>App icon</Text>
+      <View style={styles.accents} accessibilityRole="radiogroup" accessibilityLabel="App icon" testID="app-icon-picker">
+        {APP_ICONS.map((icon) => {
+          const selected = icon.id === current;
+          return (
+            <Pressable
+              key={icon.id}
+              accessibilityRole="radio"
+              accessibilityLabel={`${icon.label} app icon`}
+              accessibilityState={{ selected }}
+              testID={`settings-app-icon-${icon.id}`}
+              style={[styles.accent, selected && { borderColor: colors.primary }]}
+              onPress={() => pick(icon.id)}>
+              <Image source={icon.preview} style={styles.iconPreview} accessibilityIgnoresInvertColors />
+              <Text style={styles.accentLabel}>{icon.label}</Text>
+            </Pressable>
+          );
+        })}
       </View>
+      {error ? (
+        <Text style={styles.help} testID="app-icon-error">
+          {error}
+        </Text>
+      ) : null}
     </>
   );
 }
@@ -283,24 +269,6 @@ function McpServerSection() {
 const useStyles = makeStyles((colors) => ({
   container: { padding: 16, gap: 12 },
   section: { color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 8 },
-  url: { color: colors.text, fontSize: 14, flexShrink: 1 },
-  mcpBox: {
-    gap: 4,
-    backgroundColor: colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  copy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    gap: 4,
-    minHeight: 44,
-    paddingHorizontal: 4,
-  },
-  copyText: { color: colors.primary, fontWeight: '700' },
   version: { color: colors.muted, textAlign: 'center', marginTop: 16 },
   row: {
     flexDirection: 'row',
@@ -344,5 +312,6 @@ const useStyles = makeStyles((colors) => ({
     backgroundColor: colors.card,
   },
   swatch: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  iconPreview: { width: 48, height: 48, borderRadius: 24 },
   accentLabel: { color: colors.text, fontSize: 13, fontWeight: '600' },
 }));

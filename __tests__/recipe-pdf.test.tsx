@@ -2,7 +2,7 @@
  * v1.0.3 “Export PDF”: printable recipe PDF (title, photo, servings / timed steps, ingredients, steps, notes,
  * tags — never nutrition) shared through the system share sheet. Recipe detail exports one recipe; Existing
  * Recipes multi-select (and Recipes-tab “Share Recipes” / + menu “Share Recipe”, which open it) exports several
- * into one PDF. Household sharing stays reachable from More → Household. Gate: `pdfExport` (requires `share`).
+ * into one PDF. Gate: `pdfExport` (requires `share`).
  */
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
@@ -176,7 +176,6 @@ const routes = () => ({
   '(tabs)/add-menu': require('@/app/(tabs)/add-menu').default,
   recipes: require('@/app/recipes').default,
   'recipe/[id]': require('@/app/recipe/[id]').default,
-  household: require('@/app/household').default,
   settings: require('@/app/settings').default,
 });
 
@@ -233,17 +232,12 @@ describe('UI', () => {
     expect(screen.queryByTestId('list-add-recipe-button')).toBeNull();
   });
 
-  it('+ menu “Share Recipes” opens the PDF picker; household sharing stays under More', async () => {
+  it('+ menu “Share Recipes” opens the PDF picker', async () => {
     renderRouter(routes(), { initialUrl: '/' });
     await screen.findByTestId('search-input');
     await act(async () => fireEvent.press(screen.getByTestId('tab-add-button')));
     await act(async () => fireEvent.press(screen.getByTestId('add-menu-share-recipe')));
     await waitFor(() => expect(screen).toHavePathname('/recipes'));
-    screen.unmount();
-    renderRouter(routes(), { initialUrl: '/more' });
-    const household = await screen.findByTestId('more-household');
-    await act(async () => fireEvent.press(household));
-    await waitFor(() => expect(screen).toHavePathname('/household'));
   });
 
   it('locked pdfExport: no Export PDF, no Share Recipes, no picker; Share and recipes still work', async () => {

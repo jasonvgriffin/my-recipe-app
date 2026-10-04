@@ -1,0 +1,8 @@
+[
+  {"id": "default", "label": "Classic", "background": "#16211A", "bowl": "#FFD60A", "steam": "#ECEFEC"},
+  {"id": "orange", "label": "Sunset", "background": "#E8590C", "bowl": "#FFFFFF", "steam": "#FFE3CC"},
+  {"id": "navy", "label": "Midnight", "background": "#14213D", "bowl": "#FFD60A", "steam": "#E5E9F0"},
+  {"id": "cream", "label": "Cream", "background": "#FFF3DC", "bowl": "#F76707", "steam": "#A1887F"},
+  {"id": "red", "label": "Tomato", "background": "#C62828", "bowl": "#FFFFFF", "steam": "#FFD6D6"},
+  {"id": "green", "label": "Garden", "background": "#2E7D32", "bowl": "#FFFFFF", "steam": "#DCEFDC"}
+]

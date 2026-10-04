@@ -29,7 +29,7 @@ export interface BarcodeScannerProps {
 /**
  * THE barcode scanner (spec #27), shared by the pantry and the shopping list. Camera (EAN-13 / EAN-8 /
  * UPC-A / UPC-E) → `barcodeLookup` (name and brand only, never nutrition) → `onProduct`. Unknown and offline
- * codes ask for a name once; that mapping is saved for the household.
+ * codes ask for a name once; that mapping is saved.
  */
 export function BarcodeScanner({ visible, hiddenLabel, onProduct, testID = 'barcode-layout' }: BarcodeScannerProps) {
   const bottomInset = useBottomInset();

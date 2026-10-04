@@ -8,14 +8,24 @@ export function TagEditor({
   tags,
   onAdd,
   onRemove,
+  draft: draftProp,
+  onDraftChange,
 }: {
   tags: string[];
   onAdd: (text: string) => void;
   onRemove: (tag: string) => void;
+  /** Controlled draft text — lets the parent know about (and save) a tag typed but not yet added. */
+  draft?: string;
+  onDraftChange?: (text: string) => void;
 }) {
   const styles = useStyles();
   const colors = useColors();
-  const [draft, setDraft] = useState('');
+  const [ownDraft, setOwnDraft] = useState('');
+  const draft = draftProp ?? ownDraft;
+  const setDraft = (text: string) => {
+    if (draftProp === undefined) setOwnDraft(text);
+    onDraftChange?.(text);
+  };
 
   function add() {
     const text = draft.trim();
@@ -35,7 +45,7 @@ export function TagEditor({
             onPress={() => onRemove(t)}
             testID={`remove-tag-${t}`}
             style={styles.tag}>
-            <Text style={styles.tagText}>#{t}  ×</Text>
+            <Text style={styles.tagText}>#{t} ×</Text>
           </Pressable>
         ))}
       </View>

@@ -1,3 +1,4 @@
+import { isAppIconId } from '@/lib/app-icon-ids';
 import { isAccentId, isThemeMode } from '@/lib/theme';
 import { DEFAULT_SETTINGS, type AppSettings, type AppearanceSettings, type OptionalFeatures } from '@/types/recipe';
 
@@ -69,6 +70,7 @@ function mergeAppearance(raw: Partial<AppearanceSettings> | undefined): Appearan
   return {
     themeMode: isThemeMode(raw?.themeMode) ? raw.themeMode : d.themeMode,
     accent: isAccentId(raw?.accent) ? raw.accent : d.accent,
+    appIcon: isAppIconId(raw?.appIcon) ? raw.appIcon : d.appIcon,
   };
 }
 

@@ -59,7 +59,7 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
     expect(saved.sourceUrl).toBe('https://example.com/chicken');
   });
 
-  it('keeps household and author (SyncMeta) when a shared recipe is edited', () => {
+  it('keeps author and any legacy sync meta (SyncMeta) when a synced recipe is edited', () => {
     const recipe: Recipe = {
       ...sample(),
       householdId: 'house-1',

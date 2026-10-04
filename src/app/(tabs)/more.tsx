@@ -15,15 +15,14 @@ interface MoreRow {
 }
 
 /**
- * More tab (v1.0.2): Pantry, Household and Settings. Pantry is listed only when the gate allows it and Settings
- * shows it; Household only when household sharing is unlocked. Settings is always here.
+ * More tab: Pantry and Settings. Pantry is listed only when the gate allows it and Settings shows it. Settings is
+ * always here. (v1.0.6: Household was removed at Jason's request.)
  */
 export default function MoreScreen() {
   const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
   const showPantry = useFeatureVisible('pantry');
-  const showHousehold = useFeatureVisible('householdSync');
   const rows: MoreRow[] = [
     ...(showPantry
       ? [
@@ -33,17 +32,6 @@ export default function MoreScreen() {
             icon: 'basket-outline',
             href: '/pantry',
             testID: 'more-pantry',
-          } as const,
-        ]
-      : []),
-    ...(showHousehold
-      ? [
-          {
-            label: 'Household',
-            hint: 'Share recipes with your household',
-            icon: 'people-outline',
-            href: '/household',
-            testID: 'more-household',
           } as const,
         ]
       : []),

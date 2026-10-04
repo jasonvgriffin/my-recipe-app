@@ -3,7 +3,7 @@
  *
  * This is the single source of truth for the recipe shape. It is used by the
  * app's local storage, the add-recipe form, and (later) JSON export/import and
- * the remote MCP server. Keep it JSON-serializable (no Dates, functions, etc.).
+ * any external tool. Keep it JSON-serializable (no Dates, functions, etc.).
  *
  * v1 feature spec: docs/SPEC.md. Fields marked (spec #N) map to items in that spec.
  */
@@ -281,6 +281,8 @@ export interface AppSettings {
 export interface AppearanceSettings {
   themeMode: ThemeMode;
   accent: AccentId;
+  /** Launcher icon (v1.0.6, Android): an id from assets/app-icons/icons.json; 'default' = the yellow bowl. */
+  appIcon: string;
 }
 
 export interface OptionalFeatures {
@@ -293,5 +295,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   unitSystem: 'original',
   cookingModeKeepAwake: true,
   features: { mealPlan: true, shopping: true, pantry: true },
-  appearance: { themeMode: 'system', accent: 'green' }, // DEFAULT_THEME_MODE / DEFAULT_ACCENT in src/lib/theme.ts
+  appearance: { themeMode: 'system', accent: 'green', appIcon: 'default' }, // DEFAULT_THEME_MODE / DEFAULT_ACCENT in src/lib/theme.ts
 };

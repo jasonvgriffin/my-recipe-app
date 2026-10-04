@@ -20,7 +20,7 @@ const isBarcodeItem = (v: unknown): v is BarcodeItem =>
   typeof (v as BarcodeItem).barcode === 'string' &&
   typeof (v as BarcodeItem).name === 'string';
 
-/** Household-shared barcode mappings (synced table `barcode_items`). */
+/** Barcode mappings (synced table `barcode_items`). */
 export const barcodeItems = createCollection<BarcodeItem>(defaultStore, BARCODE_ITEMS_STORAGE_KEY, (v) =>
   isBarcodeItem(v) ? withoutNutrition(v) : undefined,
 );

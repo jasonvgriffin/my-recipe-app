@@ -17,6 +17,7 @@ export interface StoredRecord {
   id: string;
   updatedAt?: string;
   deletedAt?: string;
+  /** Legacy (household sharing was removed in v1.0.6); dropped on the next sync. */
   householdId?: string;
   createdBy?: string;
 }
@@ -32,7 +33,7 @@ export interface Collection<T extends StoredRecord> {
   allRaw(): Promise<T[]>;
   replaceAll(items: T[]): Promise<void>;
   get(id: string): Promise<T | undefined>;
-  /** Local write: stamps updatedAt (and householdId/createdBy from the current identity if unset). */
+  /** Local write: stamps updatedAt (and createdBy from the current identity if unset). */
   save(item: T, now?: Date): Promise<T>;
   /** Soft delete (tombstone). */
   remove(id: string, now?: Date): Promise<void>;
@@ -42,6 +43,26 @@ export interface Collection<T extends StoredRecord> {
   applyRemote(items: T[]): Promise<number>;
   /** Drop tombstones older than `beforeIso` (after they've been synced). */
   purgeTombstones(beforeIso: string): Promise<number>;
+}
+
+/** Per-store, per-key write queues so concurrent read-modify-writes never drop each other's changes. */
+const writeQueues = new WeakMap<KeyValueStore, Map<string, Promise<unknown>>>();
+
+/** Run `fn` after every earlier queued write to the same store+key has finished. */
+export function withKeyLock<R>(store: KeyValueStore, key: string, fn: () => Promise<R>): Promise<R> {
+  let queues = writeQueues.get(store);
+  if (!queues) {
+    queues = new Map();
+    writeQueues.set(store, queues);
+  }
+  const prev = queues.get(key) ?? Promise.resolve();
+  const run = prev.then(fn, fn);
+  const tail = run.catch(() => undefined);
+  queues.set(key, tail);
+  void tail.then(() => {
+    if (queues.get(key) === tail) queues.delete(key);
+  });
+  return run;
 }
 
 /**
@@ -64,9 +85,11 @@ export function createCollection<T extends StoredRecord>(
       return [];
     }
   }
-  async function replaceAll(items: T[]): Promise<void> {
+  async function writeAll(items: T[]): Promise<void> {
     await store.setItem(key, JSON.stringify(items));
   }
+  const locked = <R>(fn: () => Promise<R>) => withKeyLock(store, key, fn);
+  const replaceAll = (items: T[]) => locked(() => writeAll(items));
   const live = (items: T[]) => items.filter((x) => !x.deletedAt);
 
   return {
@@ -78,58 +101,64 @@ export function createCollection<T extends StoredRecord>(
     async get(id) {
       return live(await allRaw()).find((x) => x.id === id);
     },
-    async save(item, now = new Date()) {
-      const { userId, householdId } = getIdentity();
-      const stamped: T = {
-        ...item,
-        updatedAt: now.toISOString(),
-        householdId: item.householdId ?? householdId,
-        createdBy: item.createdBy ?? userId,
-      };
-      if (stamped.householdId === undefined) delete stamped.householdId;
-      if (stamped.createdBy === undefined) delete stamped.createdBy;
-      const items = await allRaw();
-      const idx = items.findIndex((x) => x.id === item.id);
-      if (idx >= 0) items[idx] = stamped;
-      else items.push(stamped);
-      await replaceAll(items);
-      notifyDataChange();
-      return stamped;
+    save(item, now = new Date()) {
+      return locked(async () => {
+        const { userId } = getIdentity();
+        const stamped: T = {
+          ...item,
+          updatedAt: now.toISOString(),
+          createdBy: item.createdBy ?? userId,
+        };
+        if (stamped.createdBy === undefined) delete stamped.createdBy;
+        const items = await allRaw();
+        const idx = items.findIndex((x) => x.id === item.id);
+        if (idx >= 0) items[idx] = stamped;
+        else items.push(stamped);
+        await writeAll(items);
+        notifyDataChange();
+        return stamped;
+      });
     },
-    async remove(id, now = new Date()) {
-      const ts = now.toISOString();
-      await replaceAll((await allRaw()).map((x) => (x.id === id ? { ...x, deletedAt: ts, updatedAt: ts } : x)));
-      notifyDataChange();
+    remove(id, now = new Date()) {
+      return locked(async () => {
+        const ts = now.toISOString();
+        await writeAll((await allRaw()).map((x) => (x.id === id ? { ...x, deletedAt: ts, updatedAt: ts } : x)));
+        notifyDataChange();
+      });
     },
     async changesSince(sinceIso) {
       const items = await allRaw();
       return sinceIso ? items.filter((x) => (x.updatedAt ?? '') > sinceIso) : items;
     },
-    async applyRemote(remote) {
-      const items = await allRaw();
-      const byId = new Map(items.map((x, i) => [x.id, i]));
-      let applied = 0;
-      for (const r of remote) {
-        const idx = byId.get(r.id);
-        if (idx === undefined) {
-          byId.set(r.id, items.push(r) - 1);
-          applied++;
-        } else if ((r.updatedAt ?? '') > (items[idx].updatedAt ?? '')) {
-          items[idx] = r;
-          applied++;
+    applyRemote(remote) {
+      return locked(async () => {
+        const items = await allRaw();
+        const byId = new Map(items.map((x, i) => [x.id, i]));
+        let applied = 0;
+        for (const r of remote) {
+          const idx = byId.get(r.id);
+          if (idx === undefined) {
+            byId.set(r.id, items.push(r) - 1);
+            applied++;
+          } else if ((r.updatedAt ?? '') > (items[idx].updatedAt ?? '')) {
+            items[idx] = r;
+            applied++;
+          }
         }
-      }
-      if (applied) {
-        await replaceAll(items);
-        notifyDataChange();
-      }
-      return applied;
+        if (applied) {
+          await writeAll(items);
+          notifyDataChange();
+        }
+        return applied;
+      });
     },
-    async purgeTombstones(beforeIso) {
-      const items = await allRaw();
-      const kept = items.filter((x) => !x.deletedAt || x.deletedAt >= beforeIso);
-      if (kept.length !== items.length) await replaceAll(kept);
-      return items.length - kept.length;
+    purgeTombstones(beforeIso) {
+      return locked(async () => {
+        const items = await allRaw();
+        const kept = items.filter((x) => !x.deletedAt || x.deletedAt >= beforeIso);
+        if (kept.length !== items.length) await writeAll(kept);
+        return items.length - kept.length;
+      });
     },
   };
 }

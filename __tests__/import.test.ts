@@ -53,7 +53,7 @@ function deps(store = createRecipeStore(memoryStore()), html = PAGE): ImportDeps
   return { store, fetchHtml: jest.fn(async () => html), now: () => new Date('2026-10-02T12:00:00Z') };
 }
 
-describe('importRecipe — structured (future MCP / "Hey AI, send this recipe")', () => {
+describe('importRecipe — structured (e.g. a JSON file)', () => {
   it('validates, normalizes and saves a structured draft', async () => {
     const d = deps();
     const result = await importRecipe(
@@ -68,7 +68,7 @@ describe('importRecipe — structured (future MCP / "Hey AI, send this recipe")'
           ...({ carbsPerServing: 3 } as object), // ignored: imports never store nutrition
           servings: 9,
         },
-        source: { channel: 'mcp', label: 'Grok' },
+        source: { channel: 'file', label: 'Grok' },
       },
       {},
       d,

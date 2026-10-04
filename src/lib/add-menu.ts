@@ -5,11 +5,12 @@ import type { FeatureId } from '@/entitlements';
  * the sheet stays thin. Every item opens an EXISTING flow; items behind an optional feature list that feature
  * in `needs` and disappear when it is locked by the gate or hidden in Settings (recipes-first rule).
  * v1.0.3: no separate Scan Barcode item; scanning lives on the Shopping list (“Scan Item”) and Pantry screens,
- * reached through Add to Shopping List / Add Pantry Item.
+ * reached through Add to Shopping List / Add Pantry Item. v1.0.6: Import PDF (9 items, a 3×3 grid).
  */
 export type AddMenuItemId =
   | 'add-recipe'
   | 'import-link'
+  | 'import-pdf'
   | 'search-recipes'
   | 'add-shopping'
   | 'add-pantry'
@@ -28,6 +29,7 @@ export interface AddMenuItem {
 export const ADD_MENU_ITEMS: readonly AddMenuItem[] = [
   { id: 'add-recipe', label: 'Add Recipe', icon: 'create-outline' },
   { id: 'import-link', label: 'Import Link', icon: 'link-outline', needs: ['linkImport'] },
+  { id: 'import-pdf', label: 'Import PDF', icon: 'document-text-outline', needs: ['linkImport'] },
   { id: 'search-recipes', label: 'Search Recipes', icon: 'search-outline' },
   { id: 'add-shopping', label: 'Add to Shopping List', icon: 'cart-outline', needs: ['shoppingList'] },
   { id: 'add-pantry', label: 'Add Pantry Item', icon: 'basket-outline', needs: ['pantry'] },
@@ -48,6 +50,8 @@ export function addMenuHref(id: AddMenuItemId, ctx: { today: string }): string {
       return '/add';
     case 'import-link':
       return '/import';
+    case 'import-pdf':
+      return '/import-pdf';
     case 'search-recipes':
       return '/recipes?focus=search';
     case 'add-shopping':
@@ -57,7 +61,7 @@ export function addMenuHref(id: AddMenuItemId, ctx: { today: string }): string {
     case 'plan-meal':
       return `/meal-plan/${ctx.today}`;
     case 'share-recipe':
-      // v1.0.3: share as a PDF (pick recipes → share sheet). Household sharing lives under More → Household.
+      // v1.0.3: share as a PDF (pick recipes → share sheet).
       return '/recipes?select=pdf';
     case 'what-can-i-make':
       return '/pantry-match';

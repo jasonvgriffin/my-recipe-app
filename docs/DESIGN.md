@@ -2,15 +2,15 @@
 
 ## 0. RECIPES ARE THE CORE
 
-Recipes are the product; pantry, meal plan, shopping list, grocery run, barcode scanning and household
-sharing are optional. App opens to Recipes; no onboarding/sign-in/setup; no recipe flow requires or prompts
+Recipes are the product; pantry, meal plan, shopping list, grocery run, barcode scanning
+are optional. App opens to Recipes; no onboarding/sign-in/setup; no recipe flow requires or prompts
 optional features; cross-links are unobtrusive and absent when the feature is hidden (`useSettings().features`)
 or empty; empty optional features never nag; Settings toggles hide the optional tabs. Recipe features get
 verification priority. Acceptance: full recipe workflow with all optional features hidden
 (`__tests__/recipes-first.test.tsx`). Full rule: top of docs/SPEC.md.
 
 These rules apply to every screen and PR. They come from Jason's v1 spec (docs/SPEC.md) — notably
-#13 dark theme, #23 foldables, #24 cook-with-me, #25 household sharing, #27 barcode lookup.
+#13 dark theme, #23 foldables, #24 cook-with-me, ~~#25 household sharing~~ (removed in v1.0.6), #27 barcode lookup.
 
 ## 0b. Paywall-ready feature gating
 
@@ -80,9 +80,9 @@ Screens stay thin. Shared logic goes in pure, tested modules that a future MCP s
 
 - `src/import/` — the ONLY way recipes enter the app (docs/IMPORT_API.md)
 - `src/cooking/` — cook-with-me session state (docs/COOK_API.md)
-- `src/sync/` + `src/storage/` — repositories and household sync (docs/SYNC.md)
+- `src/storage/` — repositories over a swappable KeyValueStore (sync and households were removed in v1.0.6)
 - `src/entitlements/` — feature gate (`canUse`, registry, providers)
-- `src/pantry/` — barcode lookup (Open Food Facts + local/household cache); shared by the pantry and shopping-list scanners (`src/components/barcode-scanner.tsx`)
+- `src/pantry/` — barcode lookup (Open Food Facts + local cache); shared by the pantry and shopping-list scanners (`src/components/barcode-scanner.tsx`)
   ESLint forbids React / react-native / expo imports inside those modules.
 
 ## 4. Voice / assistant friendliness (spec #24)
@@ -90,11 +90,11 @@ Screens stay thin. Shared logic goes in pure, tested modules that a future MCP s
 No in-app TTS. Anything an assistant might do ("send this recipe", "next step") must be reachable through a
 UI-free module + a deep link (`myrecipeapp://…`), so the future MCP server can wrap the same functions.
 
-## 5. Household-ready data (spec #25)
+## 5. Record metadata (household sharing removed in v1.0.6)
 
-Every synced record extends `SyncMeta` (UUID `id`, `householdId?`, `createdBy?`, `createdAt`, `updatedAt`,
+Every stored record extends `SyncMeta` (UUID `id`, legacy `householdId?` / `createdBy?`, `createdAt`, `updatedAt`,
 `deletedAt?`). Write through the repositories (`Collection.save/remove`) — never `replaceAll` for user edits —
-so timestamps, authorship and tombstones stay correct. The app must work fully offline/solo when signed out.
+so timestamps, authorship and tombstones stay correct. The app is fully local (no sign-in since v1.0.6).
 
 ## 6. Accessibility & touch
 

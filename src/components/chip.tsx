@@ -9,9 +9,12 @@ export function Chip({
   onPress,
   testID,
   accessibilityLabel,
+  checkable = false,
 }: {
   label: string;
   active?: boolean;
+  /** Multi-select chip: shows a checkmark when active and reports itself as a checkbox. */
+  checkable?: boolean;
   onPress?: () => void;
   testID?: string;
   accessibilityLabel?: string;
@@ -19,13 +22,15 @@ export function Chip({
   const styles = useStyles();
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={checkable ? 'checkbox' : 'button'}
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ selected: active }}
+      accessibilityState={checkable ? { checked: active, selected: active } : { selected: active }}
       onPress={onPress}
       testID={testID}
       style={[styles.chip, active && styles.chipActive]}>
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+        {checkable && active ? `✓ ${label}` : label}
+      </Text>
     </Pressable>
   );
 }

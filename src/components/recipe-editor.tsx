@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
-import { CategoryChips } from '@/components/category-chips';
+import { CategoryChips, toggleCategoryId } from '@/components/category-chips';
 import { useBottomInset } from '@/components/layout';
 import { TagEditor } from '@/components/tag-editor';
 import { useFeature } from '@/hooks/use-feature';
@@ -121,12 +121,11 @@ export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (re
         </Field>
       ) : null}
       {categoriesOn ? (
-        <Field label="Category">
+        <Field label="Categories">
           <CategoryChips
-            single
             categories={categories}
             selectedIds={state.categoryIds ?? recipe.categoryIds}
-            onToggle={(id) => patch({ categoryIds: id ? [id] : [] })}
+            onToggle={(id) => patch({ categoryIds: toggleCategoryId(state.categoryIds ?? recipe.categoryIds, id) })}
             testIDPrefix="edit-category"
           />
         </Field>

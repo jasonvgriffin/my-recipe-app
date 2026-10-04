@@ -24,7 +24,7 @@ export function AppHeaderTitle() {
 }
 
 /**
- * v1.0.4 (Jason): the section name (Recipes, Meal Plan, Shopping List, Pantry, More, Settings, Household) as a big,
+ * v1.0.4 (Jason): the section name (Recipes, Meal Plan, Shopping List, Pantry, More, Settings) as a big,
  * bold, centered page title in the content area just below the banner. Everything on the screen sits under it.
  */
 export function SectionTitle({ section }: { section: string }) {

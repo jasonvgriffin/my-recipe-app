@@ -25,7 +25,6 @@ import { createBarcodeLookup } from '@/pantry/barcodeLookup';
 import type { KeyValueStore } from '@/storage/kv';
 import { createRecipeStore } from '@/storage/recipes';
 import { settingsStore } from '@/storage/settings';
-import { createSyncEngine, type RemoteAdapter, type SyncCollections } from '@/sync';
 
 function memoryStore(): KeyValueStore {
   const data = new Map<string, string>();
@@ -63,17 +62,11 @@ describe('feature gate', () => {
     expect(gate.canUse('pdfExport')).toBe(false);
   });
 
-  it('registers cloudSync (personal account + sync, v1.0.6) separately from householdSync, free in v1', () => {
-    expect(DEFAULT_FEATURE_CONFIG.cloudSync).toEqual({ tier: 'free', enabled: true });
-    expect(canUse('cloudSync')).toBe(true);
-    featureGate.setConfig({ householdSync: { enabled: false } });
-    expect(canUse('cloudSync')).toBe(true);
-    expect(canUse('householdSync')).toBe(false);
-  });
-
-  it('registers mcpAccess (future MCP server paywall switch), free in v1', () => {
-    expect(DEFAULT_FEATURE_CONFIG.mcpAccess).toEqual({ tier: 'free', enabled: true });
-    expect(canUse('mcpAccess')).toBe(true);
+  it('v1.0.6: household sharing and the MCP server were cut at Jason\'s request — no gates or toggles left', () => {
+    for (const gone of ['householdSync', 'cloudSync', 'mcpAccess']) {
+      expect(ALL_FEATURE_IDS).not.toContain(gone);
+      expect(DEFAULT_FEATURE_CONFIG).not.toHaveProperty(gone);
+    }
   });
 
   it('premium without entitlement is locked; granting it unlocks; kill switch beats entitlement', () => {
@@ -145,20 +138,6 @@ describe('UI-free modules honour the gate (canUse)', () => {
     expect(await session.getCurrentStep()).toMatchObject({ ok: false, code: 'feature_locked' });
   });
 
-  it('sync engine is a no-op when householdSync is locked', async () => {
-    featureGate.setConfig(premium('householdSync'));
-    const remote = { pull: jest.fn(), push: jest.fn() } as unknown as RemoteAdapter;
-    const engine = createSyncEngine({
-      collections: {} as SyncCollections,
-      remote,
-      kv: memoryStore(),
-      householdId: 'h',
-      userId: 'u',
-    });
-    expect((await engine.syncOnce()).skipped).toBe('feature_locked');
-    expect(remote.pull).not.toHaveBeenCalled();
-  });
-
   it('barcode lookup locked when barcode scanning is premium', async () => {
     featureGate.setConfig(premium('barcodeScan'));
     const fetchJson = jest.fn();
@@ -189,7 +168,6 @@ const routes = () => ({
   'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
   'grocery-run': require('@/app/grocery-run').default,
   settings: require('@/app/settings').default,
-  household: require('@/app/household').default,
 });
 
 // Requiring every screen transforms most of the app. On a cold CI cache that alone can exceed Jest's 5 s

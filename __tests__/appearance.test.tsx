@@ -110,17 +110,17 @@ describe('palettes', () => {
 
 describe('appearance settings', () => {
   it('defaults to System + Green, persists changes, and ignores unknown stored values', async () => {
-    expect(DEFAULT_SETTINGS.appearance).toEqual({ themeMode: 'system', accent: 'green' });
-    expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'system', accent: 'green' });
+    expect(DEFAULT_SETTINGS.appearance).toEqual({ themeMode: 'system', accent: 'green', appIcon: 'default' });
+    expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'system', accent: 'green', appIcon: 'default' });
     await settingsStore.update({ appearance: { accent: 'teal' } });
     await settingsStore.update({ appearance: { themeMode: 'light' } });
-    expect((await createSettingsStore().get()).appearance).toEqual({ themeMode: 'light', accent: 'teal' });
+    expect((await createSettingsStore().get()).appearance).toEqual({ themeMode: 'light', accent: 'teal', appIcon: 'default' });
     const AsyncStorage = require('@react-native-async-storage/async-storage');
     await AsyncStorage.setItem(
       SETTINGS_STORAGE_KEY,
-      JSON.stringify({ appearance: { themeMode: 'neon', accent: 'gold' } }),
+      JSON.stringify({ appearance: { themeMode: 'neon', accent: 'gold', appIcon: 'rainbow' } }),
     );
-    expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'system', accent: 'green' });
+    expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'system', accent: 'green', appIcon: 'default' });
   });
 });
 
@@ -130,7 +130,7 @@ describe('Settings → Appearance (UI)', () => {
     await act(async () => fireEvent.press(await screen.findByTestId('settings-theme-light')));
     await act(async () => fireEvent.press(screen.getByTestId('settings-accent-blue')));
     await waitFor(async () =>
-      expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'light', accent: 'blue' }),
+      expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'light', accent: 'blue', appIcon: 'default' }),
     );
     const blue = buildColors('light', 'blue');
     await waitFor(() =>
@@ -158,7 +158,7 @@ describe('Settings → Appearance (UI)', () => {
     renderRouter(routes(), { initialUrl: '/settings' });
     const pink = await screen.findByTestId('settings-accent-pink');
     await act(async () => fireEvent.press(pink));
-    await waitFor(async () => expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'dark', accent: 'pink' }));
+    await waitFor(async () => expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'dark', accent: 'pink', appIcon: 'default' }));
     const widths = new Set(
       ACCENTS.map((a) => StyleSheet.flatten(screen.getByTestId(`settings-accent-${a.id}`).props.style).width),
     );

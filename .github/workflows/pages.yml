@@ -1,7 +1,7 @@
 name: GitHub Pages
 
-# Publishes site/ (the MCP OAuth consent page, docs/MCP.md) to https://jasonvgriffin.github.io/my-recipe-app/.
-# Supabase Auth's Site URL points here; its OAuth server sends users to <Site URL>/oauth/consent. Free (public repo).
+# Publishes site/ (a one-page placeholder) to https://jasonvgriffin.github.io/my-recipe-app/. The MCP OAuth consent
+# page that used to live here was removed in v1.0.6 (MCP cut at Jason's request). Free (public repo).
 
 on:
   push:

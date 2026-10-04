@@ -1,8 +1,7 @@
 /**
  * App colors (spec #13; Appearance since v1.0.3). Pure data + helpers, no React: the live palette comes from
  * `useColors()` / `makeStyles()` in `src/hooks/use-theme.tsx`, driven by Settings → Appearance
- * (`AppSettings.appearance`: theme mode System / Light / Dark + accent color). Never hard-code colors in screens. No imports on purpose: `src/types/recipe.ts` (shared with the
- * MCP Edge Function) imports its types.
+ * (`AppSettings.appearance`: theme mode System / Light / Dark + accent color). Never hard-code colors in screens. No imports on purpose: `src/types/recipe.ts` imports its types.
  */
 export interface ThemeColors {
   /** Accent color: links, primary buttons, tab highlight, selected chips. */

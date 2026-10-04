@@ -1,6 +1,6 @@
 /**
- * Public API of the import module. UI, deep links, share intents (and later MCP / sync) import through here only.
- * A non-app host (e.g. a Node MCP server) should use `importRecipeWith(serverDeps, input)` from './import-recipe'
+ * Public API of the import module. UI, deep links, share intents and file imports (PDF) go through here only.
+ * A non-app host should use `importRecipeWith(deps, input)` from './import-recipe'
  * to avoid pulling in the on-device store.
  */
 import { appImportDeps } from './app-deps';
@@ -17,6 +17,6 @@ export function importRecipe(
 }
 
 export { importRecipeWith, appImportDeps, type ImportDeps };
-export { importPathFromIncomingUrl, parseImportDeepLink, sharedPayloadToText, shareTextToImportInput } from './deep-link';
+export { importPathFromIncomingUrl, parseImportDeepLink, sharedPayloadToText, sharedPdfUri, shareTextToImportInput } from './deep-link';
 export { normalizeSourceUrl } from './normalize';
 export * from './types';

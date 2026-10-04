@@ -1,13 +1,11 @@
 /**
  * v1.0.2 UI: Cronometer-style bottom bar (Recipes · Meal Plan · + · Shopping · More), the + add sheet, the More
- * screen, the "My Recipe App" header, and Settings (AI assistants / MCP URL, version). Optional features hidden in
+ * screen, the "My Recipe App" header, and Settings (version; the MCP section was cut in v1.0.6). Optional features hidden in
  * Settings (or locked by the gate) disappear from the bar and the + menu; the + button and More always stay.
  */
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
-import * as Clipboard from 'expo-clipboard';
 import { renderRouter } from 'expo-router/testing-library';
 
-import { MCP_SERVER_URL } from '@/config';
 import type { FeatureId } from '@/entitlements';
 import { ADD_MENU_ITEMS, addMenuHref, visibleAddMenuItems } from '@/lib/add-menu';
 import { toIsoDate } from '@/lib/dates';
@@ -40,9 +38,9 @@ const routes = () => ({
   'pantry-match': require('@/app/pantry-match').default,
   add: require('@/app/add').default,
   import: require('@/app/import').default,
+  'import-pdf': require('@/app/import-pdf').default,
   'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
   settings: require('@/app/settings').default,
-  household: require('@/app/household').default,
 });
 
 beforeAll(() => {
@@ -58,10 +56,11 @@ beforeEach(async () => {
 const ALL_IDS = ADD_MENU_ITEMS.map((i) => i.id);
 
 describe('add menu items (pure)', () => {
-  it('lists all eight actions in order when everything is visible', () => {
+  it('lists all nine actions in order when everything is visible (v1.0.6: Import PDF, a 3×3 grid)', () => {
     expect(visibleAddMenuItems(() => true).map((i) => i.label)).toEqual([
       'Add Recipe',
       'Import Link',
+      'Import PDF',
       'Search Recipes',
       'Add to Shopping List',
       'Add Pantry Item',
@@ -77,7 +76,7 @@ describe('add menu items (pure)', () => {
 
   it('has no separate Scan Barcode item (scanning lives on the Shopping and Pantry screens)', () => {
     expect(ADD_MENU_ITEMS.some((i) => /scan/i.test(i.id) || /scan/i.test(i.label))).toBe(false);
-    expect(visibleAddMenuItems(() => true)).toHaveLength(8);
+    expect(visibleAddMenuItems(() => true)).toHaveLength(9);
     expect(addMenuHref('plan-meal', { today: '2026-10-03' })).toBe('/meal-plan/2026-10-03');
     expect(addMenuHref('share-recipe', { today: '2026-10-03' })).toBe('/recipes?select=pdf'); // v1.0.3: PDF
   });
@@ -113,6 +112,7 @@ describe('bottom bar, header and + sheet', () => {
   it('each action opens its existing flow', async () => {
     const cases: [string, string][] = [
       ['add-recipe', '/add'],
+      ['import-pdf', '/import-pdf'],
       ['search-recipes', '/recipes'],
       ['plan-meal', `/meal-plan/${toIsoDate(new Date())}`],
       ['what-can-i-make', '/pantry-match'],
@@ -224,7 +224,6 @@ describe('section title below the banner (v1.0.4)', () => {
     ['/more', 'More'],
     ['/pantry', 'Pantry'],
     ['/settings', 'Settings'],
-    ['/household', 'Household'],
   ])('%s shows the “%s” page title', async (url, section) => {
     renderRouter(routes(), { initialUrl: url });
     expect(await screen.findByTestId('section-title')).toHaveTextContent(section);
@@ -234,10 +233,11 @@ describe('section title below the banner (v1.0.4)', () => {
 });
 
 describe('More screen', () => {
-  it('lists Pantry, Household and Settings', async () => {
+  it('lists just Pantry and Settings (v1.0.6: Household removed)', async () => {
     renderRouter(routes(), { initialUrl: '/more' });
     expect(await screen.findByTestId('more-pantry')).toBeTruthy();
-    expect(screen.getByTestId('more-household')).toBeTruthy();
+    expect(screen.queryByTestId('more-household')).toBeNull();
+    expect(screen.queryByText('Household')).toBeNull();
     expect(screen.getByTestId('section-title')).toHaveTextContent('More');
     await act(async () => fireEvent.press(screen.getByTestId('more-settings')));
     expect(await screen.findByTestId('settings-screen')).toBeTruthy();
@@ -259,15 +259,16 @@ describe('More screen', () => {
 });
 
 describe('Settings (v1.0.2)', () => {
-  it('shows the MCP server URL with a copy button, no cooked-recently setting, and the app version', async () => {
+  it('has no AI assistants (MCP) section or sign-in (cut in v1.0.6), no cooked-recently setting, and shows the app version', async () => {
     renderRouter(routes(), { initialUrl: '/settings' });
-    expect(await screen.findByText('AI assistants (MCP)')).toBeTruthy();
-    expect(screen.getByTestId('mcp-server-url')).toHaveTextContent(MCP_SERVER_URL);
+    expect(await screen.findByTestId('settings-screen')).toBeTruthy();
+    expect(screen.queryByText(/AI assistants|MCP/)).toBeNull();
+    expect(screen.queryByTestId('mcp-server-url')).toBeNull();
+    expect(screen.queryByTestId('account-settings-link')).toBeNull();
+    expect(screen.queryByText(/Sign in/i)).toBeNull();
+    expect(screen.queryByText(/Household/)).toBeNull();
     expect(screen.queryByText(/Cooked recently/i)).toBeNull();
     expect(screen.queryByTestId('cooked-recently-input')).toBeNull();
-    await act(async () => fireEvent.press(screen.getByTestId('mcp-copy-button')));
-    expect(Clipboard.setStringAsync).toHaveBeenCalledWith(MCP_SERVER_URL);
-    expect(await screen.findByText('Copied')).toBeTruthy();
     const { version } = require('../app.json').expo as { version: string };
     expect(screen.getByTestId('app-version')).toHaveTextContent(`Version ${version}`);
   });

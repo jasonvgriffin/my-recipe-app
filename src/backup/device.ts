@@ -9,7 +9,7 @@ import { appVersion } from '@/config';
 import { presentShare } from '@/lib/present-share';
 import { RECIPE_PHOTO_DIR } from '@/lib/photo-path';
 import { settingsStore } from '@/storage/settings';
-import { appSyncCollections } from '@/sync';
+import { appCollections } from '@/storage/app-collections';
 
 import { createBackup, restoreBackup, type BackupDeps, type PhotoStore, type RestoreMode, type RestoreResult } from './backup';
 import { BACKUP_MIME, backupFileName, parseBackup, type Backup, type ParseResult } from './format';
@@ -42,7 +42,7 @@ export const devicePhotoStore: PhotoStore = {
 
 export function deviceBackupDeps(): BackupDeps {
   return {
-    collections: appSyncCollections(),
+    collections: appCollections(),
     settings: settingsStore,
     photos: devicePhotoStore,
     appVersion: appVersion() ?? undefined,

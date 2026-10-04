@@ -1,6 +1,7 @@
 package expo.modules.recipeshare
 
 import android.content.ClipData
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -34,6 +35,38 @@ class RecipeShareModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("RecipeShare")
+
+    // App icon picker (v1.0.6): launcher icons are <activity-alias> entries `<package>.LauncherIcon<Suffix>` added by
+    // plugins/with-alternate-icons.js. Exactly one is enabled; the default alias is the manifest default.
+    Function("getAppIcon") { suffixes: List<String> ->
+      val pm = context.packageManager
+      suffixes.firstOrNull { suffix ->
+        val state = pm.getComponentEnabledSetting(ComponentName(context.packageName, "${context.packageName}.$suffix"))
+        state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
+          (state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && suffix == suffixes.first())
+      }
+    }
+
+    AsyncFunction("setAppIcon") { target: String, suffixes: List<String> ->
+      if (target !in suffixes) throw IllegalArgumentException("Unknown app icon")
+      val pm = context.packageManager
+      fun component(suffix: String) = ComponentName(context.packageName, "${context.packageName}.$suffix")
+      // Enable the new launcher entry first, then turn the others off, so there is never zero (or two) for long.
+      pm.setComponentEnabledSetting(
+        component(target),
+        if (target == suffixes.first()) PackageManager.COMPONENT_ENABLED_STATE_DEFAULT else PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+        PackageManager.DONT_KILL_APP,
+      )
+      for (suffix in suffixes) {
+        if (suffix == target) continue
+        pm.setComponentEnabledSetting(
+          component(suffix),
+          if (suffix == suffixes.first()) PackageManager.COMPONENT_ENABLED_STATE_DISABLED else PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
+          PackageManager.DONT_KILL_APP,
+        )
+      }
+      target
+    }
 
     AsyncFunction("shareAsync") { options: ShareOptions ->
       val message = options.message?.takeIf { it.isNotBlank() }

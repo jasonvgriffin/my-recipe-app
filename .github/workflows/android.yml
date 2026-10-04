@@ -37,10 +37,6 @@ env:
   NODE_VERSION: '22'
   # Build only the ABIs that matter (real phones + x86_64 emulators) to keep CI fast.
   RN_ARCHS: arm64-v8a,x86_64
-  # Household sync (spec #25). Public values only (anon key, never service_role). Empty → offline/solo build.
-  # Set as repo variable EXPO_PUBLIC_SUPABASE_URL and secret EXPO_PUBLIC_SUPABASE_ANON_KEY.
-  EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
-  EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
 
 jobs:
   build:
@@ -180,6 +176,15 @@ jobs:
           if grep -Eq "BLUETOOTH|NEARBY_WIFI_DEVICES|UWB_RANGING|SYSTEM_ALERT_WINDOW|EXTERNAL_STORAGE|EXACT_ALARM|launcher|badge|finsky|c2dm" <<<"$perms"; then
             echo "::error::APK requests a blocked permission (see app.json android.blockedPermissions)"; exit 1
           fi
+
+      - name: Verify launcher icons (app icon picker, v1.0.6)
+        run: |
+          apk=$(ls android/app/build/outputs/apk/release/*.apk | head -n1)
+          bt="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n1)"
+          "$bt/aapt2" dump xmltree --file AndroidManifest.xml "$apk" > manifest.txt
+          python3 scripts/check-launcher-icons.py "$(python3 -c 'import json;print(len(json.load(open("assets/app-icons/icons.json"))))')" < manifest.txt
+          "$bt/aapt2" dump resources "$apk" | grep -E "mipmap/(ic_launcher_alt_[a-z]+|ic_launcher_monochrome)\b" | sort -u | tee res.txt
+          grep -q "mipmap/ic_launcher_monochrome" res.txt || { echo "::error::monochrome launcher layer missing"; exit 1; }
 
       - name: Remove decoded keystore
         if: always()
