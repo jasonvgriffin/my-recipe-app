@@ -40,6 +40,8 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 
 ## v1.1.0 (2026-10-13)
 
+- **`ALTER PUBLICATION ... DROP TABLE` has no `IF EXISTS` here.** The first apply failed at that clause (`syntax error at or near "exists"`) and rolled back, so the migration file was still unapplied and could be corrected. Guard with `pg_publication_tables`, then `DROP TABLE`.
+
 - **Check every caller before uninstalling a package.** Grocery run still calls `useKeepAwake`. Removing cooking mode only removed the keep-awake setting. `expo-keep-awake` stays.
 - **A removed collection still has to parse.** Old backups include `barcode_items` and `cookingModeKeepAwake`. The zod schema still accepts `barcode_items` (new files write `[]` and do not restore them). Settings merge copies only keys that exist on `DEFAULT_SETTINGS`.
 - **Servings scaling is display-only.** The stepper does not write the recipe. Fractions and mixed numbers go through `parseIngredient` / `scaleIngredient`. A line that does not parse stays as written.
