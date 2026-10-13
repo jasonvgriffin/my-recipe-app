@@ -1,11 +1,11 @@
 import { extractRecipeHeuristically } from '@/import/parsers/heuristics';
 
 const MICRODATA = `<div itemscope itemtype="http://schema.org/Recipe">
-  <h1 itemprop="name">Allulose Lemon Bars</h1>
+  <h1 itemprop="name">Cocoa Lemon Bars</h1>
   <meta itemprop="description" content="Bright and simple." />
   <span itemprop="recipeYield">9</span>
   <li itemprop="recipeIngredient">1 cup almond flour</li>
-  <li itemprop="recipeIngredient">1/2 cup allulose</li>
+  <li itemprop="recipeIngredient">1/2 cup cocoa</li>
   <ol itemprop="recipeInstructions">
     <li itemprop="text">Mix.</li>
     <li itemprop="text">Bake 20 minutes.</li>
@@ -45,10 +45,10 @@ const HEADINGS = `<html><head><title>Ignored title</title></head><body>
 describe('extractRecipeHeuristically (spec #1 fallback)', () => {
   it('reads schema.org microdata', () => {
     expect(extractRecipeHeuristically(MICRODATA, 'https://example.com/bars')).toMatchObject({
-      title: 'Allulose Lemon Bars',
+      title: 'Cocoa Lemon Bars',
       description: 'Bright and simple.',
       servings: 9,
-      ingredients: ['1 cup almond flour', '1/2 cup allulose'],
+      ingredients: ['1 cup almond flour', '1/2 cup cocoa'],
       steps: ['Mix.', 'Bake 20 minutes.'],
       sourceUrl: 'https://example.com/bars',
     });
@@ -89,6 +89,6 @@ describe('extractRecipeHeuristically (spec #1 fallback)', () => {
 
   it('prefers microdata over a generic heading on the same page', () => {
     const html = `${MICRODATA}<h1>Something else</h1><h2>Ingredients</h2><ul><li>nope</li></ul><h2>Steps</h2><ul><li>nope</li></ul>`;
-    expect(extractRecipeHeuristically(html)?.title).toBe('Allulose Lemon Bars');
+    expect(extractRecipeHeuristically(html)?.title).toBe('Cocoa Lemon Bars');
   });
 });

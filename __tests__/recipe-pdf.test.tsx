@@ -66,7 +66,7 @@ function soup(overrides: Partial<Recipe> = {}): Recipe {
       tags: ['soup', 'low-sugar'],
       ingredients: [
         { text: '2 cups chicken broth' },
-        { text: '1 tbsp allulose', substitutionNote: 'allulose instead of sugar' },
+        { text: '1 tbsp honey', substitutionNote: 'honey instead of sugar' },
       ],
       steps: [{ text: 'Simmer the broth.', durationSeconds: 1200 }, { text: 'Stir in greens.' }],
       notes: 'Freezes well.',
@@ -98,7 +98,7 @@ describe('recipe PDF HTML (pure)', () => {
     expect(html).toContain('Servings: 4');
     expect(html).toContain('Timed steps: 20 min');
     expect(html).toMatch(/<li>2 cups? chicken broth<\/li>/); // same wording as the detail screen
-    expect(html).toContain('Substitution: allulose instead of sugar');
+    expect(html).toContain('Substitution: honey instead of sugar');
     expect(html).toMatch(/<li>Simmer the broth\. <span class="timer">\(20 min\)<\/span><\/li>/);
     expect(html).toContain('<li>Stir in greens.</li>');
     expect(html).toContain('Freezes well.');

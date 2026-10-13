@@ -209,7 +209,7 @@ function ImportBody() {
         <TextInput
           value={text}
           onChangeText={setText}
-          placeholder={'Title\nIngredients:\n- 2 tbsp allulose\nSteps:\n1. Mix'}
+          placeholder={'Title\nIngredients:\n- 2 tbsp olive oil\nSteps:\n1. Mix'}
           placeholderTextColor={colors.placeholder}
           style={[styles.input, styles.multiline]}
           multiline

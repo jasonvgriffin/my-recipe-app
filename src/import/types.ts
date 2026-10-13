@@ -97,7 +97,6 @@ export interface ImportOptions {
 export type ImportErrorCode =
   | 'invalid_input' // input/draft failed schema validation
   | 'feature_locked' // gated feature (src/entitlements) not available
-  | 'forbidden_ingredient' // e.g. monk fruit (allulose is the only allowed sugar-free sweetener)
   | 'fetch_failed' // URL couldn't be downloaded
   | 'no_recipe_found' // page/text contained no recognizable recipe
   | 'not_implemented'; // parser not built yet

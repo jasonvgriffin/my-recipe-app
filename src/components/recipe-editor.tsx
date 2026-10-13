@@ -18,7 +18,7 @@ import {
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
 import { parseTags } from '@/lib/recipe-utils';
-import { PREFERRED_SWEETENER, type Category, type Recipe } from '@/types/recipe';
+import type { Category, Recipe } from '@/types/recipe';
 
 /** Full recipe editor: title, notes, ingredients (add/delete/reorder/substitute), steps with timers (spec #2, #4, #6, #7). */
 export function RecipeEditor({ recipe, onSaved }: { recipe: Recipe; onSaved: (recipe: Recipe) => void }) {
@@ -262,7 +262,7 @@ function IngredientRow({
       <TextInput
         value={row.substitutionNote}
         onChangeText={(substitutionNote) => onChange({ ...row, substitutionNote })}
-        placeholder={`Substitution (optional), e.g. ${PREFERRED_SWEETENER} instead of sugar`}
+        placeholder="Substitution (optional), e.g. olive oil instead of butter"
         placeholderTextColor={colors.placeholder}
         style={styles.input}
         testID={`ingredient-sub-${index}`}

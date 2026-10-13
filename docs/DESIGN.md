@@ -104,7 +104,7 @@ so timestamps, authorship and tombstones stay correct. The app is fully local (n
 
 ## 7. Product rules
 
-Diabetic-friendly recipes; **allulose is the only sugar-free sweetener — never monk fruit**. This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition.
+Diabetic-friendly recipes. This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition.
 
 ## 8. Visual design (v1.0.9)
 

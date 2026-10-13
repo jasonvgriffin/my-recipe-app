@@ -29,7 +29,7 @@ const PAGE = `<html><head><script type="application/ld+json">${JSON.stringify({
       '@type': ['Recipe'],
       name: 'Keto Bread &amp; Butter',
       recipeYield: ['8 servings'],
-      recipeIngredient: ['2 cups almond flour', '2 tbsp allulose'],
+      recipeIngredient: ['2 cups almond flour', '2 tbsp cocoa'],
       recipeInstructions: [
         { '@type': 'HowToSection', itemListElement: [{ '@type': 'HowToStep', text: 'Mix.' }] },
         { '@type': 'HowToStep', text: '<p>Bake.</p>' },
@@ -60,8 +60,8 @@ describe('importRecipe — structured (e.g. a JSON file)', () => {
       {
         kind: 'structured',
         recipe: {
-          title: '  Allulose   Lemon Bars ',
-          ingredients: ['1 cup almond flour', { text: '1/2 cup allulose' }],
+          title: '  Cocoa   Lemon Bars ',
+          ingredients: ['1 cup almond flour', { text: '1/2 cup cocoa' }],
           steps: ['Bake 20 min'],
           tags: ['Dessert'],
           categories: ['Desserts'],
@@ -76,30 +76,24 @@ describe('importRecipe — structured (e.g. a JSON file)', () => {
     expect(result).toMatchObject({ ok: true, status: 'created', warnings: [] });
     if (!result.ok) throw new Error('expected ok');
     expect(result.recipe).toMatchObject({
-      title: 'Allulose Lemon Bars',
-      ingredients: [{ text: '1 cup almond flour' }, { text: '1/2 cup allulose' }],
+      title: 'Cocoa Lemon Bars',
+      ingredients: [{ text: '1 cup almond flour' }, { text: '1/2 cup cocoa' }],
       tags: ['dessert'],
       servings: 9,
     });
     expect('nutrition' in result.recipe).toBe(false);
     expect('carbsPerServing' in result.recipe).toBe(false);
-    expect(result.recipe.ingredients[1]).toMatchObject({ quantity: 0.5, unit: 'cup', name: 'allulose' });
+    expect(result.recipe.ingredients[1]).toMatchObject({ quantity: 0.5, unit: 'cup', name: 'cocoa' });
     const [cat] = await d.store.listCategories();
     expect(cat.name).toBe('Desserts');
     expect(result.recipe.categoryIds).toEqual([cat.id]);
     expect(await d.store.get(result.recipe.id)).toBeDefined();
   });
 
-  it('rejects invalid drafts and monk fruit', async () => {
+  it('rejects invalid drafts', async () => {
     const d = deps();
     const bad = await importRecipe({ kind: 'structured', recipe: { title: '', ingredients: [] } }, {}, d);
     expect(bad).toMatchObject({ ok: false, code: 'invalid_input' });
-    const monk = await importRecipe(
-      { kind: 'structured', recipe: { title: 'Cookies', ingredients: ['1/2 cup monk fruit sweetener'] } },
-      {},
-      d,
-    );
-    expect(monk).toMatchObject({ ok: false, code: 'forbidden_ingredient' });
     expect(await d.store.list()).toHaveLength(0);
   });
 
@@ -171,7 +165,7 @@ describe('importRecipe — url (link import, spec #1/#5)', () => {
     const result = await importRecipe({ kind: 'url', url: PAGE_URL }, { dryRun: true }, deps(undefined, html));
     if (!result.ok) throw new Error(result.errors.join());
     expect(result.recipe.title).toBe('Keto Bread & Butter');
-    expect(result.recipe.ingredients.map((i) => i.text)).toEqual(['2 cups almond flour', '2 tbsp allulose']);
+    expect(result.recipe.ingredients.map((i) => i.text)).toEqual(['2 cups almond flour', '2 tbsp cocoa']);
   });
 
   it('reports fetch failures and pages without a recipe', async () => {

@@ -2,8 +2,8 @@ import { createRecipe } from '@/lib/recipe-utils';
 import { buildShareRequest, formatRecipeShareText } from '@/lib/share-recipe';
 
 const recipe = createRecipe({
-  title: 'Allulose mousse',
-  ingredients: [{ text: '1/3 cup powdered allulose', substitutionNote: 'allulose instead of sugar' }],
+  title: 'Vanilla mousse',
+  ingredients: [{ text: '1/3 cup powdered cocoa', substitutionNote: 'honey instead of sugar' }],
   steps: [{ text: 'Chill 2 hours.', durationSeconds: 7200 }],
   tags: [],
   servings: 4,
@@ -20,8 +20,8 @@ describe('share payload (spec #14)', () => {
     const all = buildShareRequest(recipe, { text: true, photo: true, link: true });
     if (!text.ok || !photo.ok || !link.ok || !all.ok) throw new Error('expected ok');
 
-    expect(text.request.message).toContain('Allulose mousse');
-    expect(text.request.message).toContain('Substitution: allulose instead of sugar');
+    expect(text.request.message).toContain('Vanilla mousse');
+    expect(text.request.message).toContain('Substitution: honey instead of sugar');
     expect(text.request.message).toContain('Soft peaks.');
     expect(text.request.fileUri).toBeUndefined();
 

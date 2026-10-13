@@ -66,7 +66,6 @@ type ImportResult =
 
 type ImportErrorCode =
   | 'invalid_input' // input or structured draft failed validation
-  | 'forbidden_ingredient' // monk fruit / luo han guo / mogroside — allulose is the only sugar-free sweetener
   | 'fetch_failed' // URL couldn't be downloaded
   | 'no_recipe_found' // page/text had no recognizable recipe
   | 'not_implemented';
@@ -85,12 +84,11 @@ type ImportErrorCode =
    - `text`: `parseRecipeText` (first line = title; "Ingredients" / "Steps|Instructions|Directions" sections).
    - `structured`: used as given.
 3. **Validate the draft** (`RecipeDraftSchema`).
-4. **House rules**: reject monk fruit (and synonyms) anywhere in title/description/notes/ingredients/steps.
-5. **Dedupe by source URL**: `normalizeSourceUrl` (https, lower-case host, no `www.`, no hash, no
+4. **Dedupe by source URL**: `normalizeSourceUrl` (https, lower-case host, no `www.`, no hash, no
    `utm_*`/`fbclid`/… params, sorted query, no trailing slash). Policy `skip` returns the existing recipe
    (`status: 'duplicate'`); `update` replaces content but keeps id, createdAt, cooked history, notes/photo if
    the import has none, and keeps the existing category (an uncategorized recipe takes the import's); `create` always adds a new one.
-6. **Normalize + save**: whitespace collapsed, tags lower-cased, categories resolved to ids (structured: every name; URL/text: none — Uncategorized; plus any `options.categoryIds`), `createRecipe`,
+5. **Normalize + save**: whitespace collapsed, tags lower-cased, categories resolved to ids (structured: every name; URL/text: none — Uncategorized; plus any `options.categoryIds`), `createRecipe`,
    `store.save`.
 
 ## Dependencies (`ImportDeps`)
@@ -158,7 +156,7 @@ On-device only (no network, no paid APIs, no new permissions; pure TypeScript, n
   “Yield”), prep/cook times (kept in notes), numbered or wrapped steps, the app's own “(40 min)” step timers,
   “Substitution:” notes, Notes and Tags sections and “Source: https://…”.
 - Errors: `not_pdf`, `unreadable` (damaged / encrypted), `no_text` (“Couldn’t read text from this PDF …”),
-  `no_recipes`, `locked` (the `linkImport` gate). Recipes with monk fruit are listed in `skipped`.
+  `no_recipes`, `locked` (the `linkImport` gate).
 - Tests: `__tests__/import-pdf.test.ts` (app-export round trip from Chrome/Skia-printed fixtures, generated
   Helvetica PDFs via `test-helpers/simple-pdf.ts`, image-only PDF), `__tests__/import-pdf-ui.test.tsx`.
 

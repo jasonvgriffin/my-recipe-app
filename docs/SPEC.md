@@ -44,8 +44,7 @@ Source: Jason Griffin, 2026-10-02/03 (items 15–27 added later). **v1 = this sp
 > prove the build stays green. Releases are published only from a `v*` tag (or a manual `publish` run).
 
 **v1.0.6:** household sharing (#25) and the remote MCP server (#28) were removed at Jason's request; the app is local-first (no sign-in, no sync) with Backup & restore (#29).
-Design rules every PR must follow: [DESIGN.md](DESIGN.md). Standing product rules: diabetic-friendly recipes, **allulose is the only
-sugar-free sweetener — never monk fruit**.
+Design rules every PR must follow: [DESIGN.md](DESIGN.md). Standing product rules: diabetic-friendly recipes.
 
 > **Standing rule (Jason, Oct 3 2026):** This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition. The pantry tracks
 > item name, quantity and unit, plus optional category, expiration date and brand (no nutrition); a barcode scan may use Open Food Facts to resolve the product **name and brand** only.
@@ -85,7 +84,7 @@ Status legend: ✅ done · 🟡 data layer / partial UI ready · ⬜ not started
 | 28  | ~~**AI assistant access (remote MCP server)**~~: **deliberately cut in v1.0.6 at Jason's request; may be revisited in a future version.** The Settings “AI assistants (MCP)” section, the email-code sign-in, the OAuth consent page, `src/mcp/`, the `mcp` Edge Function (deleted from the live project) and the `mcpAccess` / `cloudSync` gates are gone (git history keeps them). | Removed | — |
 | 29  | **Backup & restore (v1.0.6):** export all app data (recipes with photos, categories, tags, ratings, cooked history, meal plans, shopping lists, pantry, settings/appearance) to one versioned file via the share sheet or a folder picker; import it on a new phone with a preview, merge or replace (confirmed). Offline, no account, no storage permissions. | ✅ Settings → Backup & restore; `.myrecipe` JSON v1 with base64 photos; zod validation + version check; merge (LWW, category dedupe) / replace (tombstones); tests | `src/backup/`, `src/app/backup.tsx`, [BACKUP.md](BACKUP.md) |
 | 30  | **App icon picker (v1.0.6):** Settings → Appearance → App icon: six launcher icons (Classic yellow bowl on dark green = default, Sunset, Midnight, Cream, Tomato, Garden) with previews; switching warns that some launchers take a moment or move the shortcut; choice persisted. Android only. | ✅ `plugins/with-alternate-icons.js` (MainActivity keeps deep-link/auth/share filters; one MAIN/LAUNCHER `<activity-alias>` per icon, only the default enabled on install), RecipeShare `getAppIcon`/`setAppIcon` (PackageManager component state), assets from `assets/icons/make-alt-icons.py`; adaptive foreground at 1.12×72/108 so round launchers match the v1.0.5 round preview; tests | `src/lib/app-icons.ts`, `src/app/settings.tsx`, `assets/app-icons/` |
-| 31  | **Import PDF (v1.0.6):** + menu → Import PDF (or Share → My Recipe App on a PDF): pick a PDF with the system file picker, the app reads it on the phone (no upload, no paid APIs, no storage permission), lists every recipe it finds (a multi-recipe PDF such as one exported from this app gives several) with checkboxes and a preview, then imports the checked ones into the chosen categories (none = Uncategorized). Scans / image-only PDFs show “Couldn’t read text from this PDF”. | ✅ pure-TS PDF text extraction (`src/import/pdf/`), multi-recipe splitting, improved text parser (servings, times, timers, notes, tags, source); every recipe goes through `importRecipe` (dedupe, monk-fruit rule, `linkImport` gate); `application/pdf` share target (intent filter only, no new permission); tests | `src/app/import-pdf.tsx`, `src/import/pdf/`, [IMPORT_API.md](IMPORT_API.md) |
+| 31  | **Import PDF (v1.0.6):** + menu → Import PDF (or Share → My Recipe App on a PDF): pick a PDF with the system file picker, the app reads it on the phone (no upload, no paid APIs, no storage permission), lists every recipe it finds (a multi-recipe PDF such as one exported from this app gives several) with checkboxes and a preview, then imports the checked ones into the chosen categories (none = Uncategorized). Scans / image-only PDFs show “Couldn’t read text from this PDF”. | ✅ pure-TS PDF text extraction (`src/import/pdf/`), multi-recipe splitting, improved text parser (servings, times, timers, notes, tags, source); every recipe goes through `importRecipe` (dedupe, `linkImport` gate); `application/pdf` share target (intent filter only, no new permission); tests | `src/app/import-pdf.tsx`, `src/import/pdf/`, [IMPORT_API.md](IMPORT_API.md) |
 
 **Pantry agent scope:** #21 + #27 together (#26 removed). **Optional features** (#11, #12, #18, #21, #25, #27) must
 follow the Recipes-are-the-core rule above.
@@ -105,8 +104,8 @@ follow the Recipes-are-the-core rule above.
 - Settings uses a standard gear icon (Ionicons `settings-outline`).
 - The Supabase magic link (`myrecipeapp://auth`) opens `src/app/auth.tsx`, which signs in and returns to
   Settings → Household with a success or error message (it used to show "Unmatched Route").
-- **Import link** saves the recipe directly (no Save / Save-and-edit prompt); errors, duplicate handling and the
-  allulose rule are unchanged (`src/app/import.tsx`).
+- **Import link** saves the recipe directly (no Save / Save-and-edit prompt); errors and duplicate handling are
+  unchanged (`src/app/import.tsx`).
 - **Android permissions trimmed** to what the app uses (app.json `android.blockedPermissions`); CI fails if a blocked
   permission comes back. APK signed with v1 + v2 + v3 schemes and checked with `zipalign -c -P 16`.
 

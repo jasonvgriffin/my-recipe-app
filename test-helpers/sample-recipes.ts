@@ -7,7 +7,7 @@ import type { Recipe, RecipeInput } from '@/types/recipe';
  * anything (v1.0.1) and `src/storage/legacy-samples.ts` removes untouched v1.0.0 copies on launch, so these use
  * a different `createdAt` than the shipped seeds and survive that cleanup. Use `asLegacySample` to get a copy
  * exactly as v1.0.0 stored it.
- * Built through createRecipe so ingredients are parsed + step timers detected. Diabetic-friendly, allulose only.
+ * Built through createRecipe so ingredients are parsed + step timers detected. Diabetic-friendly.
  */
 export const SAMPLE_CREATED_AT = '2026-10-01T00:00:00.000Z';
 
@@ -35,9 +35,9 @@ const SAMPLE_INPUTS: (RecipeInput & { id: string })[] = [
     servings: 6,
   },
   {
-    id: 'seed-allulose-cheesecake-mousse',
+    id: 'seed-cheesecake-mousse',
     title: 'Allulose Vanilla Cheesecake Mousse',
-    description: 'No-bake dessert sweetened only with allulose.',
+    description: 'No-bake vanilla cheesecake mousse.',
     ingredients: [
       { text: '8 oz cream cheese, softened' },
       { text: '1 cup heavy cream, cold' },

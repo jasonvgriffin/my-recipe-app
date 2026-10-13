@@ -24,8 +24,7 @@ sync); Backup & restore moves data between phones. Also in v1.0.6: a recipe can 
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
 - [x] Expo SDK 57 + TypeScript + expo-router scaffold
-- [x] `Recipe` schema (`src/types/recipe.ts`) with validation (required fields, servings > 0,
-      **no monk fruit** — allulose only)
+- [x] `Recipe` schema (`src/types/recipe.ts`) with validation (required fields, servings > 0)
 - [x] Recipe list with search (title / tag / ingredient), add-recipe form, detail view, delete
 - [x] Local persistence (AsyncStorage behind a swappable repository) + 2 seed recipes (removed in v1.0.1: no sample recipes)
 - [x] Jest tests for schema + storage; typecheck + lint
@@ -89,10 +88,10 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
    - Receive shared text/URLs into the app as a draft recipe (Android intent filter via config plugin).
 3. **Remote MCP server** — ✅ built in v1.0: `src/mcp/` + `supabase/functions/mcp/` (docs/MCP.md) — "Hey AI, send this recipe to my
    recipe app". Its write tools call the same `importRecipe` (`kind: 'structured'`) from `src/import/` with
-   server-side `ImportDeps`, so validation, the allulose-only rule and URL dedupe are identical to the app.
+   server-side `ImportDeps`, so validation and URL dedupe are identical to the app.
    - Tools: `add_recipe`, `update_recipe`, `search_recipes`, `get_recipe`, `list_tags`
      (inputs/outputs derived from the shared `Recipe` schema; consider a shared `@my-recipe-app/schema` package or zod).
-   - Streamable HTTP transport, **HTTPS only**. Server-side validation enforces the allulose-only rule.
+   - Streamable HTTP transport, **HTTPS only**. Server-side validation matches the app.
    - **Auth (decided by Jason, Oct 3 2026): OAuth**, tied to the same Supabase email-code (OTP / magic link)
      account that household sharing (#25) uses. Grok, ChatGPT and Claude connectors expect OAuth. An API key
      remains noted as the simpler alternative, but OAuth is the chosen path.
@@ -110,7 +109,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
    - Sync with the same backend the MCP server uses: last-write-wins on `updatedAt` to start, soft deletes
      (tombstones), per-user API token stored in `expo-secure-store`.
    - Swap in a `SyncedRecipeStore` implementing the existing repository interface.
-5. Nice-to-haves: scale servings, AI recipe tweak suggestions (must respect the allulose-only rule; no nutrition features).
+5. Nice-to-haves: scale servings, AI recipe tweak suggestions (no nutrition features).
 
 ## Phase 4 — iOS
 

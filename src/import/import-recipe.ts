@@ -1,7 +1,7 @@
 import { canUse as defaultCanUse, type CanUse } from '@/entitlements';
 import { createRecipe } from '@/lib/recipe-utils';
 import type { RecipeStore } from '@/storage/recipes';
-import { findForbiddenIngredients, type Recipe, PREFERRED_SWEETENER } from '@/types/recipe';
+import type { Recipe } from '@/types/recipe';
 
 import { draftToRecipeInput, normalizeSourceUrl } from './normalize';
 import { extractRecipeHeuristically } from './parsers/heuristics';
@@ -36,7 +36,7 @@ const fail = (code: Extract<ImportResult, { ok: false }>['code'], ...errors: str
  * Core import pipeline with explicit dependencies (portable: no app storage / UI imports).
  * The app uses `importRecipe` from '@/import', which binds the on-device deps. See docs/IMPORT_API.md.
  * Steps: validate input → produce a draft (fetch+parse / text parse / as given) → validate draft (zod)
- * → enforce house rules (no monk fruit) → normalize → dedupe by source URL → save.
+ * → dedupe by source URL → normalize → save.
  */
 export async function importRecipeWith(
   deps: ImportDeps,
@@ -84,22 +84,7 @@ export async function importRecipeWith(
   const draft = draftResult.data;
   const effectiveSource: ImportSource = { ...source, url: draft.sourceUrl ?? sourceUrl };
 
-  // 3. House rules.
-  const forbidden = findForbiddenIngredients({
-    title: draft.title,
-    description: draft.description,
-    notes: draft.notes,
-    ingredients: draft.ingredients.map((i) => ({ text: typeof i === 'string' ? i : i.text })),
-    steps: draft.steps.map((st) => (typeof st === 'string' ? { text: st } : st)),
-  });
-  if (forbidden.length > 0) {
-    return fail(
-      'forbidden_ingredient',
-      `Contains ${forbidden.join(', ')}. Replace with ${PREFERRED_SWEETENER} (the only sugar-free sweetener allowed).`,
-    );
-  }
-
-  // 4. Dedupe by normalized source URL.
+  // 3. Dedupe by normalized source URL.
   const key = normalizeSourceUrl(effectiveSource.url);
   const policy = options.onDuplicate ?? 'skip';
   const existing: Recipe | undefined = key
@@ -109,7 +94,7 @@ export async function importRecipeWith(
     return { ok: true, status: 'duplicate', recipe: existing, warnings: ['A recipe from this link already exists.'] };
   }
 
-  // 5. Normalize (resolve category names → ids) and save.
+  // 4. Normalize (resolve category names → ids) and save.
   // Imports default to Uncategorized. A web page's own `recipeCategory` ("Main Course", …) is NOT turned into a
   // category; only a structured import that names categories sets them (v1.0.6: every named category, since a recipe
   // can be in several). `options.categoryIds` (e.g. picked on the Import PDF screen) are added as well.

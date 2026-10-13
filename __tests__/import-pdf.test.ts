@@ -3,6 +3,7 @@
  * Fixtures app-export-*.pdf were printed by Chrome (Skia, the engine Android's WebView uses for our PDF export)
  * from `recipesPdfHtml`, so they are what the app's own "Share Recipes" PDF looks like.
  */
+import { SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import { imageOnlyPdf, simplePdf } from '../test-helpers/simple-pdf';
 import type { ImportDeps } from '@/import';
 import { extractPdfText, importPdfCandidates, readRecipesFromPdf, splitRecipeTexts } from '@/import/pdf';
@@ -32,7 +33,7 @@ function deps(canUse?: ImportDeps['canUse']) {
 describe('inflate (pure TS, no native module)', () => {
   it('matches zlib for stored, fixed and dynamic Huffman blocks', () => {
     const big = new TextEncoder().encode(
-      Array.from({ length: 20000 }, (_, i) => `line ${i % 97} allulose ${i * 7}\n`).join(''),
+      Array.from({ length: 20000 }, (_, i) => `line ${i % 97} salt ${i * 7}\n`).join(''),
     );
     const same = (a: Uint8Array) => a.length === big.length && a.every((v, i) => v === big[i]);
     for (const level of [0, 1, 6, 9]) {
@@ -81,12 +82,15 @@ describe('PDF exported by this app (round trip)', () => {
     const d = deps();
     const result = await readRecipesFromPdf(fixture('app-export-two'), d);
     if (!result.ok) throw new Error(result.message);
+    const mousseSample = SAMPLE_RECIPES.find((r) => r.title.includes('Mousse'));
+    if (!mousseSample) throw new Error('missing sample mousse');
     expect(result.candidates.map((c) => c.result.recipe.title)).toEqual([
       'Lemon Herb Chicken Thighs',
-      'Allulose Vanilla Cheesecake Mousse',
+      mousseSample.title,
     ]);
     const mousse = result.candidates[1].result.recipe;
-    expect(mousse.ingredients.map((i) => i.text)).toContain('⅓ cup powdered allulose');
+    const powdered = mousseSample.ingredients.find((i) => i.text.startsWith('1/3 cup'));
+    expect(mousse.ingredients.map((i) => i.text)).toContain(powdered?.text.replace('1/3', '⅓'));
     expect(mousse.steps[3]).toMatchObject({
       text: 'Spoon into 6 cups and chill at least 1 hour.',
       durationSeconds: 3600,
@@ -98,7 +102,7 @@ describe('PDF exported by this app (round trip)', () => {
     const saved = await importPdfCandidates([result.candidates[1]], [dessert.id, party.id], d);
     expect(saved).toHaveLength(1);
     const list = await d.store.list();
-    expect(list.map((r) => r.title)).toEqual(['Allulose Vanilla Cheesecake Mousse']);
+    expect(list.map((r) => r.title)).toEqual([mousseSample.title]);
     expect(list[0].categoryIds).toEqual([dessert.id, party.id]);
 
     // Once the chicken (which has a source link) is saved, reading the PDF again marks it "Already in your recipes".
@@ -168,7 +172,11 @@ describe('other PDFs', () => {
       title: 'Keto Pancakes',
       description: 'Fluffy almond-flour pancakes.',
       servings: 4,
-      ingredients: [{ text: '1 cup almond flour' }, { text: '2 eggs' }, { text: '1 tbsp allulose' }],
+      ingredients: [
+        { text: '1 cup almond flour' },
+        { text: '2 eggs' },
+        { quantity: 1, unit: 'tbsp', text: expect.stringMatching(/^1 tbsp /) },
+      ],
       steps: [
         { text: 'Whisk everything together until smooth and let it rest for five minutes before cooking.' },
         { text: 'Cook on a hot griddle.' },
@@ -216,18 +224,13 @@ describe('other PDFs', () => {
     expect(await readRecipesFromPdf(new TextEncoder().encode('%PDF-1.4 garbage'), deps())).toMatchObject({ ok: false });
   });
 
-  it('respects the import gate and the house sweetener rule', async () => {
+  it('respects the import gate', async () => {
     expect(
       await readRecipesFromPdf(
         simplePdf([recipeB]),
         deps(() => false),
       ),
     ).toMatchObject({ ok: false, reason: 'locked' });
-    const monk = ['Monk Fruit Cookies', 'Ingredients', '1 cup monk fruit sweetener', 'Steps', '1. Bake.'];
-    const result = await readRecipesFromPdf(simplePdf([monk, recipeB]), deps());
-    if (!result.ok) throw new Error(result.message);
-    expect(result.candidates.map((c) => c.result.recipe.title)).toEqual(['Cucumber Salad']);
-    expect(result.skipped[0]).toMatch(/^Monk Fruit Cookies: Contains monk fruit/);
   });
 
   it('splitRecipeTexts / parseRecipeText handle "1.5 cups" (not a bullet) and substitutions', () => {

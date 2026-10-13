@@ -84,11 +84,11 @@ describe('barcode lookup (spec #27)', () => {
   it('not found / offline → user names it once, then it is found (shared mapping)', async () => {
     const offline = setup(async () => Promise.reject(new Error('Network request failed')));
     expect(await offline.lookup.lookup(EAN)).toMatchObject({ status: 'offline', barcode: EAN });
-    await offline.lookup.saveUserProduct(EAN, 'Allulose (Wholesome)');
+    await offline.lookup.saveUserProduct(EAN, 'Cocoa (Wholesome)');
     expect(await offline.lookup.lookup(EAN)).toMatchObject({
       status: 'found',
       source: 'cache',
-      product: { name: 'Allulose (Wholesome)' },
+      product: { name: 'Cocoa (Wholesome)' },
     });
     const stored = await offline.items.all();
     expect(stored[0]).toMatchObject({ source: 'user', barcode: EAN, updatedAt: '2026-10-02T12:00:00.000Z' });
