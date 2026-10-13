@@ -5,15 +5,13 @@ import { useEffect } from 'react';
 import { AppHeaderTitle, SectionLayout } from '@/components/app-header';
 import { SystemNavFrame } from '@/components/layout';
 import { AppThemeProvider, useColorSchemeResolved, useColors, useNavigationTheme } from '@/hooks/use-theme';
-import { configureStepTimerNotifications } from '@/notifications/step-timers';
 import { recipeStore } from '@/storage/recipes';
 
 /** v1.0.4: section page title below the banner for the stack screens that show the app header. */
-const STACK_SECTIONS: Record<string, string> = { settings: 'Settings', backup: 'Backup & restore', contact: 'Contact Us' };
+const STACK_SECTIONS: Record<string, string> = { settings: 'Settings', backup: 'Backup & restore' };
 
 export default function RootLayout() {
   useEffect(() => {
-    configureStepTimerNotifications();
     // No sample recipes any more (v1.0.1): drop untouched v1.0.0 samples from old installs, once.
     recipeStore.removeUntouchedSamples().catch(() => undefined);
   }, []);
@@ -49,7 +47,6 @@ function ThemedRoot() {
         <Stack.Screen name="import-pdf" options={{ title: 'Import PDF', presentation: 'modal' }} />
         <Stack.Screen name="recipe/[id]/index" options={{ title: 'Recipe' }} />
         <Stack.Screen name="recipe/[id]/edit" options={{ title: 'Edit recipe' }} />
-        <Stack.Screen name="cook/[action]" options={{ title: 'Cook with me' }} />
         <Stack.Screen name="meal-plan/[date]" options={{ title: 'Meal plan' }} />
         <Stack.Screen name="grocery-run" options={{ title: 'Shopping List' }} />
         <Stack.Screen
@@ -68,16 +65,6 @@ function ThemedRoot() {
             headerTitle: () => <AppHeaderTitle />,
           }}
         />
-        <Stack.Screen
-          name="contact"
-          options={{
-            title: 'Contact Us',
-            headerTitleAlign: 'center',
-            headerTitle: () => <AppHeaderTitle />,
-          }}
-        />
-        <Stack.Screen name="pantry/scan" options={{ title: 'Scan barcode' }} />
-        <Stack.Screen name="shopping/scan" options={{ title: 'Scan barcode' }} />
         <Stack.Screen name="recipes" options={{ title: 'Existing Recipes' }} />
         <Stack.Screen name="pantry-match" options={{ title: 'What can I make?' }} />
       </Stack>

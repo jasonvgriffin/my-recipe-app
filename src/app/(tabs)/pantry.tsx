@@ -1,5 +1,5 @@
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
@@ -29,10 +29,6 @@ interface Draft {
   brand: string;
   notes: string;
   description: string;
-  /** Set when the form was opened by a barcode scan (v1.0.7 review-before-save). */
-  barcode?: string;
-  /** Keep the scanned product name as typed/reviewed instead of normalizing it. */
-  keepName?: boolean;
 }
 
 const EMPTY_DRAFT: Draft = { name: '', quantity: '', unit: '', category: '', expiresAt: '', brand: '', notes: '', description: '' };
@@ -54,8 +50,6 @@ function draftFor(item: PantryItem): Draft {
 /**
  * Pantry tab (spec #21). Optional: hidden with Settings → Pantry, and gated with the pantry feature.
  * One list of what's on hand. "What can I make?" lives on the Recipes tab (v1.0.1; `src/app/pantry-match.tsx`).
- * A barcode scan returns here with `?scan=…&scanBarcode=…&scanName=…&scanBrand=…` (v1.0.7) and opens the
- * pre-filled Edit item form so you review it before saving.
  */
 export default function PantryScreen() {
   const bottomInset = useBottomInset();
@@ -63,61 +57,15 @@ export default function PantryScreen() {
   const colors = useColors();
   const gate = useFeature('pantry');
   const visible = useFeatureVisible('pantry');
-  const showBarcode = useFeatureVisible('barcodeScan');
-  const { added, scan, scanBarcode, scanName, scanBrand, scanDescription } = useLocalSearchParams<{
-    added?: string;
-    scan?: string;
-    scanBarcode?: string;
-    scanName?: string;
-    scanBrand?: string;
-    scanDescription?: string;
-  }>();
   const [items, setItems] = useState<PantryItem[] | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [sort, setSort] = useState<PantrySort>('name');
-  /** Name of a reviewed scan just saved (confirmed at the top like `?added=`). */
-  const [justAdded, setJustAdded] = useState<string | undefined>();
 
   const reload = useCallback(async () => {
     setItems(await pantryStore.list());
   }, []);
-
-  // v1.0.7: a barcode scan opens the pre-filled form for review instead of saving straight away. An existing item
-  // with the same barcode (or name) opens in Edit with one more package; otherwise a new item with the product name.
-  const handledScan = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    if (typeof scan !== 'string' || !scan || handledScan.current === scan) return;
-    if (typeof scanBarcode !== 'string' || typeof scanName !== 'string' || !scanName) return;
-    handledScan.current = scan;
-    const brand = typeof scanBrand === 'string' ? scanBrand : '';
-    const description = typeof scanDescription === 'string' ? scanDescription : '';
-    void pantryStore.findScanned({ barcode: scanBarcode, name: scanName }).then((existing) => {
-      setJustAdded(undefined);
-      setError('');
-      if (existing) {
-        setDraft({
-          ...draftFor(existing),
-          quantity: String((existing.quantity ?? 0) + 1),
-          brand: existing.brand || brand,
-          description: existing.description || description,
-          barcode: scanBarcode,
-        });
-      } else {
-        setDraft({
-          ...EMPTY_DRAFT,
-          name: scanName,
-          brand,
-          description,
-          quantity: '1',
-          unit: 'package',
-          barcode: scanBarcode,
-          keepName: true,
-        });
-      }
-    });
-  }, [scan, scanBarcode, scanName, scanBrand, scanDescription]);
 
   useFocusEffect(
     useCallback(() => {
@@ -178,10 +126,7 @@ export default function PantryScreen() {
         brand: draft.brand,
         notes: draft.notes,
         description: draft.description,
-        ...(draft.barcode ? { barcode: draft.barcode } : {}),
-        ...(draft.keepName ? { keepName: true } : {}),
       });
-      if (draft.barcode) setJustAdded(draft.keepName ? name : (await pantryStore.findScanned({ barcode: draft.barcode, name }))?.name ?? name);
       setDraft(null);
       await reload();
     } catch (e) {
@@ -201,30 +146,11 @@ export default function PantryScreen() {
 
   const list = (
     <KeyboardAwareScrollView contentContainerStyle={[styles.list, { paddingBottom: 48 + bottomInset }]} testID="pantry-list">
-      {justAdded || (typeof added === 'string' && added) ? (
-        <Text style={styles.added} testID="pantry-added-banner">
-          Added {justAdded || added}
-        </Text>
-      ) : null}
-      {showBarcode ? (
-        <Pressable
-          accessibilityRole="button"
-          style={styles.primaryBtn}
-          testID="scan-barcode-button"
-          onPress={() => router.push('/pantry/scan')}>
-          <Text style={styles.primaryBtnText}>Scan barcode</Text>
-        </Pressable>
-      ) : null}
       {draft ? (
         <View style={styles.form}>
           <Text style={styles.heading} testID="pantry-form-heading">
-            {draft.id || draft.barcode ? 'Edit item' : 'Add item'}
+            {draft.id ? 'Edit item' : 'Add item'}
           </Text>
-          {draft.barcode ? (
-            <Text style={styles.muted} testID="pantry-scan-review">
-              Scanned — check the details, then Save.
-            </Text>
-          ) : null}
           <TextInput
             testID="pantry-name-input"
             style={styles.input}
@@ -425,7 +351,6 @@ const useStyles = makeStyles((colors) => ({
   itemName: { color: colors.text, fontSize: 16, fontWeight: '600' },
   muted: { color: colors.muted, marginTop: 2 },
   expiry: { color: colors.primary, marginTop: 2 },
-  added: { color: colors.primary, fontWeight: '700', fontSize: 16 },
   error: { color: colors.danger, marginTop: 2 },
   primaryBtn: {
     backgroundColor: colors.primary,

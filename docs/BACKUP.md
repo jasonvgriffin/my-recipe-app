@@ -15,12 +15,13 @@ file, which Google Drive refused to save from the share sheet; those files still
 | `version` | Schema version (`BACKUP_VERSION`, 1). Newer files are refused with "update the app"; older ones are upgraded in `parseBackup` |
 | `exportedAt`, `appVersion` | When and from which app version |
 | `data.recipes` | Every recipe: ingredients, steps, notes, tags, ratings, categories, servings, units, cooked flag + cooked history, source link, photo link |
-| `data.categories`, `data.meal_plan_entries`, `data.shopping_items`, `data.pantry_items`, `data.barcode_items` | The other collections |
-| `settings` | Units, optional-feature toggles, cooking keep-awake, appearance (theme + accent) |
+| `data.categories`, `data.meal_plan_entries`, `data.shopping_items`, `data.pantry_items` | The other collections |
+| `data.barcode_items` | Present so a 1.0.x file still parses. v1.1.0 writes `[]` and does not restore a barcode cache |
+| `settings` | Units, optional-feature toggles, appearance (theme + accent). `cookingModeKeepAwake` from an old file is ignored |
 | `photos` | Each recipe's local photo, base64, by recipe id (web photos stay URLs) |
 
-Not included: deleted records (tombstones), legacy author stamps (`householdId`, `createdBy`), and the live cook-with-me
-session (step timers are not stored; they belong to a cooking session on the device).
+Not included: deleted records (tombstones) and legacy author stamps (`householdId`, `createdBy`).
+Cook-with-me sessions and step timers were removed in v1.1.0 and were never part of the backup file.
 
 ## Export
 

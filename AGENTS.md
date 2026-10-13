@@ -25,7 +25,7 @@ Bug fixes start with a failing test, then the fix. A checklist item is done only
 
 ## Rule #1: RECIPES ARE THE CORE
 
-Pantry, meal planning, shopping list, grocery run, barcode scanning are optional
+Pantry, meal planning, shopping list, and grocery run are optional
 nice-to-haves. The app opens to Recipes; no onboarding, sign-in or setup; no recipe flow requires or prompts
 optional features; cross-links are unobtrusive and absent when a feature is hidden (`useSettings().features`)
 or empty; empty optional features never nag; Settings → Optional features hides the optional tabs. Recipe
@@ -51,8 +51,8 @@ Android first; iOS later from the **same codebase**.
 - [`docs/DESIGN.md`](docs/DESIGN.md) — design rules every PR follows (recipes-first, dark theme, foldables,
   UI-free modules, voice/deep links, household-ready data).
 - [`docs/IMPORT_API.md`](docs/IMPORT_API.md) is the recipe import contract (see "Import pipeline" below).
-- [`docs/COOK_API.md`](docs/COOK_API.md) — cook-with-me session contract; [`docs/SYNC.md`](docs/SYNC.md) —
-  why sync/households/MCP were removed in v1.0.6 and the Supabase project state.
+- [`docs/SYNC.md`](docs/SYNC.md) — why sync, households, and MCP were removed in v1.0.6, and the
+  v1.1.0 migration that drops the unused tables. Cook-with-me (`docs/COOK_API.md`) was removed in v1.1.0.
 - [`docs/PLAN.md`](docs/PLAN.md) is the phased roadmap (the remote MCP server, SPEC #28, was deliberately cut in 1.0.6 at Jason's request; may be revisited).
 
 ## Stack
@@ -70,16 +70,16 @@ Android first; iOS later from the **same codebase**.
 ```
 src/app/_layout.tsx           root Stack + dark navigation theme
 src/app/(tabs)/               bottom tabs (v1.0.2): index.tsx (Recipes), meal-plan.tsx, + (add-menu.tsx placeholder →
-                              components/add-menu-sheet.tsx), shopping.tsx, more.tsx (Pantry, Settings, Contact Us); pantry.tsx
+                              components/add-menu-sheet.tsx), shopping.tsx, more.tsx (Pantry, Settings); pantry.tsx
 src/app/add.tsx               add-recipe form (modal)
-src/app/recipe/[id].tsx       recipe detail (cooked toggle, plan for today, source link, delete)
+src/app/recipe/[id].tsx       recipe detail (servings scaler, cooked toggle, plan for today, source link, delete)
 src/types/recipe.ts           Recipe (structured steps, parsed ingredients, rating, unitSystem),
                               Category, PantryItem, AppSettings, validation, migrations (single source of truth)
 src/types/meal-plan.ts        MealPlanEntry, ShoppingList types
 src/import/                   THE import pipeline: importRecipe(), zod contract, parsers (JSON-LD, text,
                               heuristics stub), deep-link/share adapters — no UI deps (docs/IMPORT_API.md)
 src/lib/                      pure helpers: recipe-utils (create/search/filter/sort/cooked/rating),
-                              ingredients (parse/scale/convert/format), units, timers (detect step times),
+                              ingredients (parse/scale/convert/format), units, durations (step length text),
                               shopping (merge/scale/pantry-skip; grocery run), pantry (rank by on-hand),
                               dates, theme (dark colors)
 src/storage/                  repositories over a KeyValueStore (AsyncStorage by default; inject one in tests):
@@ -112,12 +112,12 @@ Run **typecheck, lint and tests** before declaring any task done. They also run 
 Expo changes a lot between SDKs — do not trust memory. Check the versioned docs for the SDK in
 `package.json` (`https://docs.expo.dev/versions/v57.0.0/`) and https://docs.expo.dev/llms.txt.
 
-## Supabase (no longer used by the app since v1.0.6)
+## Supabase (no client in the app)
 
-The project stays live (old tables kept) but the app has no sign-in or sync, and CI no longer passes the Supabase
-URL/key to builds. Schema changes = new file in `supabase/migrations/`, smoke-tested
-locally, merged to `main` → the migrations workflow applies it. Never commit the DB password or service_role key;
-never edit an applied migration. Details: `docs/SYNC.md`.
+The app has no sign-in, no sync, and no `@supabase/supabase-js` dependency (removed in v1.1.0). The hosted
+project stays so `.github/workflows/supabase-migrations.yml` can apply new files in `supabase/migrations/`.
+v1.1.0 adds `20261013000000_drop_unused_tables.sql` (`households`, `household_members`, `receipt_aliases`).
+Never commit the DB password or service_role key; never edit an applied migration. Details: `docs/SYNC.md`.
 
 ## How CI builds the APK (and when releases happen)
 
@@ -132,7 +132,7 @@ never edit an applied migration. Details: `docs/SYNC.md`.
    `apksigner verify`. Without the secrets (fork PRs, local builds) it falls back to the debug keystore with a
    warning; a publish run fails instead.
 4. Uploads the APK as CI artifact `my-recipe-app-apk` (14-day retention) on **every** run — this is how we prove
-   the build stays green. Download it from the run page while signed in to GitHub (private repo).
+   the build stays green. The repo is public; download the artifact from the run page.
 5. **Releases:** a GitHub Release with the APK is published **only** for a pushed tag `v*` (e.g. `v1.0.0`) or a
    manual run with `publish: true` + `tag`. The tag must match `app.json` `expo.version`; existing releases are
    never overwritten. **No rolling/incremental releases.** **v1.0.0 = all SPEC items 1–27 complete (#17 removed), and is the
@@ -156,7 +156,8 @@ Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the And
 
 - **This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition.**
   No nutrition fields, calories, macros, carb counts, nutrition lookups, nutrition imports, or nutrition UI. The pantry
-  tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition); barcode scans may use Open Food Facts for the product **name and brand** only.
+  tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition).
+  Barcode scanning was removed in v1.1.0.
 - Recipes are **diabetic-friendly**. Always track `servings`.
 - Keep the `Recipe` schema in `src/types/recipe.ts` JSON-serializable and versioned (`schemaVersion`);
   bump `RECIPE_SCHEMA_VERSION` and extend `migrateRecipe` when changing the stored shape.

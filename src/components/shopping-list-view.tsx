@@ -41,13 +41,6 @@ export interface ShoppingListViewProps {
   onAddManual: () => void;
   onClearChecked: () => void;
   onGroceryRun: () => void;
-  /**
-   * Barcode scan entry point (shown when barcodeScan is visible): a full-width filled “Scan Item” button, the
-   * first one under “or” (below the type-and-Add row). The scanner adds the product name.
-   */
-  onScan?: () => void;
-  /** Product name just added by a scan, confirmed at the top. */
-  added?: string;
 }
 
 /** Shopping list for one chosen week (spec #12). The parent owns persistence. */
@@ -70,8 +63,6 @@ export function ShoppingListView({
   onAddManual,
   onClearChecked,
   onGroceryRun,
-  onScan,
-  added,
 }: ShoppingListViewProps) {
   const bottomInset = useBottomInset();
   const styles = useStyles();
@@ -118,7 +109,7 @@ export function ShoppingListView({
           <Text style={styles.navText}>›</Text>
         </Pressable>
       </View>
-      {/* v1.0.5 (Jason): type-and-Add first, then “or”, then Scan Item / Build from Meal Plan / View Shopping List. */}
+      {/* Type an item, or build the list from the meal plan. Barcode scan was removed in v1.1.0. */}
       <View style={styles.manualRow}>
         <TextInput
           value={manualText}
@@ -158,26 +149,10 @@ export function ShoppingListView({
           returnKeyType="done"
         />
       </View>
-      {added ? (
-        <Text style={styles.added} testID="shopping-added-banner">
-          Added {added}
-        </Text>
-      ) : null}
-      <Text style={styles.or} testID="shopping-scan-or">
+      <Text style={styles.or} testID="shopping-actions-or">
         or
       </Text>
       <View style={styles.actions} testID="shopping-actions">
-        {onScan ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Scan Item"
-            accessibilityHint="Scan a barcode to add the product to this list"
-            onPress={onScan}
-            style={styles.primary}
-            testID="shopping-scan-button">
-            <Text style={styles.primaryText}>Scan Item</Text>
-          </Pressable>
-        ) : null}
         <Pressable
           accessibilityRole="button"
           accessibilityHint={
@@ -308,7 +283,6 @@ export function ShoppingListView({
 }
 
 const useStyles = makeStyles((colors) => ({
-  added: { color: colors.primary, fontWeight: '700', fontSize: 16, marginTop: 8 },
   fill: { flex: 1, padding: 12 },
   scroller: { flex: 1 },
   nav: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },

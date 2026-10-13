@@ -9,7 +9,7 @@ import {
 
 import { uuid } from './ids';
 import { parseIngredient } from './ingredients';
-import { detectStepDuration } from './timers';
+import { detectStepDuration } from './durations';
 
 /** Split multi-line text into trimmed, non-empty lines. */
 export function parseLines(text: string): string[] {
@@ -35,7 +35,7 @@ export function normalizeIngredient(i: Ingredient): Ingredient {
   return { ...parsed, ...i, text };
 }
 
-/** Trim + detect a timer duration if none set (spec #15). */
+/** Trim a step and record a duration written in the text, when one is not already set. */
 export function normalizeStep(st: Step | string): Step {
   const text = (typeof st === 'string' ? st : st.text).trim();
   const given = typeof st === 'string' ? undefined : st.durationSeconds;

@@ -61,7 +61,7 @@ function portable(rec: StoredRecord): BackupRecord {
 
 /** Collect everything into one Backup object (serialize with JSON.stringify). Deleted records are left out. */
 export async function createBackup({ collections, settings, photos, appVersion, now = () => new Date() }: BackupDeps): Promise<Backup> {
-  const data = {} as Backup['data'];
+  const data = { barcode_items: [] } as unknown as Backup['data'];
   for (const name of BACKUP_COLLECTIONS) {
     data[name] = (await collections[name].all()).map(portable);
   }

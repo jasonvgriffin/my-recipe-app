@@ -12,13 +12,18 @@ the account runtime, Settings → Household / More → Household, the `/househol
 
 ## Supabase project state
 
-- Migrations in `supabase/migrations/` are history; never edit an applied one. The last one,
-  `20261006000000_remove_household_sharing.sql`, moved every household-scoped row to its author's personal scope
+- Migrations in `supabase/migrations/` are history; never edit an applied one.
+  `20261006000000_remove_household_sharing.sql` moved every household-scoped row to its author's personal scope
   (`owner_id` = `created_by`, else the household's creator/owner; `household_id` = NULL), made the sync trigger and RLS
   personal-only, and made `create_household` / `join_household` refuse. Nobody lost data.
-- The `households` and `household_members` tables (and the unused `receipt_aliases`) are **left in place for now**;
-  dropping them is a later cleanup.
+- **v1.1.0** adds `20261013000000_drop_unused_tables.sql`. It drops `households`, `household_members`, and
+  `receipt_aliases`, plus the household helper functions and the `household_role` type. Foreign keys from
+  `recipes`, `categories`, `pantry_items`, `meal_plan_entries`, `shopping_items`, and `barcode_items` to
+  `households` are dropped first. Those tables and their `household_id` columns stay. `barcode_items` is not dropped.
+- The app no longer depends on `@supabase/supabase-js`. There is no Supabase client and `.env.example` has no
+  Supabase variables. Phone records still use `SyncMeta` in `src/types/record.ts` (UUID, timestamps, optional
+  legacy `householdId` / `createdBy`).
 - The live `mcp` Edge Function was deleted in v1.0.6, so the MCP endpoint no longer exists.
 - `.github/workflows/supabase-migrations.yml` still applies new migrations on `main`.
 
-Records on the phone keep their `createdBy` / legacy `householdId` fields (harmless; Backup & restore strips them).
+Backup & restore strips `householdId` and `createdBy` on export. An old backup still loads.

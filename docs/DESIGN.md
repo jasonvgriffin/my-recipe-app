@@ -2,7 +2,7 @@
 
 ## 0. RECIPES ARE THE CORE
 
-Recipes are the product; pantry, meal plan, shopping list, grocery run, barcode scanning
+Recipes are the product; pantry, meal plan, shopping list, and grocery run
 are optional. App opens to Recipes; no onboarding/sign-in/setup; no recipe flow requires or prompts
 optional features; cross-links are unobtrusive and absent when the feature is hidden (`useSettings().features`)
 or empty; empty optional features never nag; Settings toggles hide the optional tabs. Recipe features get
@@ -10,7 +10,8 @@ verification priority. Acceptance: full recipe workflow with all optional featur
 (`__tests__/recipes-first.test.tsx`). Full rule: top of docs/SPEC.md.
 
 These rules apply to every screen and PR. They come from Jason's v1 spec (docs/SPEC.md) — notably
-#13 dark theme, #23 foldables, #24 cook-with-me, ~~#25 household sharing~~ (removed in v1.0.6), #27 barcode lookup.
+#13 dark theme and #23 foldables. Cook-with-me (#24) and barcode lookup (#27) were removed in v1.1.0.
+Household sharing (#25) was removed in v1.0.6.
 
 ## 0b. Paywall-ready feature gating
 
@@ -62,7 +63,6 @@ components that unmount, and keep the primary pane at a stable position in the t
 | Recipes       | recipe list   | recipe detail (`RecipeDetail`) | list → push `/recipe/[id]` ✅   |
 | Meal plan     | calendar      | selected day's plan            | calendar → day route            |
 | Shopping list | shopping list | pantry (spec #21)              | list; pantry via its own screen |
-| Cooking mode  | steps         | ingredients for the step       | stacked (`compact="stack"`) ✅  |
 
 **Max widths:** never stretch content across a wide/unfolded screen (or the hinge). Wrap single-pane screen
 bodies in `MaxWidthContainer` (`MAX_CONTENT_WIDTH.text` 720, `.list` 560, `.form` 640); the secondary pane is
@@ -80,16 +80,15 @@ wired in `src/app/(tabs)/_layout.tsx`.
 Screens stay thin. Shared logic goes in pure, tested modules that a future MCP server can reuse:
 
 - `src/import/` — the ONLY way recipes enter the app (docs/IMPORT_API.md)
-- `src/cooking/` — cook-with-me session state (docs/COOK_API.md)
 - `src/storage/` — repositories over a swappable KeyValueStore (sync and households were removed in v1.0.6)
 - `src/entitlements/` — feature gate (`canUse`, registry, providers)
-- `src/pantry/` — barcode lookup (Open Food Facts + local cache); shared by the pantry and shopping-list scanners (`src/components/barcode-scanner.tsx`)
+- `src/pantry/` — ingredient matching against what is on hand (`isInPantry`). Barcode lookup was removed in v1.1.0.
   ESLint forbids React / react-native / expo imports inside those modules.
 
-## 4. Voice / assistant friendliness (spec #24)
+## 4. Voice / assistant friendliness
 
-No in-app TTS. Anything an assistant might do ("send this recipe", "next step") must be reachable through a
-UI-free module + a deep link (`myrecipeapp://…`), so the future MCP server can wrap the same functions.
+Cook-with-me (#24) was removed in v1.1.0, including `myrecipeapp://cook`. Import still has a UI-free module
+and `myrecipeapp://import` so a future assistant can send a recipe in through `importRecipe`.
 
 ## 5. Record metadata (household sharing removed in v1.0.6)
 
@@ -100,7 +99,7 @@ so timestamps, authorship and tombstones stay correct. The app is fully local (n
 ## 6. Accessibility & touch
 
 - Touch targets ≥ 44dp; `accessibilityRole` on custom buttons; text scales with system font size.
-- Cooking mode: large text (≥ 24sp step text), high contrast, operable with wet hands (big buttons).
+- Grocery run keeps large check targets. Cooking mode was removed in v1.1.0.
 
 ## 7. Product rules
 

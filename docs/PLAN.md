@@ -4,22 +4,28 @@ AI-friendly, diabetic-friendly recipe app. Android first, iOS later from the sam
 
 **Rule #1: RECIPES ARE THE CORE** — everything else is optional and hideable (see top of SPEC.md).
 
-**v1 = [docs/SPEC.md](SPEC.md)** (Jason's 27-item feature spec: link import, editing, categories, photos,
+**v1 = [docs/SPEC.md](SPEC.md)** (Jason's feature spec: link import, editing, categories, photos,
 source links, notes, search, filters, cooked tracking, meal plan calendar, shopping list, dark theme, share,
-step timers, unit conversion, ~~nutrition~~ (removed), grocery run mode, cooking mode, tags, pantry, ratings, foldables,
-cook-with-me, ~~household sharing~~ (removed in v1.0.6), barcode scanning; receipt scanning was removed in v1.0.1).
+unit conversion and servings scaling, grocery run mode, tags, pantry, ratings, foldables.
+Removed: nutrition (#17), receipt scanning (v1.0.1), household sharing and the MCP server (v1.0.6),
+step timers (#15), cooking mode (#19), cook-with-me (#24), and barcode scanning (#27) in v1.1.0).
 
 **Standing rule (Jason, Oct 3 2026):** This is a recipe app, not a nutrition app. Do not add nutrition features (recipes, pantry, or anywhere) unless Jason explicitly asks; apps like Cronometer and MyFitnessPal cover nutrition. Spec #17 (nutrition) was removed;
-the pantry tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition), and barcode scans use Open Food Facts for the product name and brand only.
+the pantry tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition).
 
 **Release policy:** v1.0.0 = ALL SPEC items 1–27 complete (#17 removed). The first published APK is v1.0.0. Until then CI only
 uploads APK _artifacts_ on each push/PR (to keep builds green); a GitHub Release is created only by pushing a
 `v*` tag (or a manual `publish` workflow run) — Eve/Jason decide when.
 **v1.0.6 (Jason's requests):** household sharing (#25) was removed — existing household rows were migrated to their
-owner's personal scope and the old household tables are left in place for now. **MCP server deliberately cut in 1.0.6
-at Jason's request; may be revisited in a future version.** With both gone the app is local-first (no sign-in, no
-sync); Backup & restore moves data between phones. Also in v1.0.6: a recipe can be in several categories, Import PDF
-(on-device, + menu or share a PDF to the app), the app icon picker and the recipe-detail Save fix.
+owner's personal scope. **MCP server deliberately cut in 1.0.6 at Jason's request; may be revisited in a future version.**
+With both gone the app is local-first (no sign-in, no sync); Backup & restore moves data between phones.
+Also in v1.0.6: a recipe can be in several categories, Import PDF (on-device, + menu or share a PDF to the app),
+the app icon picker and the recipe-detail Save fix.
+
+**v1.1.0 (Jason approved):** barcode scanning, cooking mode, Cook with Me, and step timers are gone.
+Servings scaling is on recipe detail. The Supabase client dependency is gone.
+Migration `20261013000000_drop_unused_tables.sql` drops `households`, `household_members`, and `receipt_aliases`.
+Contact Us is gone. Version `1.1.0`, `versionCode` 11, same release keystore.
 
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
@@ -36,13 +42,13 @@ sync); Backup & restore moves data between phones. Also in v1.0.6: a recipe can 
 - [x] Data layer for v1: categories, cooked/lastCookedAt, notes, sourceUrl, photoUri, meal plan entries,
       shopping lists, schema migration v1→v2, JSON-LD import parser
 - [x] Foldables (#23): `useWindowSizeClass`, `TwoPaneLayout`, nav rail, compact/expanded tests
-- [x] Cook-with-me module + deep links + persistence (#24, docs/COOK_API.md)
-- [x] Household-ready data (`SyncMeta`, UUIDs, tombstones), repository interface, LWW sync engine, Supabase
-      adapter, migrations applied to the live project + CI migration workflow (#25, docs/SYNC.md)
-- [x] Barcode lookup module (Open Food Facts + cache + user mapping) (#27)
+- [x] Cook-with-me module + deep links + persistence (#24) — **removed in v1.1.0**
+- [x] Household-ready data (`SyncMeta` in `src/types/record.ts`, UUIDs, tombstones). The LWW sync engine and
+      Supabase client were removed (v1.0.6 client, v1.1.0 leftover dependency). Migrations stay in git (#25, docs/SYNC.md)
+- [x] Barcode lookup module (Open Food Facts + cache) (#27) — **removed in v1.1.0**
 - [x] Settings → Optional features toggles; recipes-first acceptance test
 - [x] Paywall-ready gating: `src/entitlements` (registry, config all free, `LocalFreeEntitlements`), `useFeature`,
-      `<FeatureGate>`, `canUse` in import/cooking/sync/pantry; tests
+      `<FeatureGate>`, `canUse` in import and pantry; tests
 
 ## Phase 2 — v1 features per SPEC.md (cloud-agent PRs)
 
@@ -56,21 +62,21 @@ Suggested PR order (each small, with tests; update the status table in SPEC.md):
 5. Meal plan calendar (month view + day picker, add/remove/move entries) (#11)
 6. Shopping list: week picker, quantity merge, manual items, clear checked (#12)
 7. Share sheet with selectable parts: text / photo / link (#14)
-8. Step timers: tap ⏱ to start, background + notification (`expo-notifications`) (#15)
-9. Unit toggle per recipe + app setting; servings scaler (#16)
+8. ~~Step timers (#15)~~ — removed in v1.1.0
+9. Unit toggle per recipe + app setting; servings scaler on recipe detail (#16, scaler shipped in v1.1.0)
 10. ~~Nutrition (#17)~~ — removed by Jason (Oct 3 2026): recipe app, not a nutrition app
 11. Grocery run mode for a recipe or the planned week (big checklist, pantry-aware) (#18)
-12. Cooking mode: full-screen step pager, keep-awake, large text, inline timers (#19)
+12. ~~Cooking mode (#19)~~ — removed in v1.1.0 (grocery run still keeps the screen awake)
 13. Tag filter chips + tag management (#20)
 14. Pantry tab/screen + "what can I cook" suggestions + shopping skip (#21)
 15. Star rating input + sort/filter controls (#22)
 16. Household UI: Settings → Household (email code sign-in, create/join with invite code), sync triggers (#25)
-17. Pantry agent: barcode scanner UI (`expo-camera`) + receipt scanning (#26, #27), on top of #21 (receipt scanning removed in v1.0.1)
+17. ~~Barcode scanner + receipt scanning (#26, #27)~~ — receipt scanning removed in v1.0.1; barcode scanning removed in v1.1.0
 18. Remaining two-pane screens (meal plan, shopping+pantry) with compact/expanded tests (#23)
 19. Polish: app icon + splash, empty states → release keystore → tag **v1.0.0** (first published APK)
 
 - [ ] Optional: move storage to `expo-sqlite` if recipe count / querying needs grow
-- [ ] Production signing keystore in GitHub secrets (needed before v1.0.0 so updates install over each other)
+- [x] Production signing keystore in GitHub secrets (`ANDROID_KEYSTORE_BASE64` and the matching passwords). The same key signs every update. Do not rotate it without Jason's OK.
 
 ## Phase 3 — AI-friendly
 
@@ -109,7 +115,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
    - Sync with the same backend the MCP server uses: last-write-wins on `updatedAt` to start, soft deletes
      (tombstones), per-user API token stored in `expo-secure-store`.
    - Swap in a `SyncedRecipeStore` implementing the existing repository interface.
-5. Nice-to-haves: scale servings, AI recipe tweak suggestions (no nutrition features).
+5. Nice-to-haves: servings scaling shipped on recipe detail in v1.1.0. AI recipe tweak suggestions stay a later idea (no nutrition features).
 
 ## Phase 4 — iOS
 
@@ -124,20 +130,22 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
 
 ## Open decisions for Jason
 
-- **Monetization (later):** which features go premium, and the billing path (Google Play Billing via
-  RevenueCat, or Supabase-backed entitlements). Code is ready: flip `tier` in
-  `src/entitlements/features.ts` and plug in an `EntitlementProvider`.
+- **Monetization (later):** which features go premium, and the billing path (Google Play Billing or
+  RevenueCat). Code is ready: flip `tier` in `src/entitlements/features.ts` and plug in an `EntitlementProvider`.
 
-1. **Distribution on Android:** sideload the v1.0.0 GitHub Release APK (private repo → must be signed in to
-   GitHub to download), or publish via Google Play (one-time $25 developer fee, needs a real release keystore)?
-2. **Release signing:** OK to generate a production keystore and store it only in GitHub secrets?
-3. **Backend / hosting** for sync + MCP: Cloudflare, Supabase, Fly.io, or something else? Any budget?
+1. ~~**Distribution on Android**~~ — **Resolved (v1.1.0):** the repo is public. Install from GitHub Releases
+   (Obtainium tracks `my-recipe-app-<version>.apk`). Google Play is a later choice, not the v1 path.
+2. ~~**Release signing**~~ — **Resolved:** the production keystore is in GitHub Actions secrets. CI signs release
+   APKs with it. Do not regenerate or rotate it without Jason's OK.
+3. ~~**Backend / hosting** for sync + MCP~~ — **Moot since v1.0.6, confirmed in v1.1.0.** The app is local-only.
+   There is no Supabase client. The hosted project remains only so old migrations can be applied; v1.1.0 drops
+   the unused `households`, `household_members`, and `receipt_aliases` tables.
 4. ~~**MCP auth:** API key only vs OAuth?~~ **Resolved (Oct 3 2026): OAuth** tied to the household-sharing email-code account; own paywall switch; per-user rate limits (see Phase 3). _Moot since v1.0.6: MCP server deliberately cut in 1.0.6 at Jason's request; may be revisited in a future version._
 5. **Storage engine:** stay on AsyncStorage for now, or switch to `expo-sqlite` early?
 6. ~~Nutrition lookup source~~ — resolved (Oct 3 2026): no nutrition features at all.
 7. **iOS timing** and whether to pay for Apple Developer ($99/yr) and/or EAS.
-8. **Multi-user:** just Jason, or family members sharing a recipe box?
+8. ~~**Multi-user**~~ — **Moot.** Household sharing was removed in v1.0.6. v1.1.0 drops the unused household tables. The app is a single-phone recipe box; Backup & restore moves a copy to another phone.
 9. ~~Low-carb threshold~~ — resolved (Oct 3 2026): label removed with nutrition.
 10. **"Cooked recently" window:** fixed at 14 days since v1.0.2 (`COOKED_RECENTLY_DAYS` in `src/lib/recipe-utils.ts`; the setting was removed).
 11. **Photos:** keep on-device only (lost if the app is uninstalled) until a sync backend exists — OK?
-12. **Timer notifications:** OK to request Android notification permission on first timer start?
+12. ~~**Timer notifications**~~ — **Moot in v1.1.0.** Step timers were removed. `POST_NOTIFICATIONS` and exact-alarm permissions stay blocked.

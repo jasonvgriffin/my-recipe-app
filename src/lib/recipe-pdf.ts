@@ -1,5 +1,5 @@
 import { presentIngredient } from '@/lib/ingredients';
-import { formatDurationWords } from '@/lib/timers';
+import { formatDurationWords } from '@/lib/durations';
 import { effectiveUnitSystem } from '@/lib/units';
 import type { Recipe, UnitSystem } from '@/types/recipe';
 

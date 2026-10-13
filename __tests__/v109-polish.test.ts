@@ -58,8 +58,8 @@ describe('v1.0.9 keyboard', () => {
     const app = JSON.parse(readFileSync(join(process.cwd(), 'app.json'), 'utf8')) as {
       expo: { android: { softwareKeyboardLayoutMode?: string; versionCode?: number }; version?: string };
     };
-    expect(app.expo.version).toBe('1.0.9');
-    expect(app.expo.android.versionCode).toBe(10);
+    expect(app.expo.version).toBe('1.1.0');
+    expect(app.expo.android.versionCode).toBe(11);
     expect(app.expo.android.softwareKeyboardLayoutMode).toBe('resize');
   });
 
@@ -73,7 +73,6 @@ describe('v1.0.9 keyboard', () => {
       'src/app/import.tsx',
       'src/components/day-plan.tsx',
       'src/components/recipe-detail.tsx',
-      'src/components/barcode-scanner.tsx',
     ];
     for (const file of files) {
       const src = readFileSync(join(process.cwd(), file), 'utf8');

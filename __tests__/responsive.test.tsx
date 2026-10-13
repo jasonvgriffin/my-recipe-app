@@ -176,21 +176,6 @@ describe.each([
     expect(await screen.findByTestId('pantry-match-empty')).toBeTruthy();
   });
 
-  it('barcode scanner shows the camera and the result pane', async () => {
-    const Scan = require('@/app/pantry/scan').default;
-    renderRouter({ index: Scan }, { initialUrl: '/' });
-    expect(await screen.findByTestId('barcode-camera')).toBeTruthy();
-    expect(screen.getByText('Point the camera at a barcode.')).toBeTruthy();
-    expect(screen.getByTestId(width >= 600 ? 'barcode-layout-dual' : 'barcode-layout-single')).toBeTruthy();
-  });
-
-  it('shopping-list barcode scanner shows the camera and the result pane', async () => {
-    const Scan = require('@/app/shopping/scan').default;
-    renderRouter({ index: Scan }, { initialUrl: '/' });
-    expect(await screen.findByTestId('barcode-camera')).toBeTruthy();
-    expect(screen.getByTestId(width >= 600 ? 'barcode-layout-dual' : 'barcode-layout-single')).toBeTruthy();
-  });
-
   it('meal plan is a calendar, with the selected day beside it when expanded', async () => {
     const Screen = require('@/app/(tabs)/meal-plan').default;
     renderRouter({ index: Screen }, { initialUrl: '/' });
@@ -209,28 +194,30 @@ describe.each([
     else expect(screen.queryByTestId('pantry-on-hand')).toBeNull();
   });
 
-  it('cook screen (deep link myrecipeapp://cook/{id}) shows the current step', async () => {
+  it('recipe detail scales ingredient quantities when servings change', async () => {
     const { recipeStore } = require('@/storage/recipes');
-    await addSampleRecipes(recipeStore);
-    const r = (await recipeStore.list()).find((x: { title: string }) => x.title === SAMPLE_RECIPES[0].title);
-    const CookScreen = require('@/app/cook/[action]').default;
-    renderRouter({ 'cook/[action]': CookScreen }, { initialUrl: `/cook/${r.id}` });
-    expect(await screen.findByText(r.steps[0].text)).toBeTruthy();
-    expect(screen.getByTestId(width >= 600 ? 'cook-layout-dual' : 'cook-layout-single')).toBeTruthy();
-    expect(screen.getByTestId('cook-ingredients')).toBeTruthy();
-    if (width >= 600) {
-      expect(screen.getByTestId('cook-layout-secondary')).toBeTruthy();
-    } else {
-      expect(screen.queryByTestId('cook-layout-secondary')).toBeNull();
-    }
-    await act(async () => fireEvent.press(screen.getByText('Next ›')));
-    expect(await screen.findByText(r.steps[1].text)).toBeTruthy();
+    const { createRecipe } = require('@/lib/recipe-utils');
+    const recipe = createRecipe({
+      title: 'Scaled Soup',
+      servings: 2,
+      ingredients: ['1/2 cup broth', 'a pinch of salt'],
+      steps: ['Simmer'],
+    });
+    await recipeStore.save(recipe);
+    const Detail = require('@/app/recipe/[id]/index').default;
+    renderRouter({ 'recipe/[id]/index': Detail }, { initialUrl: `/recipe/${recipe.id}` });
+    expect(await screen.findByTestId('ingredient-0')).toHaveTextContent('½ cup broth');
+    expect(screen.getByTestId('ingredient-1')).toHaveTextContent('a pinch of salt');
+    await act(async () => fireEvent.press(screen.getByTestId('servings-plus')));
+    expect(screen.getByTestId('servings-value')).toHaveTextContent('3');
+    expect(screen.getByTestId('ingredient-0')).toHaveTextContent('¾ cup broth');
+    expect(screen.getByTestId('ingredient-1')).toHaveTextContent('a pinch of salt');
   });
 
-  it('settings shows the unit default and keep-awake toggle', async () => {
+  it('settings shows the unit default and no keep-awake toggle', async () => {
     const Screen = require('@/app/settings').default;
     renderRouter({ index: Screen }, { initialUrl: '/' });
     expect(await screen.findByTestId('settings-unit-metric')).toBeTruthy();
-    expect(screen.getByTestId('keep-awake-toggle')).toBeTruthy();
+    expect(screen.queryByTestId('keep-awake-toggle')).toBeNull();
   });
 });

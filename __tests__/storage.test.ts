@@ -84,9 +84,15 @@ describe('pantry + settings stores', () => {
     await settings.update({ unitSystem: 'metric' });
     expect((await settings.get()).unitSystem).toBe('metric');
     // v1.0.2: "cooked recently" is a fixed 14 days; a legacy stored window is dropped on read/write.
-    await kv.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ unitSystem: 'metric', cookedRecentlyDays: 30 }));
+    await kv.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({ unitSystem: 'metric', cookedRecentlyDays: 30, cookingModeKeepAwake: false }),
+    );
     expect(await settings.get()).not.toHaveProperty('cookedRecentlyDays');
+    expect(await settings.get()).not.toHaveProperty('cookingModeKeepAwake');
     await settings.update({ unitSystem: 'imperial' });
-    expect(JSON.parse((await kv.getItem(SETTINGS_STORAGE_KEY)) ?? '{}')).not.toHaveProperty('cookedRecentlyDays');
+    const stored = JSON.parse((await kv.getItem(SETTINGS_STORAGE_KEY)) ?? '{}');
+    expect(stored).not.toHaveProperty('cookedRecentlyDays');
+    expect(stored).not.toHaveProperty('cookingModeKeepAwake');
   });
 });

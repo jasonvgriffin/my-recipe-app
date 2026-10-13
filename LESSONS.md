@@ -10,7 +10,7 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - Read this file before writing code. Follow every rule in it.
 - When a review or a bug shows a rule that would have prevented it, add that lesson here in the same change. One rule, what went wrong, the version.
 - Recipe-app rules stay in this file (layout, theme, no nutrition, recipes first). Diabetic-friendly means track servings. There is no house sweetener restriction.
-- A rule that would apply to any of Jason's apps goes under General lessons at the end of this file and under `Lessons learned` in the PR description, so Eve can copy it to app-build-lessons and the other repos (or email her at `eve.chief_of_staff@agentmail.to`).
+- A rule that would apply to any of Jason's apps goes under General lessons at the end of this file and under `Lessons learned` in the PR description, so it can be copied to app-build-lessons and the other repos.
 - If app-build-lessons is not installed in the environment, follow this file and say that the shared skill was missing. Do not invent a second lessons file.
 
 ## Layout and screens
@@ -37,6 +37,13 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - **A flex row of a text field plus buttons clips at 360dp unless the field can shrink.** Set `flexGrow: 1`, `flexShrink: 1`, and `minWidth: 0` on the input, and leave Add and Cancel at their natural width (`flexShrink: 0`). `minWidth: auto` on a web input keeps the placeholder width and pushes Cancel off the card.
 - **The raised + clearance is the measured rise, plus a margin.** `marginTop: -29` is not the whole overlap. On the rendered bar the circle top sits 36dp above the bar, and 32dp of padding left Add recipe under it. `TAB_PLUS_CLEARANCE` is that rise plus 16dp, on every tab's scroll padding. Scrolling a focused field to the center parks the next control on the +.
 - **Specs to keep (1.0.9).** Each accent is one shade used in light and dark mode, at about 3:1 on white (`#FFFFFF`) and on the dark card (`#1D211D`). Badges stay `#E53935` with white text and a white ring in every theme. The + tab slot is pinned with `flexBasis: 58` (`flexGrow: 0`, `flexShrink: 0`), and the + circle is 52dp.
+
+## v1.1.0 (2026-10-13)
+
+- **Check every caller before uninstalling a package.** Grocery run still calls `useKeepAwake`. Removing cooking mode only removed the keep-awake setting. `expo-keep-awake` stays.
+- **A removed collection still has to parse.** Old backups include `barcode_items` and `cookingModeKeepAwake`. The zod schema still accepts `barcode_items` (new files write `[]` and do not restore them). Settings merge copies only keys that exist on `DEFAULT_SETTINGS`.
+- **Servings scaling is display-only.** The stepper does not write the recipe. Fractions and mixed numbers go through `parseIngredient` / `scaleIngredient`. A line that does not parse stays as written.
+- **Fetch `origin/main` before branching.** This VM’s checkout was behind the sweetener-rule removal. Branching from the stale snapshot would have put that rule back.
 
 ## 2026-10-13
 
@@ -71,6 +78,9 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - Status colors are fixed, not accent-driven.
 - One shade per color meeting about 3:1 contrast on light and dark.
 ### Process and usage
+- Before deleting a dependency, search every import. One package can serve a feature you are keeping.
+- A cloud VM snapshot can be behind the remote default branch. Fetch that branch before you branch.
+- A Google Docs markdown export escapes punctuation (`\+`, `\_`, `\#`) and wraps sentences in backticks. Unescape so it renders. Do not rewrite the author's sentences.
 - Batch requests into fewer, larger versions.
 - One release event builds once (concurrency group; skip CI on docs-only commits).
 - Verify the release yourself: run succeeded, asset attached, version correct, same signing cert.

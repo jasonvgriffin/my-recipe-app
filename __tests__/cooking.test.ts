@@ -3,7 +3,7 @@ import { convertIngredient, formatIngredient, parseIngredient, scaleIngredient }
 import { rankRecipesByPantry } from '@/lib/pantry';
 import { createRecipe, filterRecipes, setRating, sortRecipes } from '@/lib/recipe-utils';
 import { compileItems } from '@/lib/shopping';
-import { detectStepDuration, formatDuration } from '@/lib/timers';
+import { detectStepDuration, formatDuration } from '@/lib/durations';
 import { migrateRecipe, type PantryItem } from '@/types/recipe';
 
 describe('ingredient parsing / scaling / conversion (spec #16, #12)', () => {
@@ -36,7 +36,7 @@ describe('ingredient parsing / scaling / conversion (spec #16, #12)', () => {
   });
 });
 
-describe('step timers (spec #15)', () => {
+describe('step durations stored on a recipe', () => {
   it.each([
     ['Roast 35–40 minutes until crisp', 2400],
     ['Simmer 1 hour 15 minutes', 4500],

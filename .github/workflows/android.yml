@@ -178,7 +178,7 @@ jobs:
           "$bt/zipalign" -c -P 16 4 "$apk" || { echo "::error::APK is not zip-aligned (4 bytes, 16 KB pages for .so)"; exit 1; }
           perms=$("$bt/aapt2" dump permissions "$apk")
           echo "$perms"
-          if grep -Eq "BLUETOOTH|NEARBY_WIFI_DEVICES|UWB_RANGING|SYSTEM_ALERT_WINDOW|EXTERNAL_STORAGE|EXACT_ALARM|launcher|badge|finsky|c2dm" <<<"$perms"; then
+          if grep -Eq "BLUETOOTH|NEARBY_WIFI_DEVICES|UWB_RANGING|SYSTEM_ALERT_WINDOW|EXTERNAL_STORAGE|EXACT_ALARM|POST_NOTIFICATIONS|RECEIVE_BOOT_COMPLETED|launcher|badge|finsky|c2dm" <<<"$perms"; then
             echo "::error::APK requests a blocked permission (see app.json android.blockedPermissions)"; exit 1
           fi
 
