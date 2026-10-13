@@ -89,7 +89,9 @@ describe('recipes-first', () => {
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
     expect(screen.getByText('Mark cooked')).toBeTruthy();
     expect(screen.queryByTestId('plan-today-button')).toBeNull();
-    expect(screen.getByText(/30:00|0:30:00/)).toBeTruthy(); // step timer detected
+    expect(screen.getByText(/Bake 30 minutes/)).toBeTruthy();
+    expect(screen.getByTestId('servings-value')).toBeTruthy();
+    expect(screen.queryByText(/30:00|0:30:00/)).toBeNull();
   });
 
   it('optional tabs come back when enabled in Settings', async () => {

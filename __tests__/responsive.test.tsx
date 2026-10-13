@@ -200,18 +200,19 @@ describe.each([
     const recipe = createRecipe({
       title: 'Scaled Soup',
       servings: 2,
-      ingredients: ['1/2 cup broth', 'a pinch of salt'],
-      steps: ['Simmer'],
+      ingredients: [{ text: '1/2 cup broth' }, { text: 'a pinch of salt' }],
+      steps: [{ text: 'Simmer' }],
+      tags: [],
     });
     await recipeStore.save(recipe);
     const Detail = require('@/app/recipe/[id]/index').default;
     renderRouter({ 'recipe/[id]/index': Detail }, { initialUrl: `/recipe/${recipe.id}` });
-    expect(await screen.findByTestId('ingredient-0')).toHaveTextContent('½ cup broth');
-    expect(screen.getByTestId('ingredient-1')).toHaveTextContent('a pinch of salt');
+    expect(await screen.findByTestId('ingredient-0')).toHaveTextContent(/½ cup broth/);
+    expect(screen.getByTestId('ingredient-1')).toHaveTextContent(/a pinch of salt/);
     await act(async () => fireEvent.press(screen.getByTestId('servings-plus')));
     expect(screen.getByTestId('servings-value')).toHaveTextContent('3');
-    expect(screen.getByTestId('ingredient-0')).toHaveTextContent('¾ cup broth');
-    expect(screen.getByTestId('ingredient-1')).toHaveTextContent('a pinch of salt');
+    expect(screen.getByTestId('ingredient-0')).toHaveTextContent(/¾ cup broth/);
+    expect(screen.getByTestId('ingredient-1')).toHaveTextContent(/a pinch of salt/);
   });
 
   it('settings shows the unit default and no keep-awake toggle', async () => {
