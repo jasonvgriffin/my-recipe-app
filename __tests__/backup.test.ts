@@ -20,7 +20,7 @@ import {
   type BackupDeps,
   type PhotoStore,
 } from '@/backup';
-import { createCollection, type Collection, type KeyValueStore, type StoredRecord } from '@/storage/kv';
+import { type Collection, type KeyValueStore, type StoredRecord } from '@/storage/kv';
 import { setIdentity } from '@/storage/identity';
 import { createMealPlanStore } from '@/storage/meal-plan';
 import { createPantryStore } from '@/storage/pantry';
@@ -65,7 +65,6 @@ function phone() {
     pantry_items: c(pantry.collection),
     meal_plan_entries: c(plan.collections.entries),
     shopping_items: c(plan.collections.items),
-    barcode_items: c(createCollection<StoredRecord>(kv, 'barcodes', (v) => v as StoredRecord)),
   };
   const deps: BackupDeps = { collections, settings, photos, appVersion: '1.0.6', now: () => new Date('2026-10-04T12:00:00Z') };
   return { kv, recipes, plan, pantry, settings, photos, collections, deps };
@@ -177,7 +176,7 @@ describe('restore', () => {
   it('replace makes the phone match the backup (tombstones, so sync removes them too) and ignores unknown settings', async () => {
     const { old, chicken } = await fullPhone();
     const backup = await createBackup(old.deps);
-    backup.settings = { ...backup.settings, bogus: 'x' };
+    backup.settings = { ...backup.settings, bogus: 'x', cookingModeKeepAwake: true };
     const mine = phone();
     const own = await mine.recipes.save({ ...SAMPLE_RECIPES[1], id: 'own-1', title: 'Only on this phone' } as never, at('2026-10-03T10:00:00Z'));
     const r = await restoreBackup(backup, 'replace', mine.deps);
@@ -186,6 +185,7 @@ describe('restore', () => {
     expect((await mine.recipes.collections.recipes.allRaw()).find((x) => x.id === own.id)?.deletedAt).toBeTruthy();
     expect(await mine.recipes.get(chicken.id)).toBeTruthy();
     expect(await mine.settings.get()).not.toHaveProperty('bogus');
+    expect(await mine.settings.get()).not.toHaveProperty('cookingModeKeepAwake');
   });
 });
 

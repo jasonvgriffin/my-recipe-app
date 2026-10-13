@@ -10,10 +10,6 @@ export const FeatureId = {
   shoppingList: 'shoppingList',
   groceryRun: 'groceryRun',
   pantry: 'pantry',
-  barcodeScan: 'barcodeScan',
-  cookingMode: 'cookingMode',
-  cookWithMe: 'cookWithMe',
-  timers: 'timers',
   unitConversion: 'unitConversion',
   tags: 'tags',
   categories: 'categories',
@@ -34,7 +30,7 @@ export interface FeatureInfo {
   label: string;
   /** SPEC.md item number(s). */
   spec: number[];
-  /** Features this one builds on: a feature is only available when its parents are (e.g. barcodeScan → pantry). */
+  /** Features this one builds on: a feature is only available when its parents are (e.g. pdfExport → share). */
   requires?: FeatureId[];
 }
 
@@ -43,12 +39,6 @@ export const FEATURES: Record<FeatureId, FeatureInfo> = {
   shoppingList: { id: 'shoppingList', label: 'Shopping list', spec: [12] },
   groceryRun: { id: 'groceryRun', label: 'Shopping List mode', spec: [18] },
   pantry: { id: 'pantry', label: 'Pantry', spec: [21] },
-  // Pantry and shopping list both scan (v1.0.1), so barcodeScan no longer requires pantry; each entry point
-  // also needs its own screen's feature (pantry / shoppingList) to be visible.
-  barcodeScan: { id: 'barcodeScan', label: 'Barcode scanning', spec: [27] },
-  cookingMode: { id: 'cookingMode', label: 'Cooking mode', spec: [19] },
-  cookWithMe: { id: 'cookWithMe', label: 'Cook-with-me (voice assistant)', spec: [24] },
-  timers: { id: 'timers', label: 'Step timers', spec: [15] },
   unitConversion: { id: 'unitConversion', label: 'Unit conversion', spec: [16] },
   tags: { id: 'tags', label: 'Tags', spec: [20] },
   categories: { id: 'categories', label: 'Categories', spec: [3] },

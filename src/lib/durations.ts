@@ -1,7 +1,7 @@
 /**
- * Detect cooking times in step text for step timers (spec #15) and cooking mode (spec #19).
- * "Bake 25–30 minutes" → 1800 (uses the upper bound so food isn't undercooked; user can adjust).
- * "1 hour 15 minutes" → 4500. Returns undefined if no time found.
+ * Step lengths stored on a recipe (shown in PDF export and the share sheet).
+ * "Bake 25–30 minutes" → 1800 (uses the upper bound). "1 hour 15 minutes" → 4500.
+ * Returns undefined if no time is written. This is not a running timer.
  */
 const UNIT_SECONDS: Record<string, number> = {
   s: 1,
@@ -40,7 +40,7 @@ export function formatDuration(seconds: number): string {
   return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
 }
 
-/** Duration in words for print/share: "45 sec", "20 min", "1 hr 5 min" (v1.0.3 PDF export). */
+/** Duration in words for print/share: "45 sec", "20 min", "1 hr 5 min". */
 export function formatDurationWords(seconds: number): string {
   const total = Math.max(0, Math.round(seconds));
   if (total < 60) return `${total} sec`;

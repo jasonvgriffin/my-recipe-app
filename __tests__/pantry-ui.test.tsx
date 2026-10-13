@@ -59,11 +59,11 @@ describe('pantry screen (spec #21)', () => {
     expect(screen.queryByTestId('scan-receipt-button')).toBeNull();
   });
 
-  it('confirms an item a barcode scan just added', async () => {
-    const Pantry = require('@/app/(tabs)/pantry').default;
-    renderRouter({ index: Pantry }, { initialUrl: '/?added=Kerrygold%20Butter' });
-    expect(await screen.findByTestId('pantry-added-banner')).toBeTruthy();
-    expect(screen.getByText('Added Kerrygold Butter')).toBeTruthy();
+  it('has no barcode scan button', async () => {
+    renderPantry();
+    await screen.findByText('Nothing in the pantry yet.');
+    expect(screen.queryByTestId('scan-barcode-button')).toBeNull();
+    expect(screen.queryByText('Scan barcode')).toBeNull();
   });
 
   it('stays quiet when the user hides pantry', async () => {

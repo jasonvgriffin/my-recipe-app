@@ -107,7 +107,7 @@ describe('shopping quantity + notes (screen)', () => {
     expect(notes.props.placeholder).toBe('Notes');
     const { StyleSheet } = require('react-native');
     const filled = buildColors('dark', 'green').primary;
-    for (const id of ['shopping-scan-button', 'build-list', 'add-manual']) {
+    for (const id of ['build-list', 'add-manual']) {
       expect(StyleSheet.flatten(screen.getByTestId(id).props.style).backgroundColor).toBe(filled);
     }
     expect(plainVisibleText(screen.toJSON())).not.toMatch(/Generic is fine|e\.g\./);

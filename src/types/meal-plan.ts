@@ -1,4 +1,4 @@
-import type { SyncMeta } from './sync';
+import type { SyncMeta } from './record';
 
 /** Meal planning + shopping list / grocery run types (spec #11, #12, #18). Keep JSON-serializable. */
 

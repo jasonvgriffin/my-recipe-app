@@ -1,6 +1,6 @@
 import { formatIngredient } from '@/lib/ingredients';
 import { isRemotePhoto, mimeForUri } from '@/lib/photo-path';
-import { formatDuration } from '@/lib/timers';
+import { formatDuration } from '@/lib/durations';
 import type { Recipe } from '@/types/recipe';
 
 /** What the share sheet should include (spec #14). Any combination is valid. */

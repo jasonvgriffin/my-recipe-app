@@ -16,14 +16,11 @@ const routes = () => ({
   '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
   '(tabs)/more': require('@/app/(tabs)/more').default,
   '(tabs)/add-menu': require('@/app/(tabs)/add-menu').default,
-  'pantry/scan': require('@/app/pantry/scan').default,
-  'shopping/scan': require('@/app/shopping/scan').default,
   recipes: require('@/app/recipes').default,
   'pantry-match': require('@/app/pantry-match').default,
   add: require('@/app/add').default,
   'recipe/[id]': require('@/app/recipe/[id]/index').default,
   'recipe/[id]/edit': require('@/app/recipe/[id]/edit').default,
-  'cook/[action]': require('@/app/cook/[action]').default,
   import: require('@/app/import').default,
   'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
   'grocery-run': require('@/app/grocery-run').default,
@@ -92,7 +89,9 @@ describe('recipes-first', () => {
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
     expect(screen.getByText('Mark cooked')).toBeTruthy();
     expect(screen.queryByTestId('plan-today-button')).toBeNull();
-    expect(screen.getByText(/30:00|0:30:00/)).toBeTruthy(); // step timer detected
+    expect(screen.getByText(/Bake 30 minutes/)).toBeTruthy();
+    expect(screen.getByTestId('servings-value')).toBeTruthy();
+    expect(screen.queryByText(/30:00|0:30:00/)).toBeNull();
   });
 
   it('optional tabs come back when enabled in Settings', async () => {

@@ -6,8 +6,6 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 
-import { createCookSession, runCookCommand } from '@/cooking';
-import { SAMPLE_RECIPES } from '../test-helpers/sample-recipes';
 import {
   ALL_FEATURE_IDS,
   DEFAULT_FEATURE_CONFIG,
@@ -21,7 +19,6 @@ import {
   type FeatureId,
 } from '@/entitlements';
 import { importRecipeWith } from '@/import';
-import { createBarcodeLookup } from '@/pantry/barcodeLookup';
 import type { KeyValueStore } from '@/storage/kv';
 import { createRecipeStore } from '@/storage/recipes';
 import { settingsStore } from '@/storage/settings';
@@ -69,6 +66,13 @@ describe('feature gate', () => {
     }
   });
 
+  it('v1.1.0: barcode scanning, cooking mode, cook-with-me, and step timers are gone', () => {
+    for (const gone of ['barcodeScan', 'cookingMode', 'cookWithMe', 'timers']) {
+      expect(ALL_FEATURE_IDS).not.toContain(gone);
+      expect(DEFAULT_FEATURE_CONFIG).not.toHaveProperty(gone);
+    }
+  });
+
   it('premium without entitlement is locked; granting it unlocks; kill switch beats entitlement', () => {
     const gate = createFeatureGate({
       config: { pantry: { tier: 'premium', enabled: true } },
@@ -76,14 +80,10 @@ describe('feature gate', () => {
     });
     expect(gate.check('pantry')).toMatchObject({ available: false, reason: 'premium' });
     expect(() => gate.assert('pantry')).toThrow(FeatureLockedError);
-    // Barcode scanning serves the pantry AND the shopping list (v1.0.1), so it no longer follows the pantry gate;
-    // the pantry scan route still shows the pantry's locked message (below).
-    expect(gate.check('barcodeScan')).toMatchObject({ available: true });
     expect(gate.canUse('mealPlan')).toBe(true);
 
     gate.setProvider(new StaticEntitlements(['pantry']));
     expect(gate.canUse('pantry')).toBe(true);
-    expect(gate.canUse('barcodeScan')).toBe(true);
 
     gate.setConfig({ pantry: { enabled: false } });
     expect(gate.check('pantry')).toMatchObject({ available: false, reason: 'disabled' });
@@ -117,34 +117,6 @@ describe('UI-free modules honour the gate (canUse)', () => {
     expect(s.ok).toBe(true);
   });
 
-  it('cook session + deep links: cook-with-me / cooking mode / timers each gated', async () => {
-    const recipe = SAMPLE_RECIPES[0];
-    const session = createCookSession({ getRecipe: async () => recipe, kv: memoryStore() });
-
-    featureGate.setConfig(premium('cookWithMe'));
-    expect(await runCookCommand(session, { action: 'start', recipeId: recipe.id })).toMatchObject({
-      ok: false,
-      code: 'feature_locked',
-    });
-    // In-app cooking mode still works
-    expect(await runCookCommand(session, { action: 'start', recipeId: recipe.id }, { via: 'app' })).toMatchObject({
-      ok: true,
-    });
-
-    featureGate.setConfig(premium('timers'));
-    expect(await session.startStepTimer(60)).toMatchObject({ ok: false, code: 'feature_locked' });
-
-    featureGate.setConfig(premium('cookingMode'));
-    expect(await session.getCurrentStep()).toMatchObject({ ok: false, code: 'feature_locked' });
-  });
-
-  it('barcode lookup locked when barcode scanning is premium', async () => {
-    featureGate.setConfig(premium('barcodeScan'));
-    const fetchJson = jest.fn();
-    const lookup = createBarcodeLookup({ items: {} as never, fetchJson, newId: () => 'id' });
-    expect(await lookup.lookup('4006381333931')).toMatchObject({ status: 'locked' });
-    expect(fetchJson).not.toHaveBeenCalled();
-  });
 });
 
 const routes = () => ({
@@ -156,15 +128,12 @@ const routes = () => ({
   '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
   '(tabs)/more': require('@/app/(tabs)/more').default,
   '(tabs)/add-menu': require('@/app/(tabs)/add-menu').default,
-  'pantry/scan': require('@/app/pantry/scan').default,
-  'shopping/scan': require('@/app/shopping/scan').default,
   recipes: require('@/app/recipes').default,
   'pantry-match': require('@/app/pantry-match').default,
   add: require('@/app/add').default,
   'recipe/[id]': require('@/app/recipe/[id]/index').default,
   'recipe/[id]/edit': require('@/app/recipe/[id]/edit').default,
   import: require('@/app/import').default,
-  'cook/[action]': require('@/app/cook/[action]').default,
   'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
   'grocery-run': require('@/app/grocery-run').default,
   settings: require('@/app/settings').default,
@@ -219,7 +188,8 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     expect(screen.queryByTestId('share-recipe-button')).toBeNull();
     expect(screen.getByTestId('edit-recipe-button')).toBeTruthy();
     expect(screen.queryByText(/⏱/)).toBeNull();
-    expect(screen.queryByTestId('servings-units')).toBeNull();
+    expect(screen.getByTestId('servings-units')).toBeTruthy();
+    expect(screen.queryByTestId('unit-system-metric')).toBeNull();
 
     await act(async () => fireEvent.press(screen.getByTestId('edit-recipe-button')));
     expect(await screen.findByTestId('recipe-editor')).toBeTruthy();
@@ -255,40 +225,18 @@ describe('UI entry points follow the gate (separate from Settings toggles)', () 
     expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
   });
 
-  it('locked pantry scan routes show a neutral message (no payment UI)', async () => {
-    featureGate.setProvider(new NoEntitlements());
-    featureGate.setConfig(premium('pantry'));
-    renderRouter(routes(), { initialUrl: '/pantry/scan' });
-    expect(await screen.findByTestId('feature-locked-pantry')).toBeTruthy();
-    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
-  });
-
-  it('locked barcode scanning: neutral message on the pantry and shopping scan routes, no scan buttons', async () => {
-    featureGate.setProvider(new NoEntitlements());
-    featureGate.setConfig(premium('barcodeScan'));
-    renderRouter(routes(), { initialUrl: '/shopping/scan' });
-    expect(await screen.findByTestId('feature-locked-barcodeScan')).toBeTruthy();
-    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
-    screen.unmount();
+  it('shopping list has no barcode scan button', async () => {
     renderRouter(routes(), { initialUrl: '/shopping' });
     expect(await screen.findByTestId('build-list')).toBeTruthy();
     expect(screen.queryByTestId('shopping-scan-button')).toBeNull();
-    // v1.0.5: “or” sits between the Add row and the buttons; Build from Meal Plan still follows it.
-    expect(screen.getByTestId('shopping-scan-or')).toBeTruthy();
+    expect(screen.queryByText('Scan Item')).toBeNull();
+    expect(screen.getByTestId('shopping-actions-or')).toBeTruthy();
     expect(screen.getByTestId('manual-input')).toBeTruthy();
   });
 
-  it('a locked cook-with-me deep link shows a neutral message (no payment UI)', async () => {
+  it('hides the unit default when unit conversion is locked', async () => {
     featureGate.setProvider(new NoEntitlements());
-    featureGate.setConfig(premium('cookWithMe'));
-    renderRouter(routes(), { initialUrl: '/cook/current' });
-    expect(await screen.findByTestId('feature-locked-cookWithMe')).toBeTruthy();
-    expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
-  });
-
-  it('hides unit default and keep-awake when those features are locked', async () => {
-    featureGate.setProvider(new NoEntitlements());
-    featureGate.setConfig(premium('unitConversion', 'cookingMode'));
+    featureGate.setConfig(premium('unitConversion'));
     renderRouter(routes(), { initialUrl: '/settings' });
     await screen.findByText('Optional features');
     expect(screen.queryByTestId('settings-unit-metric')).toBeNull();

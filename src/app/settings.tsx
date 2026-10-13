@@ -30,13 +30,13 @@ const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; h
     label: 'Shopping list',
     help: 'Lists built from your meal plan, Shopping List mode.',
   },
-  { key: 'pantry', gate: 'pantry', label: 'Pantry', help: 'Track what you have, with barcode scanning.' },
+  { key: 'pantry', gate: 'pantry', label: 'Pantry', help: 'Track what you have on hand.' },
 ];
 
 /**
  * Settings. Recipes are the core: everything here is optional. Appearance
  * (theme mode + accent color, v1.0.3; free, not gated), units,
- * cooking mode, and optional-feature toggles; the app version at the bottom. (The "cooked recently" window is
+ * and optional-feature toggles; the app version at the bottom. (The "cooked recently" window is
  * fixed at 14 days since v1.0.2 — `COOKED_RECENTLY_DAYS`.) Turning every optional feature off makes the
  * app a pure recipe box.
  */
@@ -54,7 +54,6 @@ export default function SettingsScreen() {
   // Subscribe to gate changes; toggles for gated-off (e.g. future premium) features are not shown.
   useFeature('mealPlan');
   const units = useFeature('unitConversion').available;
-  const cooking = useFeature('cookingMode').available;
   const version = appVersion();
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
@@ -104,23 +103,6 @@ export default function SettingsScreen() {
               })}
             </View>
           </>
-        ) : null}
-        {cooking ? (
-          <View style={styles.row}>
-            <View style={styles.flex}>
-              <Text style={styles.label}>Keep screen awake while cooking</Text>
-              <Text style={styles.help}>Stops the phone from sleeping on the cooking screen.</Text>
-            </View>
-            <Switch
-              testID="keep-awake-toggle"
-              value={settings.cookingModeKeepAwake}
-              onValueChange={(v) => {
-                void settingsStore.update({ cookingModeKeepAwake: v });
-              }}
-              trackColor={{ true: colors.switchTrack, false: colors.placeholder }}
-              thumbColor={settings.cookingModeKeepAwake ? colors.switchThumb : colors.muted}
-            />
-          </View>
         ) : null}
         <Text style={styles.section}>Backup & restore</Text>
         <Link href="/backup" asChild>

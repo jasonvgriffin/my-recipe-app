@@ -7,13 +7,15 @@ import { defaultStore, type KeyValueStore } from './kv';
 export const SETTINGS_STORAGE_KEY = 'my-recipe-app/settings/v1';
 
 /**
- * App settings (per device, not synced): unit system #16, cooking-mode keep-awake #19, optional feature visibility (recipes-first rule), appearance (theme mode + accent, v1.0.3). Subscribers are notified on update so tabs/screens react live.
+ * App settings (per device): unit system #16, optional feature visibility (recipes-first rule), appearance
+ * (theme mode + accent, v1.0.3). Subscribers are notified on update so tabs/screens react live.
+ * Removed keys (cookedRecentlyDays, cookingModeKeepAwake) are ignored so an old backup still loads.
  */
 export function createSettingsStore(store: KeyValueStore = defaultStore) {
   const listeners = new Set<(s: AppSettings) => void>();
-  const merge = (raw: Partial<AppSettings> & { cookedRecentlyDays?: unknown }): AppSettings => {
-    // v1.0.2: the "cooked recently" window is fixed (COOKED_RECENTLY_DAYS); drop the old stored setting.
-    const { cookedRecentlyDays: _legacy, ...rest } = raw;
+  const merge = (raw: Partial<AppSettings> & { cookedRecentlyDays?: unknown; cookingModeKeepAwake?: unknown }): AppSettings => {
+    // v1.0.2: the "cooked recently" window is fixed. v1.1.0: cooking-mode keep-awake is gone.
+    const { cookedRecentlyDays: _legacy, cookingModeKeepAwake: _awake, ...rest } = raw;
     return {
       ...DEFAULT_SETTINGS,
       ...rest,

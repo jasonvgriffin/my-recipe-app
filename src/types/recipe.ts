@@ -10,7 +10,7 @@
 
 import type { AccentId, ThemeMode } from '../lib/theme';
 
-import type { SyncMeta } from './sync';
+import type { SyncMeta } from './record';
 
 /** Current schema version. Bump when the stored shape changes and add a migration in `migrateRecipe`. */
 export const RECIPE_SCHEMA_VERSION = 5;
@@ -186,8 +186,8 @@ export function isCategory(value: unknown): value is Category {
 /** Item on hand in the pantry (spec #21). */
 export interface PantryItem extends SyncMeta {
   /**
-   * Item title. Typed items keep the casing the user entered (v1.0.8). Scanned items keep the product or
-   * brand name. Matching always compares `ingredientKey(name)`.
+   * Item title. Typed items keep the casing the user entered (v1.0.8). Older scanned items may still
+   * store a product or brand name. Matching always compares `ingredientKey(name)`.
    */
   name: string;
   /** Optional — unknown quantity is left unset (never stored as 0 to mean "some"). */
@@ -197,13 +197,13 @@ export interface PantryItem extends SyncMeta {
   category?: string;
   /** Optional expiration date, YYYY-MM-DD. */
   expiresAt?: string;
-  /** Optional brand (typed, or filled from Open Food Facts on a barcode scan). */
+  /** Optional brand. Older installs may have filled this from a barcode lookup. */
   brand?: string;
-  /** EAN/UPC of the product when added by barcode scan (spec #27) — lets a re-scan increment this item. */
+  /** EAN/UPC kept so a pantry item saved before v1.1.0 still loads. Scanning was removed in v1.1.0. */
   barcode?: string;
   /**
-   * Generic description from a barcode scan (e.g. "Chocolate Candies") when `name` is the specific product
-   * or brand (v1.0.8). Absent on older items and on typed items.
+   * Generic description from an older barcode scan (e.g. "Chocolate Candies") when `name` is the product
+   * or brand (v1.0.8). Absent on typed items.
    */
   description?: string;
   /** v1.0.7: optional plain notes. Absent on older items. */
@@ -239,8 +239,6 @@ export function withSyncDefaults<T extends { id: string }>(v: T & Partial<SyncMe
 export interface AppSettings {
   /** Default unit display (spec #16): 'original' shows units as written. */
   unitSystem: UnitSystem | 'original';
-  /** Keep the screen awake in cooking mode (spec #19). */
-  cookingModeKeepAwake: boolean;
   /**
    * Optional supporting features (RECIPES ARE THE CORE — docs/SPEC.md). Hiding them removes their tabs and
    * every cross-link from recipe screens, turning the app into a pure recipe box.
@@ -265,7 +263,6 @@ export interface OptionalFeatures {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   unitSystem: 'original',
-  cookingModeKeepAwake: true,
   features: { mealPlan: true, shopping: true, pantry: true },
   appearance: { themeMode: 'system', accent: 'green', appIcon: 'default' }, // DEFAULT_THEME_MODE / DEFAULT_ACCENT in src/lib/theme.ts
 };

@@ -50,56 +50,15 @@ export function createPantryStore(store: KeyValueStore = defaultStore) {
       return items.save(item, now);
     },
     /**
-     * Add a scanned product (spec #27) or increment the existing item with the same barcode or name.
-     * The product name is kept as scanned ("Kerrygold Pure Irish Butter") so it is the item's title; brand is
-     * secondary. Matching (shopping skip, recipe ranking) normalizes names, so display case is fine.
-     * `count` = number of packages scanned.
-     */
-    async addScanned(product: { barcode: string; name: string; brand?: string }, count = 1, now: Date = new Date()) {
-      const key = ingredientKey({ text: product.name });
-      const all = await items.all();
-      if (!key) throw new Error('Pantry item name is required.');
-      const existing = all.find((p) => p.barcode === product.barcode) ?? all.find((p) => sameName(p, key));
-      const ts = now.toISOString();
-      if (existing) {
-        return items.save(
-          { ...existing, barcode: existing.barcode ?? product.barcode, quantity: (existing.quantity ?? 0) + count },
-          now,
-        );
-      }
-      return items.save(
-        {
-          id: uuid(),
-          name: product.name.trim(),
-          brand: product.brand,
-          barcode: product.barcode,
-          quantity: count,
-          unit: 'package',
-          createdAt: ts,
-          updatedAt: ts,
-        },
-        now,
-      );
-    },
-    /**
      * Create or replace an item from the pantry form (spec #21).
      * Quantity, unit, category, and expiry are all optional. A blank expiry clears it.
      */
     async saveDetails(draft: PantryWrite, now: Date = new Date()): Promise<PantryItem> {
       return writeItem(items, draft, 'replace', now);
     },
-    /** Add `quantity` (default 1) onto the item with this id or normalized name. Scans. */
+    /** Add `quantity` (default 1) onto the item with this id or normalized name. */
     async addQuantity(draft: PantryWrite, now: Date = new Date()): Promise<PantryItem> {
       return writeItem(items, draft, 'add', now);
-    },
-    /**
-     * v1.0.7 scan review: the item a scanned product would update (same barcode, else same name), so the Pantry
-     * opens it in the Edit form instead of saving straight away. Undefined → a new item.
-     */
-    async findScanned(product: { barcode: string; name: string }): Promise<PantryItem | undefined> {
-      const key = ingredientKey({ text: product.name });
-      const all = await items.all();
-      return all.find((p) => p.barcode === product.barcode) ?? (key ? all.find((p) => sameName(p, key)) : undefined);
     },
     remove: (id: string) => items.remove(id),
     /** For the sync engine. */

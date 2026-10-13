@@ -215,14 +215,13 @@ describe('Settings → Appearance (UI)', () => {
   it('off switches use a visible knob and track (on stays green)', async () => {
     await settingsStore.update({
       appearance: { themeMode: 'dark' },
-      features: { mealPlan: false },
-      cookingModeKeepAwake: false,
+      features: { mealPlan: false, shopping: false },
     });
     renderRouter(routes(), { initialUrl: '/settings' });
     const dark = buildColors('dark', 'green');
     await screen.findByTestId('feature-toggle-mealPlan');
     await waitFor(() => {
-      for (const id of ['feature-toggle-mealPlan', 'keep-awake-toggle']) {
+      for (const id of ['feature-toggle-mealPlan', 'feature-toggle-shopping']) {
         const props = screen.getByTestId(id).props;
         const thumb = props.thumbColor ?? props.thumbTintColor;
         const off = props.trackColor?.false ?? props.tintColor ?? props.trackColorForFalse;

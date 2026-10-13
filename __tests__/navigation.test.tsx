@@ -32,8 +32,6 @@ const routes = () => ({
   '(tabs)/pantry': require('@/app/(tabs)/pantry').default,
   '(tabs)/more': require('@/app/(tabs)/more').default,
   '(tabs)/add-menu': require('@/app/(tabs)/add-menu').default,
-  'pantry/scan': require('@/app/pantry/scan').default,
-  'shopping/scan': require('@/app/shopping/scan').default,
   recipes: require('@/app/recipes').default,
   'pantry-match': require('@/app/pantry-match').default,
   add: require('@/app/add').default,
@@ -41,7 +39,6 @@ const routes = () => ({
   'import-pdf': require('@/app/import-pdf').default,
   'meal-plan/[date]': require('@/app/meal-plan/[date]').default,
   settings: require('@/app/settings').default,
-  contact: require('@/app/contact').default,
 });
 
 beforeAll(() => {
@@ -143,11 +140,10 @@ describe('bottom bar, header and + sheet', () => {
       expect(screen.queryByTestId(`add-menu-${id}`)).toBeNull();
     expect(screen.getByTestId('add-menu-add-shopping')).toBeTruthy();
     expect(screen.queryByTestId('add-menu-scan-barcode')).toBeNull();
-    // Scanning is reached through Add to Shopping List → the list's Scan Item button.
     await act(async () => fireEvent.press(screen.getByTestId('add-menu-add-shopping')));
     await waitFor(() => expect(screen).toHavePathname('/shopping'));
-    await act(async () => fireEvent.press(await screen.findByTestId('shopping-scan-button')));
-    await waitFor(() => expect(screen).toHavePathname('/shopping/scan'));
+    expect(screen.queryByTestId('shopping-scan-button')).toBeNull();
+    expect(screen.getByTestId('build-list')).toBeTruthy();
   });
 
   it('the + button also works in the expanded navigation rail', async () => {
@@ -242,7 +238,7 @@ describe('section title below the banner (v1.0.4)', () => {
 });
 
 describe('More screen', () => {
-  it('lists Pantry, Settings and Contact Us (v1.0.6: Household removed; v1.0.7: Contact Us)', async () => {
+  it('lists Pantry and Settings (v1.0.6: Household removed; v1.1.0: Contact Us removed)', async () => {
     renderRouter(routes(), { initialUrl: '/more' });
     expect(await screen.findByTestId('more-pantry')).toBeTruthy();
     expect(screen.queryByTestId('more-household')).toBeNull();
@@ -267,31 +263,15 @@ describe('More screen', () => {
   });
 });
 
-describe('Contact Us (v1.0.7)', () => {
-  it('More has a Contact Us card; Settings no longer mentions AI assistants', async () => {
+describe('More (v1.1.0: no Contact Us)', () => {
+  it('lists Pantry and Settings, and does not offer Contact Us', async () => {
     renderRouter(routes(), { initialUrl: '/more' });
-    const contact = await screen.findByTestId('more-contact');
-    expect(contact).toHaveTextContent(/Contact Us/);
-    expect(screen.getByTestId('more-settings')).toHaveTextContent(/Appearance, units, optional features, backup/);
+    expect(await screen.findByTestId('more-settings')).toHaveTextContent(/Appearance, units, optional features, backup/);
+    expect(screen.getByTestId('more-pantry')).toBeTruthy();
+    expect(screen.queryByTestId('more-contact')).toBeNull();
+    expect(screen.queryByText('Contact Us')).toBeNull();
+    expect(screen.queryByText(/eve\.chief_of_staff/)).toBeNull();
     expect(screen.queryByText(/AI assistants/)).toBeNull();
-    const order = ['more-pantry', 'more-settings', 'more-contact'].map((id) => JSON.stringify(screen.toJSON()).indexOf(`"testID":"${id}"`));
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
-    await act(async () => fireEvent.press(contact));
-    await waitFor(() => expect(screen).toHavePathname('/contact'));
-    expect(screen.getByTestId('section-title')).toHaveTextContent('Contact Us');
-  });
-
-  it('shows exactly Jason’s text and the address opens a mailto: with the feedback subject', async () => {
-    const { Linking } = require('react-native');
-    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
-    renderRouter(routes(), { initialUrl: '/contact' });
-    const text = await screen.findByTestId('contact-text');
-    expect(text).toHaveTextContent(
-      "Want to report a bug or request a feature? Need something else? Email our AI assistant. She's keeping track and informs us when someone needs help. Send email to eve.chief_of_staff@agentmail.to",
-    );
-    await act(async () => fireEvent.press(screen.getByTestId('contact-email')));
-    expect(open).toHaveBeenCalledWith('mailto:eve.chief_of_staff@agentmail.to?subject=My%20Recipe%20App%20feedback');
-    open.mockRestore();
   });
 });
 

@@ -19,6 +19,7 @@ export function ServingsUnits({
   onAdjust,
   unitSystem,
   onUnitSystem,
+  showUnits = true,
 }: {
   baseServings: number;
   targetServings: number;
@@ -26,6 +27,8 @@ export function ServingsUnits({
   onAdjust: (delta: number) => void;
   unitSystem: UnitSystem | 'original';
   onUnitSystem: (system: UnitSystem | 'original') => void;
+  /** Metric / imperial chips. Servings scaling stays when this is false. */
+  showUnits?: boolean;
 }) {
   const styles = useStyles();
   const scaled = targetServings !== baseServings;
@@ -60,6 +63,7 @@ export function ServingsUnits({
       ) : (
         <Text style={styles.hint}>Recipe makes {baseServings}.</Text>
       )}
+      {showUnits ? (
       <View style={styles.units} accessibilityRole="radiogroup">
         {CHOICES.map((c) => {
           const selected = unitSystem === c.id;
@@ -76,6 +80,7 @@ export function ServingsUnits({
           );
         })}
       </View>
+      ) : null}
     </View>
   );
 }

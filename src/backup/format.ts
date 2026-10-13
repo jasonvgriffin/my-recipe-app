@@ -37,7 +37,6 @@ export const BACKUP_COLLECTIONS = [
   'pantry_items',
   'meal_plan_entries',
   'shopping_items',
-  'barcode_items',
 ] as const;
 export type BackupCollection = (typeof BACKUP_COLLECTIONS)[number];
 
@@ -64,6 +63,7 @@ export const backupSchema = z.object({
     pantry_items: recordList,
     meal_plan_entries: recordList,
     shopping_items: recordList,
+    /** Accepted so a backup from 1.0.x still parses. v1.1.0 does not restore a barcode cache. */
     barcode_items: recordList,
   }),
   /** Device settings + appearance (unit system, optional features, theme, accent, …). */

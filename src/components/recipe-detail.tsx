@@ -1,15 +1,13 @@
-import { Link, router, useFocusEffect, useNavigation } from 'expo-router';
+import { Link, useFocusEffect, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Pressable, Text, View } from 'react-native';
 
 import { KeyboardAwareScrollView, useBottomInset } from '@/components/layout';
 import { CategoryChips } from '@/components/category-chips';
-import { FeatureGate } from '@/components/feature-gate';
 import { ServingsUnits } from '@/components/servings-units';
 import { ShareRecipePanel } from '@/components/share-recipe-panel';
 import { StarRating } from '@/components/star-rating';
 import { TagEditor } from '@/components/tag-editor';
-import { cookSession } from '@/cooking';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { usePdfExport } from '@/hooks/use-pdf-export';
@@ -18,9 +16,7 @@ import { formatCookedOn, toIsoDate } from '@/lib/dates';
 import { presentIngredient } from '@/lib/ingredients';
 import { addRecipeTags, removeRecipeTag, setCooked, setRating, toggleRecipeCategory } from '@/lib/recipe-utils';
 import { makeStyles, useColors } from '@/hooks/use-theme';
-import { formatDuration } from '@/lib/timers';
 import { effectiveUnitSystem } from '@/lib/units';
-import { startBackgroundStepTimer } from '@/notifications/step-timers';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
 import type { Category, Recipe, UnitSystem } from '@/types/recipe';
@@ -70,7 +66,6 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   // Gated entry points (src/entitlements) — recipe view/edit/delete itself is never gated.
   const showPlanToday = useFeatureVisible('mealPlan');
   const showGroceryRun = useFeatureVisible('groceryRun');
-  const timers = useFeature('timers').available;
   const tagsOn = useFeature('tags').available;
   const categoriesOn = useFeature('categories').available;
   const ratingsOn = useFeature('ratings').available;
@@ -247,40 +242,8 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   const scaledServings = targetServings ?? current.servings;
   const factor = current.servings > 0 ? scaledServings / current.servings : 1;
 
-  async function openCook() {
-    const state = await cookSession.getState();
-    const action = state?.recipeId === current.id ? 'current' : current.id;
-    router.push({ pathname: '/cook/[action]', params: { action, via: 'app' } });
-  }
-
   async function setUnit(next: UnitSystem | 'original') {
     await persist((r) => ({ ...r, unitSystem: next }));
-  }
-
-  function startTimer(stepIndex: number, durationSeconds: number | undefined) {
-    void startBackgroundStepTimer(cookSession, {
-      recipeId: current.id,
-      recipeTitle: current.title,
-      stepIndex,
-      durationSeconds,
-    }).then((outcome) => {
-      if (!outcome.ok) {
-        Alert.alert('Timer', outcome.result.ok ? 'Could not start that timer.' : outcome.result.message);
-        return;
-      }
-      const label = durationSeconds ? formatDuration(durationSeconds) : 'Timer';
-      if (outcome.permission === 'granted') {
-        Alert.alert(
-          'Timer started',
-          `${label}. You’ll get a notification and a sound when it ends, even if you leave this screen.`,
-        );
-      } else {
-        Alert.alert(
-          'Timer running',
-          'Notifications are off, so this countdown only updates while the app is open. Allow notifications to hear it in the background.',
-        );
-      }
-    });
   }
 
   return (
@@ -357,11 +320,6 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
               {recipe.cooked ? '✓ Cooked' : 'Mark cooked'}
             </Text>
           </Pressable>
-          <FeatureGate id="cookingMode">
-            <Pressable style={styles.action} testID="cook-button" onPress={() => void openCook()}>
-              <Text style={styles.actionText}>Cook</Text>
-            </Pressable>
-          </FeatureGate>
           {showPlanToday ? (
             <Pressable style={styles.action} onPress={() => planToday(recipe)} testID="plan-today-button">
               <Text style={styles.actionText}>Plan for today</Text>
@@ -446,27 +404,26 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
           </Pressable>
         ) : null}
         <Text style={styles.section}>Ingredients</Text>
-        {unitsEnabled ? (
-          <ServingsUnits
-            baseServings={recipe.servings}
-            targetServings={scaledServings}
-            onAdjust={(delta) =>
-              setScaled((prev) => {
-                const base = prev?.id === id ? prev.value : current.servings;
-                return { id, value: Math.max(1, base + delta) };
-              })
-            }
-            unitSystem={unitSystem}
-            onUnitSystem={(u) => void setUnit(u)}
-          />
-        ) : null}
+        <ServingsUnits
+          baseServings={recipe.servings}
+          targetServings={scaledServings}
+          onAdjust={(delta) =>
+            setScaled((prev) => {
+              const base = prev?.id === id ? prev.value : current.servings;
+              return { id, value: Math.max(1, base + delta) };
+            })
+          }
+          showUnits={unitsEnabled}
+          unitSystem={unitSystem}
+          onUnitSystem={(u) => void setUnit(u)}
+        />
         {recipe.ingredients.map((i, idx) => (
           <View key={idx}>
-            <Text style={styles.item}>
+            <Text style={styles.item} testID={`ingredient-${idx}`}>
               •{' '}
               {presentIngredient(i, {
                 unitSystem: unitsEnabled ? unitSystem : 'original',
-                factor: unitsEnabled ? factor : 1,
+                factor,
               })}
             </Text>
             {i.substitutionNote ? (
@@ -482,16 +439,6 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
             <Text style={styles.item}>
               {idx + 1}. {st.text}
             </Text>
-            {timers && st.durationSeconds ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Start ${formatDuration(st.durationSeconds)} timer for step ${idx + 1}`}
-                testID={`step-timer-${idx}`}
-                style={styles.timerBtn}
-                onPress={() => startTimer(idx, st.durationSeconds)}>
-                <Text style={styles.timer}>⏱ {formatDuration(st.durationSeconds)}</Text>
-              </Pressable>
-            ) : null}
           </View>
         ))}
         {recipe.notes ? (
@@ -623,8 +570,6 @@ const useStyles = makeStyles((colors) => ({
   actionBusy: { opacity: 0.6 },
   pdfError: { color: colors.danger, marginTop: 8 },
   stepBlock: { marginBottom: 8 },
-  timerBtn: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 },
-  timer: { color: colors.primary, fontWeight: '700', fontSize: 16 },
   meta: { color: colors.muted, marginTop: 8 },
   linkHit: { minHeight: 44, justifyContent: 'center', marginTop: 8 },
   link: { color: colors.primary, textDecorationLine: 'underline' },
