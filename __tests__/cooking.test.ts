@@ -8,7 +8,7 @@ import { migrateRecipe, type PantryItem } from '@/types/recipe';
 
 describe('ingredient parsing / scaling / conversion (spec #16, #12)', () => {
   it.each([
-    ['2 1/2 tbsp allulose, powdered', { quantity: 2.5, unit: 'tbsp', name: 'allulose', note: 'powdered' }],
+    ['2 1/2 tbsp cocoa, powdered', { quantity: 2.5, unit: 'tbsp', name: 'cocoa', note: 'powdered' }],
     ['1½ cups almond flour', { quantity: 1.5, unit: 'cup', name: 'almond flour' }],
     ['2-3 cloves garlic, minced', { quantity: 2, quantityMax: 3, unit: 'clove', name: 'garlic', note: 'minced' }],
     ['8 oz cream cheese (softened)', { quantity: 8, unit: 'oz', name: 'cream cheese', note: 'softened' }],
@@ -32,7 +32,7 @@ describe('ingredient parsing / scaling / conversion (spec #16, #12)', () => {
       unit: 'lb',
     });
     expect(convertIngredient(parseIngredient('3 cloves garlic'), 'metric').unit).toBe('clove');
-    expect(formatIngredient(scaleIngredient(parseIngredient('1/2 cup allulose'), 0.5))).toBe('¼ cup allulose');
+    expect(formatIngredient(scaleIngredient(parseIngredient('1/2 cup cocoa'), 0.5))).toBe('¼ cup cocoa');
   });
 });
 
@@ -85,27 +85,27 @@ describe('shopping merge, grocery run, pantry (spec #12, #18, #21)', () => {
     servings: 2,
     tags: [],
     steps: [{ text: 'x' }],
-    ingredients: [{ text: '1 cup almond flour' }, { text: '2 tbsp allulose' }, { text: '2 eggs' }],
+    ingredients: [{ text: '1 cup almond flour' }, { text: '2 tbsp cocoa' }, { text: '2 eggs' }],
   });
   const r2 = createRecipe({
     title: 'B',
     servings: 4,
     tags: [],
     steps: [{ text: 'y' }],
-    ingredients: [{ text: '1 tbsp allulose' }, { text: '1/2 cup almond flour' }, { text: '1 tsp salt' }],
+    ingredients: [{ text: '1 tbsp cocoa' }, { text: '1/2 cup almond flour' }, { text: '1 tsp salt' }],
   });
 
   it('merges quantities, scales by planned servings and skips pantry items', () => {
     const pantry: PantryItem[] = [{ id: 'p1', name: 'Salt', createdAt: '', updatedAt: '' }];
     const items = compileItems([{ recipe: r1, servings: 4 }, { recipe: r2 }], { pantry });
     const texts = items.map((i) => i.text).sort();
-    expect(texts).toEqual(['2½ cup almond flour', '4 eggs', '5 tbsp allulose']);
+    expect(texts).toEqual(['2½ cup almond flour', '4 eggs', '5 tbsp cocoa']);
   });
 
   it('ranks recipes by ingredients on hand', () => {
     const pantry: PantryItem[] = [
       { id: '1', name: 'almond flour', createdAt: '', updatedAt: '' },
-      { id: '2', name: 'allulose', createdAt: '', updatedAt: '' },
+      { id: '2', name: 'cocoa', createdAt: '', updatedAt: '' },
       { id: '3', name: 'salt', createdAt: '', updatedAt: '' },
     ];
     const ranked = rankRecipesByPantry([r1, r2], pantry);

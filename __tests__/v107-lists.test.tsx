@@ -1,6 +1,6 @@
 /**
  * v1.0.7: Shopping List quantity + notes (add, show, edit, persist, safe for existing data), pantry Notes,
- * no sweetener rule text, accent colors.
+ * accent colors.
  */
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
@@ -139,11 +139,11 @@ describe('shopping quantity + notes (screen)', () => {
 describe('pantry Notes (v1.0.7)', () => {
   it('store: optional notes saved, edited, cleared; older items without notes load as before', async () => {
     const ts = '2026-10-01T00:00:00.000Z';
-    const pantry = createPantryStore(memoryStore({ [PANTRY_STORAGE_KEY]: [{ id: 'p1', name: 'allulose', quantity: 1, unit: 'cup', createdAt: ts, updatedAt: ts }] }));
-    expect((await pantry.list())[0]).toEqual({ id: 'p1', name: 'allulose', quantity: 1, unit: 'cup', createdAt: ts, updatedAt: ts });
-    const saved = await pantry.saveDetails({ id: 'p1', name: 'allulose', quantity: 1, unit: 'cup', notes: 'Second shelf' }, NOW);
+    const pantry = createPantryStore(memoryStore({ [PANTRY_STORAGE_KEY]: [{ id: 'p1', name: 'cocoa', quantity: 1, unit: 'cup', createdAt: ts, updatedAt: ts }] }));
+    expect((await pantry.list())[0]).toEqual({ id: 'p1', name: 'cocoa', quantity: 1, unit: 'cup', createdAt: ts, updatedAt: ts });
+    const saved = await pantry.saveDetails({ id: 'p1', name: 'cocoa', quantity: 1, unit: 'cup', notes: 'Second shelf' }, NOW);
     expect(saved.notes).toBe('Second shelf');
-    expect((await pantry.saveDetails({ id: 'p1', name: 'allulose', notes: '  ' }, NOW)).notes).toBeUndefined();
+    expect((await pantry.saveDetails({ id: 'p1', name: 'cocoa', notes: '  ' }, NOW)).notes).toBeUndefined();
   });
 
   it('form: plain Notes field (no example text), shown on the item', async () => {
@@ -165,22 +165,6 @@ describe('pantry Notes (v1.0.7)', () => {
     fireEvent.press(screen.getByTestId(`pantry-item-${rice.id}`));
     expect(screen.getByTestId('pantry-notes-input').props.value).toBe('Use the big bag first');
     expect(screen.getByTestId('pantry-form-actions')).toBeTruthy();
-  });
-});
-
-describe('no sweetener rule text in the UI (v1.0.7)', () => {
-  it('Add Recipe, Import and the recipe editor no longer show it', async () => {
-    for (const mod of ['@/app/add', '@/app/import']) {
-      const Screen = require(mod).default;
-      renderRouter({ index: Screen }, { initialUrl: '/' });
-      await act(async () => {});
-      expect(JSON.stringify(screen.toJSON())).not.toMatch(/Sweetener rule|monk fruit/i);
-      screen.unmount();
-    }
-    const fs = require('fs');
-    const path = require('path');
-    const src = fs.readFileSync(path.join(process.cwd(), 'src/components/recipe-editor.tsx'), 'utf8');
-    expect(src).not.toMatch(/no monk fruit|Sweetener rule/);
   });
 });
 

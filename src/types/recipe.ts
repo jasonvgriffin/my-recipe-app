@@ -23,7 +23,7 @@ export type UnitSystem = 'metric' | 'imperial';
  * grocery run mode (spec #18) and pantry matching (spec #21). See `src/lib/ingredients.ts`.
  */
 export interface Ingredient {
-  /** Original free-text line, e.g. "2 1/2 tbsp allulose, powdered". */
+  /** Original free-text line, e.g. "2 1/2 tbsp cocoa, powdered". */
   text: string;
   /** Parsed amount, e.g. 2.5. For ranges ("2-3 cloves") this is the low end. */
   quantity?: number;
@@ -31,11 +31,11 @@ export interface Ingredient {
   quantityMax?: number;
   /** Canonical unit id, e.g. "tbsp", "cup", "g", "lb" (see UNITS in src/lib/units.ts). */
   unit?: string;
-  /** Ingredient name without amount/unit/prep, e.g. "allulose". Used for merging + pantry. */
+  /** Ingredient name without amount/unit/prep, e.g. "cocoa". Used for merging + pantry. */
   name?: string;
   /** Prep / extra info, e.g. "powdered", "minced". */
   note?: string;
-  /** Note about a substitution made, e.g. "allulose instead of sugar" (spec #2). */
+  /** Note about a substitution made, e.g. "olive oil instead of butter" (spec #2). */
   substitutionNote?: string;
 }
 
@@ -110,39 +110,9 @@ export const DEFAULT_CATEGORY_NAMES: readonly string[] = ['Breakfast', 'Lunch', 
 /** Label for recipes that have no (existing) category. Not a stored category. */
 export const UNCATEGORIZED_LABEL = 'Uncategorized';
 
-/** Jason's sweetener rule: allulose is the only sugar-free sweetener used. */
-export const PREFERRED_SWEETENER = 'allulose';
-
-/** Ingredients that must never appear in a recipe (no monk fruit, ever). */
-export const FORBIDDEN_INGREDIENT_PATTERNS: readonly RegExp[] = [
-  /monk\s*-?\s*fruit/i,
-  /luo\s*han\s*guo/i,
-  /mogroside/i,
-];
-
 export interface ValidationResult {
   ok: boolean;
   errors: string[];
-}
-
-export function findForbiddenIngredients(
-  input: Pick<RecipeInput, 'ingredients' | 'steps' | 'title' | 'description' | 'notes'>,
-): string[] {
-  const haystack = [
-    input.title,
-    input.description ?? '',
-    input.notes ?? '',
-    ...input.ingredients.map((i) => [i.text, i.name ?? ''].join(' ')),
-    ...input.steps.map((st) => st.text),
-  ];
-  const hits = new Set<string>();
-  for (const text of haystack) {
-    for (const pattern of FORBIDDEN_INGREDIENT_PATTERNS) {
-      const m = text.match(pattern);
-      if (m) hits.add(m[0].toLowerCase());
-    }
-  }
-  return [...hits];
 }
 
 export function validateRecipeInput(input: RecipeInput): ValidationResult {
@@ -153,11 +123,6 @@ export function validateRecipeInput(input: RecipeInput): ValidationResult {
   if (!Number.isFinite(input.servings) || input.servings <= 0) errors.push('Servings must be a number greater than 0.');
   if (input.rating !== undefined && !(Number.isInteger(input.rating) && input.rating >= 1 && input.rating <= 5))
     errors.push('Rating must be 1–5 stars.');
-  const forbidden = findForbiddenIngredients(input);
-  if (forbidden.length > 0)
-    errors.push(
-      `Forbidden sweetener found (${forbidden.join(', ')}). Use ${PREFERRED_SWEETENER} as the only sugar-free sweetener.`,
-    );
   return { ok: errors.length === 0, errors };
 }
 

@@ -87,7 +87,7 @@ async function fullPhone() {
   old.photos.files.set('file:///docs/recipe-photos/seed-lemon-herb-chicken.jpg', 'QUJD');
   const web = await old.recipes.save({ ...SAMPLE_RECIPES[1], photoUri: 'https://example.com/p.jpg' } as never, at('2026-10-01T10:00:00Z'));
   await old.plan.addEntry('2026-10-05', chicken.id, 'dinner', at('2026-10-01T11:00:00Z'));
-  await old.pantry.upsert('allulose', 1, 'cup', at('2026-10-01T11:00:00Z'));
+  await old.pantry.upsert('cocoa', 1, 'cup', at('2026-10-01T11:00:00Z'));
   const gone = await old.recipes.save({ ...SAMPLE_RECIPES[1], id: 'gone-1', title: 'Deleted' } as never, at('2026-10-01T10:00:00Z'));
   await old.recipes.remove(gone.id);
   await old.settings.update({ unitSystem: 'metric', appearance: { themeMode: 'dark', accent: 'orange' } as never });
@@ -158,7 +158,7 @@ describe('restore', () => {
     expect((await fresh.recipes.listCategories()).filter((c) => c.name === 'Dinner')).toHaveLength(1);
     expect((await fresh.recipes.get(web.id))?.photoUri).toBe('https://example.com/p.jpg');
     expect((await fresh.plan.entriesForDates(['2026-10-05'])).map((e) => e.recipeId)).toEqual([chicken.id]);
-    expect((await fresh.pantry.list()).map((p) => p.name)).toEqual(['allulose']);
+    expect((await fresh.pantry.list()).map((p) => p.name)).toEqual(['cocoa']);
     expect(await fresh.settings.get()).toMatchObject({ unitSystem: 'metric', appearance: { themeMode: 'dark', accent: 'orange' } });
   });
 

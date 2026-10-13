@@ -37,7 +37,7 @@ const QTY_RE = new RegExp(String.raw`^(${NUM})(?:\s*(?:-|–|to)\s*(${NUM}))?\s*
 
 /**
  * Parse an ingredient line into { quantity, quantityMax, unit, name, note } (best effort).
- * "2 1/2 tbsp allulose, powdered" → { quantity: 2.5, unit: 'tbsp', name: 'allulose', note: 'powdered' }.
+ * "2 1/2 tbsp cocoa, powdered" → { quantity: 2.5, unit: 'tbsp', name: 'cocoa', note: 'powdered' }.
  * Always keeps the original `text`.
  */
 export function parseIngredient(text: string): Ingredient {

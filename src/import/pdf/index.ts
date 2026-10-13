@@ -54,8 +54,6 @@ export async function readRecipesFromPdf(bytes: Uint8Array, deps: ImportDeps): P
     );
     if (result.ok) candidates.push({ text: chunk, result });
     else if (result.code === 'feature_locked') return fail('locked');
-    else if (result.code === 'forbidden_ingredient')
-      skipped.push(`${chunk.split('\n')[0]}: ${result.errors.join(' ')}`);
   }
   if (candidates.length === 0) {
     return skipped.length ? { ok: true, candidates, skipped } : fail('no_recipes');

@@ -4,7 +4,7 @@ import { isRecipe, validateRecipeInput, type RecipeInput } from '@/types/recipe'
 
 const base: RecipeInput = {
   title: 'Test Recipe',
-  ingredients: [{ text: '1 cup almond flour' }, { text: '2 tbsp allulose' }],
+  ingredients: [{ text: '1 cup almond flour' }, { text: '2 tbsp cocoa' }],
   steps: [{ text: 'Mix' }, { text: 'Bake 20 minutes' }],
   tags: ['dessert'],
   servings: 4,
@@ -26,15 +26,6 @@ describe('validateRecipeInput', () => {
     expect(r.ok).toBe(false);
     expect(r.errors).toHaveLength(4);
   });
-
-  it.each(['1 tbsp monk fruit sweetener', 'Monk-fruit blend', 'luo han guo extract'])(
-    'rejects forbidden sweetener: %s',
-    (text) => {
-      const r = validateRecipeInput({ ...base, ingredients: [{ text }] });
-      expect(r.ok).toBe(false);
-      expect(r.errors.join(' ')).toMatch(/allulose/);
-    },
-  );
 });
 
 describe('recipe utils', () => {
@@ -55,11 +46,11 @@ describe('recipe utils', () => {
     expect(searchRecipes(SAMPLE_RECIPES, 'chicken')).toHaveLength(1);
     expect(searchRecipes(SAMPLE_RECIPES, 'thyme')).toHaveLength(1);
     expect(searchRecipes(SAMPLE_RECIPES, 'no-bake')).toHaveLength(1);
-    expect(searchRecipes(SAMPLE_RECIPES, 'allulose')).toHaveLength(1);
+    expect(searchRecipes(SAMPLE_RECIPES, 'cream cheese')).toHaveLength(1);
     expect(searchRecipes(SAMPLE_RECIPES, '')).toHaveLength(2);
   });
 
-  it('seed recipes are valid and monk-fruit free', () => {
+  it('seed recipes are valid', () => {
     for (const r of SAMPLE_RECIPES) {
       expect(isRecipe(r)).toBe(true);
       expect(validateRecipeInput(r).ok).toBe(true);

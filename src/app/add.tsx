@@ -9,7 +9,7 @@ import { useFeature } from '@/hooks/use-feature';
 import { createRecipe, parseLines, parseTags } from '@/lib/recipe-utils';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { recipeStore } from '@/storage/recipes';
-import { PREFERRED_SWEETENER, validateRecipeInput, type Category, type RecipeInput } from '@/types/recipe';
+import { validateRecipeInput, type Category, type RecipeInput } from '@/types/recipe';
 
 export default function AddRecipeScreen() {
   const bottomInset = useBottomInset();
@@ -105,7 +105,7 @@ export default function AddRecipeScreen() {
             value={ingredients}
             onChangeText={setIngredients}
             multiline
-            placeholder={`1 head cauliflower\n2 tbsp ${PREFERRED_SWEETENER}`}
+            placeholder={'1 head cauliflower\n2 tbsp olive oil'}
           />
         </Field>
         <Field label="Steps (one per line)">

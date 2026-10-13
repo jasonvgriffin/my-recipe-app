@@ -21,7 +21,7 @@ export interface MealPlanEntry extends SyncMeta {
 export interface ShoppingListItem extends SyncMeta {
   /** Week (Monday, YYYY-MM-DD) whose list this item belongs to. Each item is its own synced row. */
   weekStart: IsoDate;
-  /** Display text, e.g. "3 tbsp allulose" (merged + scaled). */
+  /** Display text, e.g. "3 tbsp cocoa" (merged + scaled). */
   text: string;
   /** Normalized ingredient name used for merging / pantry matching. */
   name?: string;

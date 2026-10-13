@@ -158,8 +158,6 @@ Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the And
   No nutrition fields, calories, macros, carb counts, nutrition lookups, nutrition imports, or nutrition UI. The pantry
   tracks item name, quantity and unit, plus optional category, expiration date and brand (no nutrition); barcode scans may use Open Food Facts for the product **name and brand** only.
 - Recipes are **diabetic-friendly**. Always track `servings`.
-- **Allulose is the only sugar-free sweetener. Never use or suggest monk fruit** (or luo han guo / mogrosides)
-  — not in sample data, examples, tests, AI prompts, or suggestions. `validateRecipeInput` enforces this; keep it.
 - Keep the `Recipe` schema in `src/types/recipe.ts` JSON-serializable and versioned (`schemaVersion`);
   bump `RECIPE_SCHEMA_VERSION` and extend `migrateRecipe` when changing the stored shape.
 - Put logic in pure, unit-tested helpers (`src/lib`, `src/storage`); keep screens thin.

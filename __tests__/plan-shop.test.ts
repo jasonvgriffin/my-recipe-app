@@ -65,17 +65,17 @@ describe('shopping list merge, manual lines, pantry skip (spec #12, #18)', () =>
     servings: 2,
     tags: [],
     steps: [{ text: 'Mix' }],
-    ingredients: [{ text: '1 tbsp allulose' }, { text: '1 cup almond flour' }],
+    ingredients: [{ text: '1 tbsp cocoa' }, { text: '1 cup almond flour' }],
   });
   const extra = createRecipe({
     title: 'Extra',
     servings: 2,
     tags: [],
     steps: [{ text: 'Stir' }],
-    ingredients: [{ text: '3 tsp allulose' }, { text: '2 eggs' }],
+    ingredients: [{ text: '3 tsp cocoa' }, { text: '2 eggs' }],
   });
 
-  it('normalizes tbsp and tsp into one allulose line and scales servings', () => {
+  it('normalizes tbsp and tsp into one cocoa line and scales servings', () => {
     const items = compileItems(
       [
         { recipe: bowl, servings: 4 },
@@ -83,9 +83,9 @@ describe('shopping list merge, manual lines, pantry skip (spec #12, #18)', () =>
       ],
       { now: NOW },
     );
-    const allulose = items.find((i) => i.name === 'allulose');
-    expect(allulose?.text).toBe('3 tbsp allulose');
-    expect(allulose?.aisle).toBe('Pantry');
+    const cocoa = items.find((i) => i.name === 'cocoa');
+    expect(cocoa?.text).toBe('3 tbsp cocoa');
+    expect(cocoa?.aisle).toBe('Pantry');
     expect(items.find((i) => i.name === 'eggs')?.aisle).toBe('Dairy & eggs');
   });
 
@@ -117,7 +117,7 @@ describe('shopping list merge, manual lines, pantry skip (spec #12, #18)', () =>
       (key) => isInPantry(key, pantry),
       NOW,
     );
-    expect(list.items.map((i) => i.name)).toEqual(['allulose']);
+    expect(list.items.map((i) => i.name)).toEqual(['cocoa']);
     expect(groupByAisle(list.items).map((g) => g.aisle)).toEqual(['Pantry']);
     expect(shoppingProgress(list.items)).toEqual({ checked: 0, total: 1, fraction: 0 });
   });
@@ -131,10 +131,10 @@ describe('shopping list merge, manual lines, pantry skip (spec #12, #18)', () =>
 });
 
 describe('aisles (spec #18)', () => {
-  it('classifies baking staples and does not special-case other sweeteners', () => {
+  it('classifies baking staples', () => {
     expect(aisleForIngredient('6 bone-in, skin-on chicken thighs')).toBe('Meat & seafood');
     expect(aisleForIngredient('1 lb green beans, trimmed')).toBe('Produce');
-    expect(aisleForIngredient('1/3 cup powdered allulose')).toBe('Pantry');
+    expect(aisleForIngredient('1/3 cup powdered cocoa')).toBe('Pantry');
     expect(aisleForIngredient('1 tsp dried thyme')).toBe('Spices');
     expect(aisleForIngredient('8 oz cream cheese')).toBe('Dairy & eggs');
     expect(aisleForIngredient('something unfamiliar')).toBe('Other');
@@ -163,11 +163,11 @@ describe('isInPantry (spec #12, #21)', () => {
   it('the app binding follows the feature gate', async () => {
     const { pantryStore } = require('@/storage/pantry') as typeof import('@/storage/pantry');
     await require('@react-native-async-storage/async-storage').clear();
-    await pantryStore.upsert('allulose');
-    expect(await pantryMatcher.isInPantry('powdered allulose')).toBe(true);
+    await pantryStore.upsert('cocoa');
+    expect(await pantryMatcher.isInPantry('powdered cocoa')).toBe(true);
 
     featureGate.setProvider(new NoEntitlements());
     featureGate.setConfig({ pantry: { tier: 'premium', enabled: true } });
-    expect(await pantryMatcher.isInPantry('powdered allulose')).toBe(false);
+    expect(await pantryMatcher.isInPantry('powdered cocoa')).toBe(false);
   });
 });

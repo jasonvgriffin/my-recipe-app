@@ -86,7 +86,7 @@ describe('Recipes tab categories (v1.0.5)', () => {
 
     await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
-    const mousse = await byTitle('Allulose');
+    const mousse = await byTitle('Mousse');
     const dinner = await categoryByName('Dinner');
     await recipeStore.save(setRating({ ...chicken, categoryIds: [dinner.id] }, 4));
     renderRouter(routes(), { initialUrl: '/' });
@@ -186,7 +186,7 @@ describe('Recipes tab categories (v1.0.5)', () => {
     expect(screen.getByText('✓ Dinner')).toBeTruthy();
     fireEvent.press(screen.getByTestId('add-rating-5'));
     fireEvent.changeText(screen.getByPlaceholderText('e.g. Cauliflower Mac & Cheese'), 'Almond Bread');
-    fireEvent.changeText(screen.getByPlaceholderText(/1 head cauliflower/), `2 cups almond flour\n1 tbsp allulose`);
+    fireEvent.changeText(screen.getByPlaceholderText(/1 head cauliflower/), `2 cups almond flour\n1 tbsp cocoa`);
     fireEvent.changeText(screen.getByPlaceholderText(/Preheat oven/), 'Mix\nBake 25 minutes');
     fireEvent.changeText(screen.getByTestId('add-form-tags-input'), 'bread, Quick');
     await act(async () => fireEvent.press(screen.getByText('Save recipe')));
@@ -306,7 +306,7 @@ describe('search and Advanced search (spec #8 #9 #10 #22)', () => {
   it('typing a search shows the flat list of matches; clearing it brings the categories back', async () => {
     await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
-    const mousse = await byTitle('Allulose');
+    const mousse = await byTitle('Mousse');
     await recipeStore.save({ ...chicken, notes: 'serve with a side salad' });
     renderRouter(routes(), { initialUrl: '/recipes' });
     await screen.findByTestId('recipe-categories');
@@ -328,7 +328,7 @@ describe('search and Advanced search (spec #8 #9 #10 #22)', () => {
   it('filters live in the Advanced search sheet, with an indicator on the button and Reset', async () => {
     await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
-    const mousse = await byTitle('Allulose');
+    const mousse = await byTitle('Mousse');
     await recipeStore.save(setRating(setCooked(chicken, true, new Date()), 5));
     await recipeStore.save(setRating(mousse, 2));
     renderRouter(routes(), { initialUrl: '/recipes' });
@@ -368,7 +368,7 @@ describe('search and Advanced search (spec #8 #9 #10 #22)', () => {
   it('sort is in the sheet: non-default sort lights the indicator and orders recipes inside a category', async () => {
     await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
-    const mousse = await byTitle('Allulose');
+    const mousse = await byTitle('Mousse');
     await recipeStore.save(setRating(chicken, 5));
     await recipeStore.save(setRating(mousse, 2));
     renderRouter(routes(), { initialUrl: '/recipes' });
@@ -389,7 +389,7 @@ describe('search and Advanced search (spec #8 #9 #10 #22)', () => {
   it('uses a fixed 14-day cooked-recently window (v1.0.2)', async () => {
     await addSampleRecipes(recipeStore);
     const chicken = await byTitle('Lemon');
-    const mousse = await byTitle('Allulose');
+    const mousse = await byTitle('Mousse');
     await recipeStore.save(setCooked(chicken, true, new Date(Date.now() - 20 * 86_400_000)));
     await recipeStore.save(setCooked(mousse, true, new Date(Date.now() - 10 * 86_400_000)));
     renderRouter(routes(), { initialUrl: '/recipes' });

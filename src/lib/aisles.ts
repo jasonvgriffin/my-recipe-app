@@ -1,6 +1,5 @@
 /**
  * Grocery aisles for run mode (spec #18). First matching rule wins.
- * Allulose is the only sugar-free sweetener we recognize; it lives with pantry staples.
  */
 export const AISLES = [
   'Produce',
@@ -37,7 +36,7 @@ const RULES: readonly [Aisle, RegExp][] = [
   ['Dairy & eggs', /\b(eggs?|cream cheese|heavy cream|butter|cheese|yogurt|milk|cream)\b/i],
   [
     'Pantry',
-    /\b(almond flour|coconut flour|allulose|olive oil|avocado oil|oil|vinegar|almond|walnut|pecan|cocoa|flour|baking powder)\b/i,
+    /\b(almond flour|coconut flour|olive oil|avocado oil|oil|vinegar|almond|walnut|pecan|cocoa|flour|baking powder)\b/i,
   ],
 ];
 

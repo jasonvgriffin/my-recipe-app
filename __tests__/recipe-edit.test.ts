@@ -37,7 +37,7 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
     state.title = '  Lemon herb chicken  ';
     state.notes = 'Rest 5 minutes.';
     state.ingredients = moveItem(state.ingredients, 1, -1);
-    state.ingredients[0].substitutionNote = 'allulose is not in this one';
+    state.ingredients[0].substitutionNote = 'use avocado oil';
     state.steps = moveItem(state.steps, 0, 1);
     state.steps[0].minutes = '40';
 
@@ -47,7 +47,7 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
     expect(saved.title).toBe('Lemon herb chicken');
     expect(saved.notes).toBe('Rest 5 minutes.');
     expect(saved.ingredients.map((i) => i.text)).toEqual(['1 tbsp olive oil', '6 chicken thighs']);
-    expect(saved.ingredients[0].substitutionNote).toBe('allulose is not in this one');
+    expect(saved.ingredients[0].substitutionNote).toBe('use avocado oil');
     expect(saved.steps.map((s) => s.text)).toEqual(['Roast 35 minutes.', 'Heat the oven.']);
     expect(saved.steps[0].durationSeconds).toBe(40 * 60);
     expect(saved.id).toBe(recipe.id);
@@ -76,17 +76,6 @@ describe('recipe editor model (spec #2, #6, #7)', () => {
     expect(saved.createdBy).toBe('user-a');
     expect(saved.cookHistory).toEqual(recipe.cookHistory);
     expect(saved.title).toBe('Edited by someone else');
-  });
-
-  it('rejects monk fruit', () => {
-    const recipe = sample();
-    const state = recipeToEditorState(recipe);
-
-    state.ingredients[0].text = '1 tsp monk fruit';
-    const forbidden = editorStateToInput(state, recipe);
-    expect(forbidden.ok).toBe(false);
-    if (forbidden.ok) return;
-    expect(forbidden.errors.join(' ')).toMatch(/allulose/i);
   });
 
   it('rejects a bad timer and a bad source link', () => {

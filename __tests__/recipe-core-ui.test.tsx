@@ -93,17 +93,6 @@ describe('import screen (spec #1)', () => {
     expect(await screen.findByTestId('import-error-no_recipe_found')).toBeTruthy();
   });
 
-  it('rejects monk fruit and explains the allulose rule', async () => {
-    mount('/import');
-    fireEvent.changeText(
-      await screen.findByTestId('import-text-input'),
-      'Cookies\nIngredients:\n- 1 cup monk fruit sweetener\nSteps:\n1. Bake',
-    );
-    await act(async () => fireEvent.press(screen.getByTestId('import-text-button')));
-    expect(await screen.findByTestId('import-error-forbidden_ingredient')).toHaveTextContent(/allulose/i);
-    expect(await recipeStore.list()).toHaveLength(0);
-  });
-
   it('pasted text still shows a draft before saving', async () => {
     mount('/import');
     fireEvent.changeText(
@@ -161,7 +150,7 @@ describe('edit, notes, title, source link, photo, share', () => {
     expect(await screen.findByTestId('recipe-editor')).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('edit-title'), 'Custom title');
     fireEvent.changeText(screen.getByTestId('edit-notes'), 'Whisk first.');
-    fireEvent.changeText(screen.getByTestId('ingredient-sub-0'), 'allulose instead of sugar');
+    fireEvent.changeText(screen.getByTestId('ingredient-sub-0'), 'honey instead of sugar');
     await act(async () => fireEvent.press(screen.getByTestId('ingredient-down-0')));
     fireEvent.changeText(screen.getByTestId('step-minutes-0'), '12');
     await act(async () => fireEvent.press(screen.getByTestId('add-ingredient')));
@@ -176,7 +165,7 @@ describe('edit, notes, title, source link, photo, share', () => {
     const saved = await recipeStore.get('edit-me');
     expect(saved?.notes).toBe('Whisk first.');
     expect(saved?.ingredients.map((i) => i.text)).toEqual(['1 tbsp butter', '2 eggs', '1 tsp salt']);
-    expect(saved?.ingredients[1].substitutionNote).toBe('allulose instead of sugar');
+    expect(saved?.ingredients[1].substitutionNote).toBe('honey instead of sugar');
     expect(saved?.steps[0].durationSeconds).toBe(12 * 60);
     expect(saved?.photoUri).toBe('file:///docs/recipe-photos/picked.jpg');
     expect(saved?.cooked).toBe(true);

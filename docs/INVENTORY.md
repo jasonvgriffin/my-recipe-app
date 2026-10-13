@@ -76,7 +76,7 @@ App icon (v1.0.5: yellow bowl `#FFD60A`): sources `assets/icons/*.svg`, PNGs `as
 
 | Job | Use | Notes |
 |-----|-----|-------|
-| Recipe type, validation, migration | `src/types/recipe.ts` (`Recipe`, `validateRecipe`, `isRecipe`, `migrateRecipe`, `RECIPE_SCHEMA_VERSION`, `PantryItem`, `slimPantryItem`) | Bump the schema version and add a migration step for shape changes |
+| Recipe type, validation, migration | `src/types/recipe.ts` (`Recipe`, `validateRecipeInput`, `isRecipe`, `migrateRecipe`, `RECIPE_SCHEMA_VERSION`, `PantryItem`, `slimPantryItem`) | Validation is a title, at least one ingredient, at least one step, servings > 0, and an optional 1–5 rating. No ingredient ban. Bump the schema version and add a migration step for shape changes |
 | Create / normalize recipes | `createRecipe`, `normalizeIngredient`, `normalizeStep`, `parseTags` (`src/lib/recipe-utils.ts`) | |
 | IDs | `uuid()` (`src/lib/ids.ts`) | Only ID generator |
 | Dates | `src/lib/dates.ts` | Local time, never UTC slices |

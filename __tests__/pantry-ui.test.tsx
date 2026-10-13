@@ -117,7 +117,7 @@ describe('What can I make with my existing pantry? (Recipes tab button)', () => 
     renderMatch();
     expect(await screen.findByText('Lemon Herb Chicken Thighs')).toBeTruthy();
     expect(screen.getByText(/of \d+ on hand/)).toBeTruthy();
-    expect(screen.queryByText('Allulose Vanilla Cheesecake Mousse')).toBeNull();
+    expect(screen.queryByText(/Cheesecake Mousse/)).toBeNull();
   });
 
   it('explains gently when the pantry is empty', async () => {

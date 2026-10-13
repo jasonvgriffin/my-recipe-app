@@ -46,7 +46,7 @@ describe('Import PDF screen', () => {
     const list = await screen.findByTestId('import-pdf-candidates');
     expect(within(list).getByText('Found 2 recipes')).toBeTruthy();
     expect(within(list).getByText('Lemon Herb Chicken Thighs')).toBeTruthy();
-    expect(within(list).getByText('Allulose Vanilla Cheesecake Mousse')).toBeTruthy();
+    expect(within(list).getByText(/Cheesecake Mousse/)).toBeTruthy();
     expect(screen.getByTestId('import-pdf-import')).toHaveTextContent('Import 2 recipes');
 
     // Preview, then uncheck the mousse.

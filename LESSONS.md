@@ -9,7 +9,7 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 
 - Read this file before writing code. Follow every rule in it.
 - When a review or a bug shows a rule that would have prevented it, add that lesson here in the same change. One rule, what went wrong, the version.
-- Recipe-app rules stay in this file (layout, theme, allulose only, no nutrition, recipes first).
+- Recipe-app rules stay in this file (layout, theme, no nutrition, recipes first). Diabetic-friendly means track servings. There is no house sweetener restriction.
 - A rule that would apply to any of Jason's apps goes under General lessons at the end of this file and under `Lessons learned` in the PR description, so Eve can copy it to app-build-lessons and the other repos (or email her at `eve.chief_of_staff@agentmail.to`).
 - If app-build-lessons is not installed in the environment, follow this file and say that the shared skill was missing. Do not invent a second lessons file.
 
@@ -37,6 +37,11 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - **A flex row of a text field plus buttons clips at 360dp unless the field can shrink.** Set `flexGrow: 1`, `flexShrink: 1`, and `minWidth: 0` on the input, and leave Add and Cancel at their natural width (`flexShrink: 0`). `minWidth: auto` on a web input keeps the placeholder width and pushes Cancel off the card.
 - **The raised + clearance is the measured rise, plus a margin.** `marginTop: -29` is not the whole overlap. On the rendered bar the circle top sits 36dp above the bar, and 32dp of padding left Add recipe under it. `TAB_PLUS_CLEARANCE` is that rise plus 16dp, on every tab's scroll padding. Scrolling a focused field to the center parks the next control on the +.
 - **Specs to keep (1.0.9).** Each accent is one shade used in light and dark mode, at about 3:1 on white (`#FFFFFF`) and on the dark card (`#1D211D`). Badges stay `#E53935` with white text and a white ring in every theme. The + tab slot is pinned with `flexBasis: 58` (`flexGrow: 0`, `flexShrink: 0`), and the + circle is 52dp.
+
+## 2026-10-13
+
+- **No house sweetener restriction.** Jason dropped it. Do not reject a recipe, an import, or an edit based on which sweetener it uses, and do not put a preferred sweetener back into validation, import errors, placeholders, or docs. Diabetic-friendly still means track servings.
+- **Leave the shipped sample fingerprint alone.** `src/storage/legacy-samples.ts` matches untouched v1.0.0 copies by title, ingredient lines, steps, tags, and servings. Rewriting that fingerprint so a wording search comes up empty stops the cleanup from recognizing those copies.
 
 ## Process
 - **Cloud agents: put Node on `/usr/local/bin`.** (2026-10-04) Login shells skip `~/.bashrc`, so nvm is invisible after install. Expo web binds IPv6 `localhost` (`::1`); `127.0.0.1:8081` does not connect. Open `http://localhost:8081`.
@@ -79,3 +84,4 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - Make sure one release event builds once (concurrency group, skip CI on docs-only commits).
 - Verify the release yourself: the run succeeded, the asset is attached, the version is correct and it's signed with the same cert.
 - Check tool availability before delegating. Background helpers can't launch cloud agents, so the orchestrator launches them. (Recipe app 1.0.9.)
+- When a product rule is retired, delete the check, the error code, the user-facing copy, the tests that assert it, and the docs in the same change, then search the repo. A comment or test that still names the old ban is a remnant. (Recipe app, 2026-10-13.)
