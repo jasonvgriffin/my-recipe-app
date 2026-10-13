@@ -51,37 +51,28 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 
 ## General lessons (from Eve's shared app-build-lessons skill; Eve keeps this section in sync)
 
-### Build workflow
-- **Build workflow (Compound Engineering plugin, installed Oct 2026):** run each build as plan, then work, then code review, then compound. Use `ce-plan` to turn the change list into a plan with a yes/no done checklist, `ce-work` for the coding agent, `ce-code-review` on the PR before merge, and `ce-compound` after release to record learnings. If cloud agents can't see the plugin, write these steps into the repo's `AGENTS.md`. Source: https://github.com/EveryInc/compound-engineering-plugin
-- Two standing rules (originally from the Superpowers plugin, uninstalled Oct 4 2026; follow them anyway): `verification-before-completion` (run the checks and show the evidence before saying anything is done or fixed) and `test-driven-development` for bug fixes (write a failing test for the bug first, then fix it). Compound Engineering is the only build workflow plugin.
-
 ### Verification
-- Verify UI from real renders or screenshots at a small width (360dp) and a default width, never from layout math. Reviewers sign off only from screenshots. (Recipe app 1.0.8: labels passed the math but were truncated on the phone.)
-- Include reviewer checklists in the build prompt up front, so one agent run is enough and no fix-up run is needed.
-- Open every screenshot before signing off. A file can exist and still be an error overlay. (Recipe app 1.0.9: the keyboard and add-menu shots were a red error overlay and were attached anyway.)
-- Web renders don't prove text fits on a phone. Keep `allowFontScaling={false}` on tab labels, or capture on Android at a font scale above 1. (Recipe app 1.0.9: shrink-to-fit at the default web font size still truncates when the phone scales the font.)
-
+- Verify UI from real renders or screenshots at 360dp and a default width, never from layout math. Reviewers sign off only from screenshots.
+- Include reviewer checklists in the build prompt up front so one run is enough.
+- Open every screenshot before signing off; a file can exist and still be an error overlay.
+- Web renders don't prove text fits on a phone: keep allowFontScaling={false} on tab labels, or capture on Android at font scale above 1.
 ### Layout
-- Text never truncates: shrink-to-fit plus removing padding come before shortening labels.
-- Every text input needs keyboard avoidance, tested with the keyboard open (Android: softwareKeyboardLayoutMode resize).
+- Text never truncates: shrink-to-fit and less padding before shorter labels.
+- Every text input needs keyboard avoidance, tested with the keyboard open (Android softwareKeyboardLayoutMode resize).
 - Editing one field must not hide nearby controls.
 - Respect safe-area insets on all edges.
-- A raised center FAB needs bottom scroll padding on every tab (the measured rise plus a margin) so the last control never sits under it. (Recipe app 1.0.9: 32dp of padding left Add recipe under the +.)
-- In a row with a text input plus buttons, the input flex-shrinks with `minWidth: 0` and the buttons keep their natural width, so nothing is clipped at 360dp. (Recipe app 1.0.9: Cancel was pushed off the card.)
-
+- A raised center FAB needs bottom scroll padding on every tab so the last control never sits under it.
+- In a row with a text input plus buttons, the input flex-shrinks with minWidth: 0 and buttons keep natural width.
 ### Platform APIs
-- Guard platform-specific React Native APIs (for example `TextInput.State`) with `typeof` before calling them, because the web build produces the screenshots. (Recipe app 1.0.9: `currentlyFocusedInput` is missing on web and threw on every focus.)
-
+- Guard platform-specific React Native APIs with typeof before calling them, because the web build produces screenshots.
 ### Theme and color
-- Never hard-code colors. Use theme tokens, and accent-tinted UI follows the user's chosen accent.
-- Content on an accent fill uses a per-accent on-color (dark text on light accents such as amber or lime).
-- Status colors (badges, destructive actions) are fixed, not accent-driven.
-- If light and dark modes should match, use one shade per color that meets about 3:1 contrast on both backgrounds.
-
+- Never hard-code colors; use theme tokens; accent UI follows the chosen accent.
+- Content on an accent fill uses a per-accent on-color.
+- Status colors are fixed, not accent-driven.
+- One shade per color meeting about 3:1 contrast on light and dark.
 ### Process and usage
-- Batch requests into fewer, larger versions. Each build plus review costs real usage.
-- Group chats wake every member on every message. Keep specialist bots out of busy rooms and message them directly at checkpoints.
-- Make sure one release event builds once (concurrency group, skip CI on docs-only commits).
-- Verify the release yourself: the run succeeded, the asset is attached, the version is correct and it's signed with the same cert.
-- Check tool availability before delegating. Background helpers can't launch cloud agents, so the orchestrator launches them. (Recipe app 1.0.9.)
-- When a product rule is retired, delete the check, the error code, the user-facing copy, the tests that assert it, and the docs in the same change, then search the repo. A comment or test that still names the old ban is a remnant. (Recipe app, 2026-10-13.)
+- Batch requests into fewer, larger versions.
+- One release event builds once (concurrency group; skip CI on docs-only commits).
+- Verify the release yourself: run succeeded, asset attached, version correct, same signing cert.
+- Build workflow: plan, work, code review, compound (record lessons). Run checks and show evidence before saying done; write a failing test first for bug fixes.
+- Read LESSONS.md before every build; before opening/updating a PR, add new lessons and list them under 'Lessons learned' in the PR description.
