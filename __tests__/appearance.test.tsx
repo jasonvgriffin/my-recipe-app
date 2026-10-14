@@ -11,6 +11,7 @@ import {
   ACCENTS,
   BADGE_COLORS,
   DARK_ON_ACCENT_IDS,
+  DEFAULT_ACCENT,
   THEME_MODES,
   buildColors,
   contrastRatio,
@@ -175,9 +176,10 @@ describe('palettes', () => {
 });
 
 describe('appearance settings', () => {
-  it('defaults to System + Green, persists changes, and ignores unknown stored values', async () => {
-    expect(DEFAULT_SETTINGS.appearance).toEqual({ themeMode: 'system', accent: 'green', appIcon: 'default' });
-    expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'system', accent: 'green', appIcon: 'default' });
+  it('defaults to System + Purple for a new install, persists changes, and ignores unknown stored values', async () => {
+    expect(DEFAULT_ACCENT).toBe('purple');
+    expect(DEFAULT_SETTINGS.appearance).toEqual({ themeMode: 'system', accent: 'purple', appIcon: 'default' });
+    expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'system', accent: 'purple', appIcon: 'default' });
     await settingsStore.update({ appearance: { accent: 'teal' } });
     await settingsStore.update({ appearance: { themeMode: 'light' } });
     expect((await createSettingsStore().get()).appearance).toEqual({ themeMode: 'light', accent: 'teal', appIcon: 'default' });
@@ -186,7 +188,26 @@ describe('appearance settings', () => {
       SETTINGS_STORAGE_KEY,
       JSON.stringify({ appearance: { themeMode: 'neon', accent: 'gold', appIcon: 'rainbow' } }),
     );
-    expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'system', accent: 'green', appIcon: 'default' });
+    expect((await settingsStore.get()).appearance).toEqual({ themeMode: 'system', accent: 'purple', appIcon: 'default' });
+  });
+
+  it('keeps a saved accent when the default is Purple', async () => {
+    const AsyncStorage = require('@react-native-async-storage/async-storage');
+    await AsyncStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({ appearance: { themeMode: 'dark', accent: 'green', appIcon: 'default' } }),
+    );
+    expect((await settingsStore.get()).appearance.accent).toBe('green');
+  });
+
+  it('keeps white on Purple and clears about 3:1 on the fill and on the page backgrounds', () => {
+    const purple = buildColors('dark', 'purple');
+    expect(purple.primary).toBe('#9D5DEE');
+    expect(purple.primaryText).toBe('#FFFFFF');
+    expect(contrastRatio(purple.primaryText, purple.primary)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(purple.primary, '#FFFFFF')).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(purple.primary, '#1D211D')).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(purple.primary, '#F5F7F5')).toBeGreaterThanOrEqual(3);
   });
 });
 
@@ -237,8 +258,8 @@ describe('Settings → Appearance (UI)', () => {
     await settingsStore.update({ features: { mealPlan: false, shopping: false, pantry: false } });
     renderRouter(routes(), { initialUrl: '/settings' });
     expect(await screen.findByText('Appearance')).toBeTruthy();
-    expect(within(screen.getByTestId('settings-accent-green')).getByText('Default')).toBeTruthy();
-    expect(within(screen.getByTestId('settings-accent-blue')).queryByText('Default')).toBeNull();
+    expect(within(screen.getByTestId('settings-accent-purple')).getByText('Default')).toBeTruthy();
+    expect(within(screen.getByTestId('settings-accent-green')).queryByText('Default')).toBeNull();
     for (const a of ACCENTS) expect(screen.getByTestId(`settings-accent-${a.id}`)).toBeTruthy();
   });
 

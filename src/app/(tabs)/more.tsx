@@ -37,7 +37,7 @@ export default function MoreScreen() {
       : []),
     {
       label: 'Settings',
-      hint: 'Appearance, units, optional features, backup',
+      hint: 'Appearance, units, optional features, backups and updates',
       icon: 'settings-outline',
       href: '/settings',
       testID: 'more-settings',
@@ -85,7 +85,7 @@ const useStyles = makeStyles((colors) => ({
     backgroundColor: colors.card,
   },
   pressed: { borderColor: colors.primary },
-  flex: { flex: 1 },
+  flex: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
   label: { color: colors.text, fontSize: 18, fontWeight: '700' },
   hint: { color: colors.muted, marginTop: 2 },
 }));

@@ -1,6 +1,9 @@
 {
   "platforms": ["android"],
   "android": {
-    "modules": ["expo.modules.recipeshare.RecipeShareModule"]
+    "modules": [
+      "expo.modules.recipeshare.RecipeShareModule",
+      "expo.modules.recipeshare.ApkInstallModule"
+    ]
   }
 }

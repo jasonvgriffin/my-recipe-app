@@ -3,6 +3,7 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
+import { AppUpdateSection } from '@/components/app-update-section';
 import { MaxWidthContainer, MAX_CONTENT_WIDTH, useBottomInset } from '@/components/layout';
 import { appVersion } from '@/config';
 import { featureGate, type FeatureId } from '@/entitlements';
@@ -36,7 +37,7 @@ const FEATURES: { key: keyof OptionalFeatures; gate: FeatureId; label: string; h
 /**
  * Settings. Recipes are the core: everything here is optional. Appearance
  * (theme mode + accent color, v1.0.3; free, not gated), units,
- * and optional-feature toggles; the app version at the bottom. (The "cooked recently" window is
+ * optional-feature toggles, backup, and a manual update check (v1.1.2); the app version at the bottom. (The "cooked recently" window is
  * fixed at 14 days since v1.0.2 — `COOKED_RECENTLY_DAYS`.) Turning every optional feature off makes the
  * app a pure recipe box.
  */
@@ -114,6 +115,7 @@ export default function SettingsScreen() {
             <Text style={styles.label}>›</Text>
           </Pressable>
         </Link>
+        <AppUpdateSection />
         {version ? (
           <Text style={styles.version} testID="app-version">
             Version {version}
@@ -175,7 +177,7 @@ function AppearanceSection() {
                 {selected ? <Ionicons name="checkmark" size={20} color={a[scheme].primaryText} /> : null}
               </View>
               <Text style={styles.accentLabel}>{a.label}</Text>
-              {a.id === 'green' ? <Text style={styles.accentHint}>Default</Text> : null}
+              {a.id === 'purple' ? <Text style={styles.accentHint}>Default</Text> : null}
             </Pressable>
           );
         })}

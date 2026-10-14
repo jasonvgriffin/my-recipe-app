@@ -47,6 +47,13 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - **Servings scaling is display-only.** The stepper does not write the recipe. Fractions and mixed numbers go through `parseIngredient` / `scaleIngredient`. A line that does not parse stays as written.
 - **Fetch `origin/main` before branching.** This VM’s checkout was behind the sweetener-rule removal. Branching from the stale snapshot would have put that rule back.
 
+## v1.1.2 (2026-10-14)
+
+- **Purple keeps the white on-color.** `#9D5DEE` is about 4.01:1 for white on the fill, 4.01:1 against white, 4.07:1 against the dark card, and 3.73:1 against the light page `#F5F7F5`. That clears the 3:1 bar. Do not switch Purple to the dark on-color.
+- **The default accent is also the fallback.** A saved accent id stays. A missing or unknown id uses `DEFAULT_ACCENT`. Changing the default changes that fallback. A test of the live fill color has to read `DEFAULT_ACCENT`, not a hardcoded Green.
+- **Hand the APK over the existing file-system content URI.** `File.contentUri` is `${applicationId}.FileSystemFileProvider`. Do not add a second FileProvider. `REQUEST_INSTALL_PACKAGES` does not show a runtime dialog. The prompt is the system "install unknown apps" screen for this package.
+- **Web still draws the updater.** Update returns before any native import. A `__DEV__` `updatePreview` query draws a state for screenshots. A release build ignores it. Nothing checks on launch.
+
 ## v1.1.1 (2026-10-14)
 
 - **The idle “All changes saved” line is the recipe screen, not the import write.** Hiding that line must leave rating, cooked, category, and unit saves immediate. A link import is a separate draft: dry-run preview, pinned Save, and a leave warning. A duplicate notice is not an unsaved draft.
@@ -92,6 +99,9 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - Unsaved UI that must survive a layout change cannot live in a pane that unmounts below a width breakpoint. Keep it in the parent or a store both widths read.
 - Do not assign `ref.current` during render. React's refs lint rejects it. Update the ref in an effect, or close over the latest callback in the effect dependencies.
 - Do not wrap `findBy*` inside `act()`. The query does not retry there. Wait for the control, then press it inside `act`.
+- A saved setting's default is also the fallback for a missing or unknown stored value. Changing the default changes that fallback. A value the user already saved stays.
+- Android "install unknown apps" is an app-op. Listing `REQUEST_INSTALL_PACKAGES` in the manifest does not show a permission dialog. Open the system settings screen for this package.
+- Do not import a native module until the platform check has passed. The web build is what the screenshots are taken from.
 - A Google Docs markdown export escapes punctuation (`\+`, `\_`, `\#`) and wraps sentences in backticks. Unescape so it renders. Do not rewrite the author's sentences.
 - Batch requests into fewer, larger versions.
 - One release event builds once (concurrency group; skip CI on docs-only commits).

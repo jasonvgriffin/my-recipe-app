@@ -8,7 +8,7 @@
  * v1 feature spec: docs/SPEC.md. Fields marked (spec #N) map to items in that spec.
  */
 
-import type { AccentId, ThemeMode } from '../lib/theme';
+import { DEFAULT_ACCENT, type AccentId, type ThemeMode } from '../lib/theme';
 
 import type { SyncMeta } from './record';
 
@@ -264,5 +264,5 @@ export interface OptionalFeatures {
 export const DEFAULT_SETTINGS: AppSettings = {
   unitSystem: 'original',
   features: { mealPlan: true, shopping: true, pantry: true },
-  appearance: { themeMode: 'system', accent: 'green', appIcon: 'default' }, // DEFAULT_THEME_MODE / DEFAULT_ACCENT in src/lib/theme.ts
+  appearance: { themeMode: 'system', accent: DEFAULT_ACCENT, appIcon: 'default' }, // DEFAULT_THEME_MODE / DEFAULT_ACCENT in src/lib/theme.ts
 };

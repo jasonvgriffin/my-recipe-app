@@ -51,3 +51,24 @@ export function getAppIcon(aliasSuffixes: string[]): string | null {
 export function setAppIcon(target: string, aliasSuffixes: string[]): Promise<string> {
   return requireNativeModule<RecipeShareNative>('RecipeShare').setAppIcon(target, aliasSuffixes);
 }
+
+interface ApkInstallNative {
+  canRequestPackageInstalls(): boolean;
+  openUnknownAppSources(): Promise<void>;
+  installApk(contentUri: string): Promise<void>;
+}
+
+/** True when this app may hand an APK to the system installer (Android 8+ app-op). */
+export function canRequestPackageInstalls(): boolean {
+  return requireNativeModule<ApkInstallNative>('ApkInstall').canRequestPackageInstalls();
+}
+
+/** Opens the system screen where the user allows installs from this app. */
+export function openUnknownAppSources(): Promise<void> {
+  return requireNativeModule<ApkInstallNative>('ApkInstall').openUnknownAppSources();
+}
+
+/** Starts the system package installer for a content URI from this app's file provider. */
+export function installApk(contentUri: string): Promise<void> {
+  return requireNativeModule<ApkInstallNative>('ApkInstall').installApk(contentUri);
+}

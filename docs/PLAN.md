@@ -29,6 +29,8 @@ Contact Us is gone. Version `1.1.0`, `versionCode` 11, same release keystore.
 
 **v1.1.1 (Jason approved):** a link import and a new meal stay drafts until Save. Meal-plan chips are the user's recipe categories. The idle “All changes saved” line, the Today button, “Added by you”, and shopping-list aisle headers are gone. Pantry rows show quantity beside the name. The settings gear stays inside the safe area. Version `1.1.1`, `versionCode` 12, same release keystore.
 
+**v1.1.2 (Jason approved):** Settings can check GitHub for a newer release and, on Android, download that `.apk` and hand it to the system installer. The More Settings card mentions updates. New installs use the Purple accent; a saved accent is kept. Version `1.1.2`, `versionCode` 13, same release keystore.
+
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
 - [x] Expo SDK 57 + TypeScript + expo-router scaffold
