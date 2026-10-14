@@ -31,11 +31,12 @@ export function createMealPlanStore(store: KeyValueStore = defaultStore) {
       const set = new Set(dates);
       return (await entries.all()).filter((e) => set.has(e.date)).sort((a, b) => a.date.localeCompare(b.date));
     },
+    /** `slot` is a category id or a legacy meal name (`breakfast`, `lunch`, `dinner`, `snack`). */
     async addEntry(date: IsoDate, recipeId: string, slot?: MealSlot, now: Date = new Date()): Promise<MealPlanEntry> {
       const ts = now.toISOString();
       return entries.save({ id: uuid(), date, recipeId, slot, createdAt: ts, updatedAt: ts }, now);
     },
-    /** Place a recipe on a day, optionally with a meal slot and a servings override (spec #11). */
+    /** Place a recipe on a day. `slot` is a category id or a legacy meal name. Servings override is optional. */
     async placeEntry(
       input: { date: IsoDate; recipeId: string; slot?: MealSlot; servings?: number },
       now: Date = new Date(),

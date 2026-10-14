@@ -3,22 +3,15 @@ import { useCallback, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { KeyboardAwareScrollView, useBottomInset } from '@/components/layout';
-import { Chip } from '@/components/chip';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
 import { addDays, formatLongDate } from '@/lib/dates';
+import { ANY_TIME_LABEL, defaultMealCategoryId, groupMealPlanEntries, resolveMealSlot } from '@/lib/meal-plan';
 import { searchRecipes } from '@/lib/recipe-utils';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { recipeStore } from '@/storage/recipes';
-import { MEAL_SLOTS, type IsoDate, type MealPlanEntry, type MealSlot } from '@/types/meal-plan';
-import type { Recipe } from '@/types/recipe';
-
-const SLOT_LABEL: Record<MealSlot, string> = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snack: 'Snack',
-};
+import type { IsoDate, MealPlanEntry } from '@/types/meal-plan';
+import type { Category, Recipe } from '@/types/recipe';
 
 /**
  * One day's plan: assign a recipe to a meal, move it, or remove it (spec #11).
@@ -30,21 +23,32 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
   const colors = useColors();
   const [entries, setEntries] = useState<MealPlanEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [slot, setSlot] = useState<MealSlot>('dinner');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [slot, setSlot] = useState<string | undefined>(undefined);
   const [query, setQuery] = useState('');
   const [servingsText, setServingsText] = useState('');
 
   const load = useCallback(async () => {
-    const [dayEntries, all] = await Promise.all([mealPlanStore.entriesForDates([date]), recipeStore.list()]);
+    await recipeStore.prepareCategories();
+    const [dayEntries, all, cats] = await Promise.all([
+      mealPlanStore.entriesForDates([date]),
+      recipeStore.list(),
+      recipeStore.listCategories(),
+    ]);
     setEntries(dayEntries);
     setRecipes(all);
+    setCategories(cats);
+    setSlot((current) => (current && cats.some((c) => c.id === current) ? current : defaultMealCategoryId(cats)));
   }, [date]);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       load().catch(() => {
-        if (active) setRecipes([]);
+        if (active) {
+          setRecipes([]);
+          setCategories([]);
+        }
       });
       return () => {
         active = false;
@@ -78,9 +82,9 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
     await changed();
   }
 
-  async function setSlotFor(entry: MealPlanEntry, next: MealSlot) {
-    if (entry.slot === next) return;
-    await mealPlanStore.updateEntry(entry.id, { slot: next });
+  async function setSlotFor(entry: MealPlanEntry, categoryId: string) {
+    if (resolveMealSlot(entry.slot, categories).categoryId === categoryId) return;
+    await mealPlanStore.updateEntry(entry.id, { slot: categoryId });
     await changed();
   }
 
@@ -100,10 +104,8 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
     await changed();
   }
 
-  const groups: { key: string; label: string; items: MealPlanEntry[] }[] = [
-    { key: 'any', label: 'Any time', items: entries.filter((e) => !e.slot) },
-    ...MEAL_SLOTS.map((s) => ({ key: s, label: SLOT_LABEL[s], items: entries.filter((e) => e.slot === s) })),
-  ].filter((g) => g.items.length > 0);
+  const groups = groupMealPlanEntries(entries, categories);
+  const selectedCategory = categories.find((c) => c.id === slot);
 
   return (
     <KeyboardAwareScrollView
@@ -122,13 +124,14 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
               <View key={entry.id} style={styles.entry} testID={`entry-${entry.id}`}>
                 <Text style={styles.title}>{title}</Text>
                 <View style={styles.row}>
-                  {MEAL_SLOTS.map((s) => (
-                    <Chip
-                      key={s}
-                      label={SLOT_LABEL[s]}
-                      accessibilityLabel={`Set ${title} to ${SLOT_LABEL[s]}`}
-                      active={entry.slot === s}
-                      onPress={() => setSlotFor(entry, s)}
+                  {categories.map((c) => (
+                    <SlotChip
+                      key={c.id}
+                      label={c.name}
+                      accessibilityLabel={`Set ${title} to ${c.name}`}
+                      active={resolveMealSlot(entry.slot, categories).categoryId === c.id}
+                      onPress={() => setSlotFor(entry, c.id)}
+                      testID={`entry-slot-${entry.id}-${c.id}`}
                     />
                   ))}
                 </View>
@@ -183,13 +186,13 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
 
       <Text style={styles.section}>Add a recipe</Text>
       <View style={styles.row}>
-        {MEAL_SLOTS.map((s) => (
-          <Chip
-            key={s}
-            label={SLOT_LABEL[s]}
-            active={slot === s}
-            onPress={() => setSlot(s)}
-            testID={`new-slot-${s}`}
+        {categories.map((c) => (
+          <SlotChip
+            key={c.id}
+            label={c.name}
+            active={slot === c.id}
+            onPress={() => setSlot(c.id)}
+            testID={`new-slot-${c.id}`}
           />
         ))}
       </View>
@@ -221,10 +224,38 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
           style={styles.addRow}
           testID={`add-recipe-${recipe.id}`}>
           <Text style={styles.addTitle}>{recipe.title}</Text>
-          <Text style={styles.addMeta}>Add to {SLOT_LABEL[slot]}</Text>
+          <Text style={styles.addMeta}>Add to {selectedCategory?.name ?? ANY_TIME_LABEL}</Text>
         </Pressable>
       ))}
     </KeyboardAwareScrollView>
+  );
+}
+
+/** Category chip. The label wraps inside the screen width and is not cut off with an ellipsis. */
+function SlotChip({
+  label,
+  active = false,
+  onPress,
+  testID,
+  accessibilityLabel,
+}: {
+  label: string;
+  active?: boolean;
+  onPress?: () => void;
+  testID?: string;
+  accessibilityLabel?: string;
+}) {
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      testID={testID}
+      style={[styles.slotChip, active && styles.slotChipActive]}>
+      <Text style={[styles.slotChipText, active && styles.slotChipTextActive]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -245,6 +276,20 @@ const useStyles = makeStyles((colors) => ({
   },
   title: { color: colors.text, fontSize: 17, fontWeight: '700' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  slotChip: {
+    minHeight: 44,
+    maxWidth: '100%',
+    flexShrink: 1,
+    paddingHorizontal: 12,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    backgroundColor: colors.card,
+  },
+  slotChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  slotChipText: { color: colors.muted, fontSize: 14, flexShrink: 1, textAlign: 'center' },
+  slotChipTextActive: { color: colors.primaryText, fontWeight: '600' },
   iconBtn: {
     minWidth: 44,
     minHeight: 44,

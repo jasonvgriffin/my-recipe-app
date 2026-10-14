@@ -5,13 +5,21 @@ import type { SyncMeta } from './record';
 /** Calendar day in local time, formatted YYYY-MM-DD. */
 export type IsoDate = string;
 
-export type MealSlot = 'breakfast' | 'lunch' | 'dinner' | 'snack';
-export const MEAL_SLOTS: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner', 'snack'];
+/**
+ * Older entries store one of these meal names. New entries store a recipe category id in `slot`.
+ * Both still load.
+ */
+export const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
+export type LegacyMealSlot = (typeof MEAL_SLOTS)[number];
+
+/** A recipe category id, or a legacy meal name from `MEAL_SLOTS`. */
+export type MealSlot = string;
 
 /** A recipe placed on a calendar day (spec #11). */
 export interface MealPlanEntry extends SyncMeta {
   date: IsoDate;
   recipeId: string;
+  /** Category id, or a legacy `breakfast` | `lunch` | `dinner` | `snack`. Omitted means any time. */
   slot?: MealSlot;
   /** Optional servings override for scaling the shopping list later. */
   servings?: number;
@@ -46,6 +54,10 @@ export interface ShoppingList {
   updatedAt: string;
 }
 
+/**
+ * Permissive on purpose: a category id, a legacy meal name, a missing slot, or any other slot string
+ * still loads. Slot is not checked, so an old backup row is not dropped.
+ */
 export function isMealPlanEntry(v: unknown): v is MealPlanEntry {
   if (typeof v !== 'object' || v === null) return false;
   const e = v as Record<string, unknown>;
