@@ -201,9 +201,6 @@ function ImportBody() {
     },
     [photos, rememberDraft, rememberPending],
   );
-  const commitRef = useRef(commit);
-  commitRef.current = commit;
-
   // Ask before leaving while a non-duplicate draft is on screen. Registered with the other hooks.
   useEffect(() => {
     return navigation.addListener('beforeRemove', (e) => {
@@ -222,7 +219,7 @@ function ImportBody() {
         {
           text: 'Save',
           onPress: () => {
-            void commitRef.current('none').then((saved) => {
+            void commit('none').then((saved) => {
               if (!saved) return;
               leaveRef.current = false;
               navigation.dispatch(e.data.action);
@@ -231,7 +228,7 @@ function ImportBody() {
         },
       ]);
     });
-  }, [navigation]);
+  }, [navigation, commit]);
 
   const duplicate = draft?.status === 'duplicate';
   const canSave = Boolean(draft && !duplicate && !busy);
