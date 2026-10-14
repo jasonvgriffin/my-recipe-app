@@ -87,11 +87,6 @@ function MealPlanBody() {
       recipes={recipes}
       onPrev={() => setAnchor((d) => addMonths(d, -1))}
       onNext={() => setAnchor((d) => addMonths(d, 1))}
-      onToday={() => {
-        const now = new Date();
-        setAnchor(now);
-        setSelected(toIsoDate(now));
-      }}
       onSelect={selectDay}
     />
   );

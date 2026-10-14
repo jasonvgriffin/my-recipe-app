@@ -1,4 +1,5 @@
 import { createRecipe } from '@/lib/recipe-utils';
+import { defaultMealCategoryId, groupMealPlanEntries, resolveMealSlot } from '@/lib/meal-plan';
 import { addDays, formatMonthYear, inMonth, monthGrid, weekDates } from '@/lib/dates';
 import { aisleForIngredient } from '@/lib/aisles';
 import {
@@ -14,10 +15,11 @@ import {
   shoppingProgress,
 } from '@/lib/shopping';
 import { createPantryMatcher, isInPantry, pantryMatcher } from '@/pantry';
-import { createMealPlanStore } from '@/storage/meal-plan';
+import { createMealPlanStore, MEAL_PLAN_STORAGE_KEY } from '@/storage/meal-plan';
 import { createPantryStore } from '@/storage/pantry';
 import { featureGate, LocalFreeEntitlements, NoEntitlements } from '@/entitlements';
 import type { KeyValueStore } from '@/storage/kv';
+import { isMealPlanEntry, type MealPlanEntry } from '@/types/meal-plan';
 import type { PantryItem } from '@/types/recipe';
 
 function memoryStore(): KeyValueStore {
@@ -56,6 +58,80 @@ describe('meal plan moves (spec #11)', () => {
     expect(await plan.entriesForDates(['2026-10-03'])).toHaveLength(0);
     await plan.removeEntry(placed.id);
     expect(await plan.entriesForDates(weekDates('2026-09-28'))).toHaveLength(0);
+  });
+});
+
+describe('meal slot labels', () => {
+  const categories = [
+    { id: 'b', name: 'Breakfast' },
+    { id: 'l', name: 'Lunch' },
+    { id: 'd', name: 'Dinner' },
+    { id: 'g', name: 'Get me laid' },
+  ];
+  const entry = (id: string, slot?: string): MealPlanEntry => ({
+    id,
+    date: '2026-10-03',
+    recipeId: 'r1',
+    slot,
+    createdAt: '',
+    updatedAt: '',
+  });
+
+  it('resolves a category id, then a legacy name, and keeps a missing slot as Any time', () => {
+    expect(resolveMealSlot(undefined, categories)).toMatchObject({ key: 'any', label: 'Any time' });
+    expect(resolveMealSlot('  ', categories)).toMatchObject({ key: 'any', label: 'Any time' });
+    expect(resolveMealSlot('d', categories)).toMatchObject({ key: 'd', label: 'Dinner', categoryId: 'd' });
+    expect(resolveMealSlot('DINNER', categories)).toMatchObject({ key: 'd', label: 'Dinner', categoryId: 'd' });
+    expect(resolveMealSlot('lunch', categories)).toMatchObject({ key: 'l', label: 'Lunch', categoryId: 'l' });
+    expect(resolveMealSlot('snack', categories)).toEqual({ key: 'legacy:snack', label: 'Snack' });
+    expect(resolveMealSlot('snack', [])).toEqual({ key: 'legacy:snack', label: 'Snack' });
+    expect(resolveMealSlot('breakfast', categories.filter((c) => c.id !== 'b'))).toEqual({
+      key: 'legacy:breakfast',
+      label: 'Breakfast',
+    });
+    expect(resolveMealSlot('gone-id', categories)).toEqual({ key: 'removed:gone-id', label: 'Category removed' });
+    expect(resolveMealSlot('snack', [...categories, { id: 's', name: 'Snack' }])).toMatchObject({
+      key: 's',
+      label: 'Snack',
+      categoryId: 's',
+    });
+  });
+
+  it('groups by category order, then an unmatched legacy snack, then a removed category', () => {
+    const groups = groupMealPlanEntries(
+      [entry('any'), entry('snack', 'snack'), entry('gone', 'gone-id'), entry('dinner', 'dinner'), entry('custom', 'g')],
+      categories,
+    );
+    expect(groups.map((g) => g.label)).toEqual(['Any time', 'Dinner', 'Get me laid', 'Snack', 'Category removed']);
+    expect(groups.map((g) => g.items.map((item) => item.id))).toEqual([['any'], ['dinner'], ['custom'], ['snack'], ['gone']]);
+    expect(groups.find((g) => g.label === 'Breakfast')).toBeUndefined();
+  });
+
+  it('starts the add chip on Dinner, or the first category when Dinner is gone', () => {
+    expect(defaultMealCategoryId(categories)).toBe('d');
+    expect(defaultMealCategoryId(categories.filter((c) => c.name !== 'Dinner'))).toBe('b');
+    expect(defaultMealCategoryId([])).toBeUndefined();
+  });
+
+  it('placeEntry accepts a category id and a legacy slot, and a backup dinner row still loads', async () => {
+    const plan = createMealPlanStore(memoryStore());
+    const byId = await plan.placeEntry({ date: '2026-10-03', recipeId: 'r1', slot: 'cat-123', servings: 2 }, NOW);
+    expect(byId.slot).toBe('cat-123');
+    const legacy = await plan.addEntry('2026-10-04', 'r2', 'breakfast', NOW);
+    expect(legacy.slot).toBe('breakfast');
+
+    const kv = memoryStore();
+    await kv.setItem(
+      MEAL_PLAN_STORAGE_KEY,
+      JSON.stringify([{ id: 'old', date: '2026-10-03', recipeId: 'r1', slot: 'dinner', createdAt: '', updatedAt: '' }]),
+    );
+    const loaded = await createMealPlanStore(kv).entriesForDates(['2026-10-03']);
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].slot).toBe('dinner');
+    expect(isMealPlanEntry({ id: '1', date: '2026-10-03', recipeId: 'r', slot: 'snack' })).toBe(true);
+    expect(isMealPlanEntry({ id: '1', date: '2026-10-03', recipeId: 'r', slot: 'cat-123' })).toBe(true);
+    expect(isMealPlanEntry({ id: '1', date: '2026-10-03', recipeId: 'r' })).toBe(true);
+    expect(isMealPlanEntry({ date: '2026-10-03', recipeId: 'r' })).toBe(false);
   });
 });
 

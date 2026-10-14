@@ -27,6 +27,8 @@ Servings scaling is on recipe detail. The Supabase client dependency is gone.
 Migration `20261013000000_drop_unused_tables.sql` drops `households`, `household_members`, and `receipt_aliases`.
 Contact Us is gone. Version `1.1.0`, `versionCode` 11, same release keystore.
 
+**v1.1.1 (Jason approved):** a link import and a new meal stay drafts until Save. Meal-plan chips are the user's recipe categories. The idle “All changes saved” line, the Today button, “Added by you”, and shopping-list aisle headers are gone. Pantry rows show quantity beside the name. The settings gear stays inside the safe area. Version `1.1.1`, `versionCode` 12, same release keystore.
+
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
 - [x] Expo SDK 57 + TypeScript + expo-router scaffold

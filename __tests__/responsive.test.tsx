@@ -152,7 +152,7 @@ describe.each([
   });
 
   it.each([
-    ['(tabs)/meal-plan', 'Today'],
+    ['(tabs)/meal-plan', 'Tap a day to add meal plan'],
     ['(tabs)/shopping', 'No list yet for this week.'],
     ['add', 'Save recipe'],
     ['settings', 'Optional features'],

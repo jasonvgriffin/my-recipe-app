@@ -51,9 +51,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
   }, []);
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const [pendingSaves, setPendingSaves] = useState(0);
-  const [savedFlash, setSavedFlash] = useState(false);
   const [saveError, setSaveError] = useState(false);
-  const flashTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Tag typed but not yet added — the one edit on this screen that isn't saved until you act.
   const [tagDraft, setTagDraft] = useState('');
   const dirty = tagDraft.trim().length > 0 || saveError;
@@ -118,8 +116,6 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
     });
   });
 
-  useEffect(() => () => clearTimeout(flashTimer.current), []);
-
   /**
    * Save an edit. Edits run one after another against the latest saved recipe, and the stamped record
    * from storage is what we show, so rapid taps (rating, then category, then a tag) all stick.
@@ -136,9 +132,6 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
         setRecipe(saved);
         onChangeRef.current?.(saved);
         setSaveError(false);
-        setSavedFlash(true);
-        clearTimeout(flashTimer.current);
-        flashTimer.current = setTimeout(() => setSavedFlash(false), 2000);
       });
       saveQueue.current = run
         .catch(() => {
@@ -453,7 +446,7 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
           <Text style={styles.deleteText}>Delete recipe</Text>
         </Pressable>
       </KeyboardAwareScrollView>
-      {ratingsOn || categoriesOn || tagsOn ? (
+      {tagDraft.trim().length > 0 || saveError || pendingSaves > 0 ? (
         <View style={styles.saveBar} testID="recipe-save-bar">
           <Text
             style={[styles.saveStatus, saveError && styles.saveStatusError]}
@@ -463,22 +456,18 @@ export function RecipeDetail({ id, onDeleted, onChange, categories: categoriesPr
               ? 'Couldn’t save — tap Save to try again'
               : pendingSaves > 0
                 ? 'Saving…'
-                : tagDraft.trim()
-                  ? `Unsaved tag “${tagDraft.trim()}”`
-                  : savedFlash
-                    ? '✓ Saved'
-                    : 'All changes saved'}
+                : `Unsaved tag “${tagDraft.trim()}”`}
           </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Save changes"
-            accessibilityState={{ disabled: !dirty }}
-            disabled={!dirty}
-            onPress={() => void saveAll()}
-            style={[styles.saveButton, !dirty && styles.saveButtonIdle]}
-            testID="recipe-save-button">
-            <Text style={[styles.saveButtonText, !dirty && styles.saveButtonTextIdle]}>{dirty ? 'Save' : 'Saved'}</Text>
-          </Pressable>
+          {dirty ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Save changes"
+              onPress={() => void saveAll()}
+              style={styles.saveButton}
+              testID="recipe-save-button">
+              <Text style={styles.saveButtonText}>Save</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -520,9 +509,7 @@ const useStyles = makeStyles((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveButtonIdle: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
   saveButtonText: { color: colors.primaryText, fontWeight: '700' },
-  saveButtonTextIdle: { color: colors.muted },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   photo: { width: '100%', height: 200, borderRadius: 10, marginBottom: 12, backgroundColor: colors.card },
   title: { fontSize: 24, fontWeight: '700', color: colors.text },

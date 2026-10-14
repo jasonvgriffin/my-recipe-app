@@ -146,7 +146,7 @@ describe('pantry Notes (v1.0.7)', () => {
     expect((await pantry.saveDetails({ id: 'p1', name: 'cocoa', notes: '  ' }, NOW)).notes).toBeUndefined();
   });
 
-  it('form: plain Notes field (no example text), shown on the item', async () => {
+  it('form: plain Notes field (no example text), kept in details and off the row', async () => {
     const Pantry = require('@/app/(tabs)/pantry').default;
     renderRouter({ index: Pantry }, { initialUrl: '/' });
     fireEvent.press(await screen.findByTestId('pantry-add-button'));
@@ -159,7 +159,7 @@ describe('pantry Notes (v1.0.7)', () => {
     fireEvent.changeText(screen.getByTestId('pantry-name-input'), 'Rice');
     fireEvent.changeText(notes, 'Use the big bag first');
     await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
-    expect(await screen.findByText('Use the big bag first')).toBeTruthy();
+    expect(screen.queryByText('Use the big bag first')).toBeNull();
     const [rice] = await pantryStore.list();
     expect(rice.notes).toBe('Use the big bag first');
     fireEvent.press(screen.getByTestId(`pantry-item-${rice.id}`));

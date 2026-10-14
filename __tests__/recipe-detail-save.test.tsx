@@ -1,7 +1,7 @@
 /**
- * v1.0.6: the recipe detail saves rating / category / tag / cooked edits immediately and reliably, shows a
- * Save button + “Saved” status, asks before leaving with an unsaved tag, and keeps its buttons above the
- * Android navigation bar.
+ * Recipe detail saves rating, category, cooked, and unit edits immediately. The save bar mounts only for an
+ * unsaved tag, a failed save, or a save in flight. Leaving with an unsaved tag asks first, and the screen
+ * stays above the Android navigation bar.
  */
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
@@ -70,16 +70,18 @@ describe('recipe detail saving', () => {
       expect(saved?.tags).toEqual(['weekend']);
       expect(saved?.cooked).toBe(true);
     });
-    expect(await screen.findByText('✓ Saved')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByText('All changes saved')).toBeNull();
+      expect(screen.queryByTestId('recipe-save-bar')).toBeNull();
+    });
   });
 
-  it('shows a Save button for a typed tag and saves it with a confirmation', async () => {
+  it('shows Save for an unsaved tag and hides the bar once that tag is stored', async () => {
     const { r } = await seed();
     renderRouter({ 'recipe/[id]': RecipeRoute }, { initialUrl: `/recipe/${r.id}` });
-    const save = await screen.findByTestId('recipe-save-button');
-    expect(save).toHaveTextContent('Saved');
-    expect(save).toBeDisabled();
-    expect(screen.getByTestId('recipe-save-status')).toHaveTextContent('All changes saved');
+    await screen.findByTestId('add-tag-input');
+    expect(screen.queryByText('All changes saved')).toBeNull();
+    expect(screen.queryByTestId('recipe-save-bar')).toBeNull();
 
     fireEvent.changeText(screen.getByTestId('add-tag-input'), 'Quick');
     expect(screen.getByTestId('recipe-save-button')).toHaveTextContent('Save');
@@ -87,10 +89,20 @@ describe('recipe detail saving', () => {
     expect(screen.getByTestId('recipe-save-status')).toHaveTextContent('Unsaved tag “Quick”');
 
     await act(async () => fireEvent.press(screen.getByTestId('recipe-save-button')));
-    expect((await recipeStore.get(r.id))?.tags).toEqual(['quick']);
-    expect(screen.getByTestId('recipe-save-status')).toHaveTextContent('✓ Saved');
+    await waitFor(async () => expect((await recipeStore.get(r.id))?.tags).toEqual(['quick']));
+    expect(screen.queryByText('All changes saved')).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId('recipe-save-bar')).toBeNull());
     expect(screen.getByTestId('add-tag-input').props.value).toBe('');
-    expect(screen.getByTestId('recipe-save-button')).toBeDisabled();
+  });
+
+  it('persists a rating without showing All changes saved', async () => {
+    const { r } = await seed();
+    renderRouter({ 'recipe/[id]': RecipeRoute }, { initialUrl: `/recipe/${r.id}` });
+    await screen.findByTestId('detail-rating-5');
+    expect(screen.queryByText('All changes saved')).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId('detail-rating-5')));
+    await waitFor(async () => expect((await recipeStore.get(r.id))?.rating).toBe(5));
+    await waitFor(() => expect(screen.queryByText('All changes saved')).toBeNull());
   });
 
   it('asks before leaving with an unsaved tag, and Save keeps it', async () => {
@@ -135,10 +147,14 @@ describe('recipe detail saving', () => {
     const { r } = await seed();
     renderRouter({ 'recipe/[id]': RecipeRoute }, { initialUrl: `/recipe/${r.id}` });
     const root = await screen.findByTestId('recipe-detail-screen');
-    // The whole screen (scroll viewport + save bar) ends above the 48dp system bar, not just the content.
+    // The whole screen ends above the 48dp system bar. The save bar is absent until a tag is unsaved.
     expect(StyleSheet.flatten(root.props.style).paddingBottom).toBe(48);
-    expect(screen.getByTestId('recipe-save-bar')).toBeTruthy();
+    expect(screen.queryByTestId('recipe-save-bar')).toBeNull();
+    expect(screen.queryByText('All changes saved')).toBeNull();
     expect(screen.getByTestId('cooked-toggle')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('add-tag-input'), 'Later');
+    expect(screen.getByTestId('recipe-save-bar')).toBeTruthy();
+    expect(StyleSheet.flatten(root.props.style).paddingBottom).toBe(48);
   });
 });
 

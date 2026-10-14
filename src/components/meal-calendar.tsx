@@ -15,7 +15,6 @@ export interface MealCalendarProps {
   recipes: Map<string, Recipe>;
   onPrev: () => void;
   onNext: () => void;
-  onToday: () => void;
   onSelect: (date: IsoDate) => void;
 }
 
@@ -30,7 +29,6 @@ export function MealCalendar({
   recipes,
   onPrev,
   onNext,
-  onToday,
   onSelect,
 }: MealCalendarProps) {
   const styles = useStyles();
@@ -40,9 +38,6 @@ export function MealCalendar({
         <Text style={styles.hint} numberOfLines={2} testID="meal-calendar-hint">
           Tap a day to add meal plan
         </Text>
-        <Pressable accessibilityRole="button" onPress={onToday} style={styles.todayBtn} testID="jump-today">
-          <Text style={styles.todayText}>Today</Text>
-        </Pressable>
       </View>
       <View style={styles.nav}>
         <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={onPrev} hitSlop={8} testID="cal-prev">
@@ -103,8 +98,6 @@ const useStyles = makeStyles((colors) => ({
   wrap: { padding: 12, paddingBottom: 8 },
   modes: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   hint: { flex: 1, color: colors.muted, fontSize: 13 },
-  todayBtn: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
-  todayText: { color: colors.primary, fontWeight: '700' },
   nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   navText: { color: colors.primary, fontSize: 28, fontWeight: '600', minWidth: 44, textAlign: 'center' },
   label: { color: colors.text, fontWeight: '700', fontSize: 16 },

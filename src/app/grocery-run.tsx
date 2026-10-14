@@ -3,8 +3,7 @@ import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { GroceryAisleSummary, GroceryRunView } from '@/components/grocery-run-view';
-import { TwoPaneLayout } from '@/components/layout';
+import { GroceryRunView } from '@/components/grocery-run-view';
 import { OptionalFeature } from '@/components/optional-feature';
 import { startOfWeek, toIsoDate, weekDates } from '@/lib/dates';
 import { ingredientKey } from '@/lib/ingredients';
@@ -28,7 +27,7 @@ function param(value: string | string[] | undefined): string | undefined {
 
 /**
  * Grocery run (spec #18). Full-screen checklist for one recipe or a planned week.
- * Grouped by aisle, large targets, progress, undo. The screen stays awake while this is open.
+ * One flat list, large targets, progress, undo. The screen stays awake while this is open.
  */
 export default function GroceryRunScreen() {
   return (
@@ -132,11 +131,7 @@ function GroceryRunBody() {
       ) : missing ? (
         <Text style={{ color: colors.muted, textAlign: 'center', marginTop: 48 }}>Recipe not found.</Text>
       ) : (
-        <TwoPaneLayout
-          testID="grocery-layout"
-          primary={<GroceryRunView items={items} canUndo={undoStack.length > 0} onToggle={toggle} onUndo={undo} />}
-          secondary={<GroceryAisleSummary items={items} />}
-        />
+        <GroceryRunView items={items} canUndo={undoStack.length > 0} onToggle={toggle} onUndo={undo} />
       )}
     </View>
   );
