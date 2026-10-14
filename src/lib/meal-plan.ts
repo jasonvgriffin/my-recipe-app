@@ -1,5 +1,38 @@
-import { MEAL_SLOTS, type LegacyMealSlot, type MealPlanEntry } from '@/types/meal-plan';
+import { MEAL_SLOTS, type IsoDate, type LegacyMealSlot, type MealPlanEntry } from '@/types/meal-plan';
 import type { Category } from '@/types/recipe';
+
+/**
+ * A meal the day screen is showing but has not written yet.
+ * Lives outside React so folding (the day pane unmounts under 600dp) does not drop it.
+ * Changing the open date clears it.
+ */
+export interface PendingMeal {
+  date: IsoDate;
+  recipeId: string;
+  /** Category id. Omitted means any time. */
+  slot?: string;
+  /** Servings override. Omitted uses the recipe's servings until the stepper changes it. */
+  servings?: number;
+}
+
+let pendingMeal: PendingMeal | null = null;
+const pendingListeners = new Set<() => void>();
+
+export function getPendingMeal(): PendingMeal | null {
+  return pendingMeal;
+}
+
+export function setPendingMeal(next: PendingMeal | null): void {
+  pendingMeal = next;
+  pendingListeners.forEach((listener) => listener());
+}
+
+export function subscribePendingMeal(listener: () => void): () => void {
+  pendingListeners.add(listener);
+  return () => {
+    pendingListeners.delete(listener);
+  };
+}
 
 /** Display names for entries stored before slots were category ids. */
 export const LEGACY_MEAL_LABELS: Record<LegacyMealSlot, string> = {

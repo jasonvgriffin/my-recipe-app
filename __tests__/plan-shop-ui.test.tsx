@@ -11,6 +11,7 @@ import { GroceryRunView } from '@/components/grocery-run-view';
 import { ShoppingListView } from '@/components/shopping-list-view';
 import { featureGate, LocalFreeEntitlements, NoEntitlements } from '@/entitlements';
 import { addDays, formatMonthYear, formatShortDate, monthGrid, startOfWeek, toIsoDate } from '@/lib/dates';
+import { setPendingMeal } from '@/lib/meal-plan';
 import { mealPlanStore } from '@/storage/meal-plan';
 import { pantryStore } from '@/storage/pantry';
 import { recipeStore } from '@/storage/recipes';
@@ -42,6 +43,7 @@ async function chicken() {
 
 beforeEach(async () => {
   mockWidth = COMPACT;
+  setPendingMeal(null);
   await require('@react-native-async-storage/async-storage').clear();
   act(() => {
     featureGate.resetConfig();
@@ -79,6 +81,10 @@ describe.each([
 
     await act(async () => fireEvent.press(screen.getByLabelText('Set Lemon Herb Chicken Thighs to Lunch')));
     expect(screen.getAllByText('Lunch').length).toBeGreaterThan(0);
+    expect(await mealPlanStore.entriesForDates([today])).toHaveLength(0);
+
+    await act(async () => fireEvent.press(screen.getByTestId('save-planned-meal')));
+    expect(await mealPlanStore.entriesForDates([today])).toHaveLength(1);
 
     await act(async () => fireEvent.press(screen.getByLabelText('Move Lemon Herb Chicken Thighs to the next day')));
     await waitFor(() => expect(screen.queryByLabelText('Remove Lemon Herb Chicken Thighs')).toBeNull());
@@ -203,6 +209,75 @@ describe('meal plan category chips', () => {
     const stored = await mealPlanStore.entriesForDates([today]);
     expect(stored).toHaveLength(1);
     expect(stored[0].slot).toBe(gone.id);
+  });
+
+  it('keeps a new meal off the calendar until Save, and hides the add block', async () => {
+    await addSampleRecipes(recipeStore);
+    renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
+    const today = toIsoDate(new Date());
+    expect(await screen.findByText('Nothing planned')).toBeTruthy();
+    await act(async () => fireEvent.press(await screen.findByLabelText('Add Lemon Herb Chicken Thighs')));
+
+    expect(await screen.findByTestId('pending-meal')).toBeTruthy();
+    expect(screen.queryByText('Nothing planned')).toBeNull();
+    expect(screen.queryByText('Add a recipe')).toBeNull();
+    expect(screen.queryByTestId('recipe-search')).toBeNull();
+    expect(screen.queryByTestId('new-servings')).toBeNull();
+    expect(screen.queryByLabelText('Move Lemon Herb Chicken Thighs to the next day')).toBeNull();
+    expect(await mealPlanStore.entriesForDates([today])).toHaveLength(0);
+
+    await act(async () => fireEvent.press(screen.getByLabelText('Increase servings for Lemon Herb Chicken Thighs')));
+    expect(screen.getByText('7 servings')).toBeTruthy();
+    expect(await mealPlanStore.entriesForDates([today])).toHaveLength(0);
+
+    await act(async () => fireEvent.press(screen.getByTestId('save-planned-meal')));
+    const stored = await mealPlanStore.entriesForDates([today]);
+    expect(stored).toHaveLength(1);
+    expect(stored[0].servings).toBe(7);
+    expect(await screen.findByText('Add a recipe')).toBeTruthy();
+    expect(screen.queryByTestId('pending-meal')).toBeNull();
+    expect(screen.getByLabelText('Move Lemon Herb Chicken Thighs to the next day')).toBeTruthy();
+  });
+
+  it('drops the unsaved card when another day is opened and keeps it when the day screen remounts', async () => {
+    await addSampleRecipes(recipeStore);
+    expect(await recipeStore.list()).toHaveLength(2);
+    const today = toIsoDate(new Date());
+    const other = addDays(today, 1);
+    const expanded = renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
+    expect(await screen.findByText('Lemon Herb Chicken Thighs')).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByLabelText('Add Lemon Herb Chicken Thighs')));
+    expect(await screen.findByTestId('pending-meal')).toBeTruthy();
+    expanded.unmount();
+
+    mockWidth = COMPACT;
+    const compact = renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: `/meal-plan/${today}` });
+    expect(await screen.findByTestId('pending-meal')).toBeTruthy();
+    expect(await mealPlanStore.entriesForDates([today])).toHaveLength(0);
+    compact.unmount();
+
+    mockWidth = EXPANDED;
+    renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
+    expect(await screen.findByTestId('pending-meal')).toBeTruthy();
+    const otherCell = screen.queryByTestId(`day-${other}`) ?? screen.getByTestId('cal-next');
+    if (!screen.queryByTestId(`day-${other}`)) fireEvent.press(otherCell);
+    await act(async () => fireEvent.press(screen.getByTestId(`day-${other}`)));
+    await waitFor(() => expect(screen.queryByTestId('pending-meal')).toBeNull());
+    expect(await mealPlanStore.entriesForDates([today, other])).toHaveLength(0);
+    expect(screen.getByText('Add a recipe')).toBeTruthy();
+  });
+
+  it('ignores Add when that recipe is already planned for the category, including a legacy slot', async () => {
+    await recipeStore.prepareCategories();
+    const recipe = await chicken();
+    const today = toIsoDate(new Date());
+    await mealPlanStore.addEntry(today, recipe.id, 'dinner');
+    renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
+    expect(await screen.findByLabelText(`Remove ${recipe.title}`)).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByLabelText(`Add ${recipe.title}`)));
+    expect(screen.queryByTestId('pending-meal')).toBeNull();
+    expect(screen.getByText('Add a recipe')).toBeTruthy();
+    expect(await mealPlanStore.entriesForDates([today])).toHaveLength(1);
   });
 
   it('groups an entry with no slot as Any time', async () => {
