@@ -66,7 +66,7 @@ export function createSettingsStore(store: KeyValueStore = defaultStore) {
   return api;
 }
 
-/** Appearance (v1.0.3) with defaults; unknown stored values fall back to System / Green. */
+/** Appearance (v1.0.3) with defaults; unknown stored values fall back to System / the default accent (Purple since v1.1.2). A saved accent id is kept. */
 function mergeAppearance(raw: Partial<AppearanceSettings> | undefined): AppearanceSettings {
   const d = DEFAULT_SETTINGS.appearance;
   return {

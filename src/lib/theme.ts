@@ -185,7 +185,7 @@ export function contrastRatio(a: string, b: string): number {
 }
 
 export const DEFAULT_THEME_MODE: ThemeMode = 'system';
-export const DEFAULT_ACCENT: AccentId = 'green';
+export const DEFAULT_ACCENT: AccentId = 'purple';
 
 export function isThemeMode(v: unknown): v is ThemeMode {
   return THEME_MODES.some((m) => m.id === v);

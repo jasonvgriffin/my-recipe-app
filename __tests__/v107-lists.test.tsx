@@ -8,7 +8,7 @@ import { renderRouter } from 'expo-router/testing-library';
 import { featureGate, LocalFreeEntitlements } from '@/entitlements';
 import { startOfWeek, toIsoDate } from '@/lib/dates';
 import { addManualItem, compileWeekShoppingList, emptyShoppingList, updateItemDetails } from '@/lib/shopping';
-import { ACCENTS, buildColors } from '@/lib/theme';
+import { ACCENTS, DEFAULT_ACCENT, buildColors } from '@/lib/theme';
 import { createMealPlanStore, mealPlanStore, SHOPPING_ITEMS_STORAGE_KEY } from '@/storage/meal-plan';
 import { createPantryStore, pantryStore, PANTRY_STORAGE_KEY } from '@/storage/pantry';
 import type { KeyValueStore } from '@/storage/kv';
@@ -106,7 +106,7 @@ describe('shopping quantity + notes (screen)', () => {
     expect(qty.props.placeholder).toBe('Quantity');
     expect(notes.props.placeholder).toBe('Notes');
     const { StyleSheet } = require('react-native');
-    const filled = buildColors('dark', 'green').primary;
+    const filled = buildColors('dark', DEFAULT_ACCENT).primary;
     for (const id of ['build-list', 'add-manual']) {
       expect(StyleSheet.flatten(screen.getByTestId(id).props.style).backgroundColor).toBe(filled);
     }

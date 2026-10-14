@@ -273,3 +273,11 @@ Version `1.1.1`, Android `versionCode` 12. Same release signing key as 1.0.x and
 - **Shopping list** (#12, #18). Rows do not say “Added by you”. The checklist is one flat list. Aisle values stay on the items and are not shown as headers.
 - **Pantry rows** (#21) show the item name and “Quantity: N”. Category, brand, expiry, and notes stay on the details screen opened from the row.
 - **Settings gear** stays inside the status-bar and right safe area on the tab header.
+
+## v1.1.2 (Jason, Oct 2026)
+
+Version `1.1.2`, Android `versionCode` 13. Same release signing key as 1.0.x, 1.1.0, and 1.1.1.
+
+- **In-app updates.** Settings → Updates has Check for updates. It reads the latest GitHub release of `jasonvgriffin/my-recipe-app` and compares it with the installed version. Nothing checks in the background. A newer release shows the version, the release notes, and Update. Update downloads that release's `.apk` with progress and hands it to Android's package installer through the file-system content URI. The app asks for `REQUEST_INSTALL_PACKAGES` and, when needed, opens the system screen to allow installs from this app. The same signing certificate lets Android replace the installed app. Up to date says "You're on the latest version". Offline, a GitHub rate limit, and a release with no `.apk` each have their own message. On web, Update does not download or install.
+- **More.** The Settings card says "Appearance, units, optional features, backups and updates".
+- **Accent.** New installs use Purple (`#9D5DEE`, white on the fill). A saved accent stays as it was. White on that purple is about 4.01:1. The shade is about 4.01:1 on white, 4.07:1 on the dark card, and 3.73:1 on the light page background.

@@ -8,6 +8,7 @@ import { renderRouter } from 'expo-router/testing-library';
 
 import type { FeatureId } from '@/entitlements';
 import { ADD_MENU_ITEMS, addMenuHref, visibleAddMenuItems } from '@/lib/add-menu';
+import { DEFAULT_ACCENT, buildColors } from '@/lib/theme';
 import { toIsoDate } from '@/lib/dates';
 import { settingsStore } from '@/storage/settings';
 
@@ -201,7 +202,7 @@ describe('section title below the banner (v1.0.4)', () => {
     const appTitle = within(banner).getByText('My Recipe App');
     const appStyle = StyleSheet.flatten(appTitle.props.style);
     expect(appStyle.fontSize).toBeGreaterThanOrEqual(26);
-    expect(appStyle.color).toBe('#3C8F40');
+    expect(appStyle.color).toBe(buildColors('dark', DEFAULT_ACCENT).primary);
     const slot = StyleSheet.flatten(screen.getByTestId('tab-add-slot').props.style);
     expect(slot.width).toBe(58);
     expect(slot.flexGrow).toBe(0);
@@ -266,7 +267,9 @@ describe('More screen', () => {
 describe('More (v1.1.0: no Contact Us)', () => {
   it('lists Pantry and Settings, and does not offer Contact Us', async () => {
     renderRouter(routes(), { initialUrl: '/more' });
-    expect(await screen.findByTestId('more-settings')).toHaveTextContent(/Appearance, units, optional features, backup/);
+    expect(await screen.findByTestId('more-settings')).toHaveTextContent(
+      /Appearance, units, optional features, backups and updates/,
+    );
     expect(screen.getByTestId('more-pantry')).toBeTruthy();
     expect(screen.queryByTestId('more-contact')).toBeNull();
     expect(screen.queryByText('Contact Us')).toBeNull();
