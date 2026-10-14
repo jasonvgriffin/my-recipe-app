@@ -1,6 +1,6 @@
-import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { Stack, router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 import * as Sharing from 'expo-sharing';
 
 import { FeatureGate, FeatureLocked } from '@/components/feature-gate';
@@ -24,9 +24,8 @@ import { recipeStore } from '@/storage/recipes';
 
 /**
  * Paste a link or recipe text, or receive an Android share / deep link (spec #1).
- * Every path calls importRecipe. "Import link" saves the recipe straight away (v1.0.1, Jason: no
- * Save / Save-and-edit choice); pasted text, shares and deep links are shown as a draft until the user saves.
- * A link that is already in your recipes still shows "Already in your recipes" instead of saving.
+ * Every path calls importRecipe. Import link and Import text keep a non-duplicate result as a draft until
+ * Save. A link that is already in your recipes shows "Already in your recipes" and does not warn on leave.
  */
 export default function ImportScreen() {
   return (
@@ -45,23 +44,59 @@ function ImportBody() {
   const [url, setUrl] = useState(typeof params.url === 'string' ? params.url : '');
   const [text, setText] = useState(typeof params.text === 'string' ? params.text : '');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ code: ImportErrorCode; message: string } | null>(null);
+  const [error, setError] = useState<{ code: ImportErrorCode | 'save_failed'; message: string } | null>(null);
   const [draft, setDraft] = useState<Extract<ImportResult, { ok: true }> | null>(null);
   const [pending, setPending] = useState<RecipeImportInput | null>(null);
+  // True after a field edit drops a non-duplicate preview, so Save stays on screen and disabled.
+  const [blocked, setBlocked] = useState(false);
+  const draftRef = useRef(draft);
+  const pendingRef = useRef(pending);
+  const leaveRef = useRef(false);
+  const requestRef = useRef(0);
+  const navigation = useNavigation();
+
+  const rememberDraft = useCallback((next: Extract<ImportResult, { ok: true }> | null) => {
+    draftRef.current = next;
+    setDraft(next);
+    leaveRef.current = Boolean(next && next.status !== 'duplicate');
+  }, []);
+
+  const rememberPending = useCallback((next: RecipeImportInput | null) => {
+    pendingRef.current = next;
+    setPending(next);
+  }, []);
+
+  /** Drop a non-duplicate preview so Save cannot write the page that was just cleared. */
+  const invalidatePreview = useCallback(() => {
+    const current = draftRef.current;
+    if (current?.status === 'duplicate') return;
+    if (!current && !pendingRef.current) return;
+    requestRef.current += 1;
+    leaveRef.current = false;
+    rememberDraft(null);
+    rememberPending(null);
+    setBlocked(true);
+    setBusy(false);
+  }, [rememberDraft, rememberPending]);
 
   const preview = useCallback(async (input: RecipeImportInput) => {
+    const request = ++requestRef.current;
     setBusy(true);
     setError(null);
-    setDraft(null);
-    setPending(input);
+    setBlocked(false);
+    leaveRef.current = false;
+    rememberDraft(null);
+    rememberPending(input);
     const result = await importRecipe(input, { dryRun: true });
+    if (request !== requestRef.current) return;
     setBusy(false);
     if (!result.ok) {
+      rememberPending(null);
       setError({ code: result.code, message: importErrorMessage(result.code, result.errors) });
       return;
     }
-    setDraft(result);
-  }, []);
+    rememberDraft(result);
+  }, [rememberDraft, rememberPending]);
 
   useEffect(() => {
     const paramUrl = firstParam(params.url);
@@ -122,164 +157,219 @@ function ImportBody() {
     };
   }, [params.incoming, preview]);
 
-  /** "Import link": check (errors / duplicate exactly as the draft path), then save with no extra prompt. */
-  async function importLinkNow(input: RecipeImportInput) {
-    setBusy(true);
-    setError(null);
-    setDraft(null);
-    setPending(input);
-    const checked = await importRecipe(input, { dryRun: true });
-    if (!checked.ok) {
-      setBusy(false);
-      setError({ code: checked.code, message: importErrorMessage(checked.code, checked.errors) });
-      return;
-    }
-    if (checked.status === 'duplicate') {
-      setBusy(false);
-      setDraft(checked);
-      return;
-    }
-    await commit(false, input);
-  }
-
-  async function commit(andEdit: boolean, input: RecipeImportInput | null = pending) {
-    if (!input) return;
-    setBusy(true);
-    setError(null);
-    const result = await importRecipe(input);
-    if (!result.ok) {
-      setBusy(false);
-      setError({ code: result.code, message: importErrorMessage(result.code, result.errors) });
-      return;
-    }
-    let saved = result.recipe;
-    if (photos && result.status !== 'duplicate' && isRemotePhoto(saved.photoUri)) {
+  const commit = useCallback(
+    async (mode: 'open' | 'edit' | 'none'): Promise<boolean> => {
+      const input = pendingRef.current;
+      const current = draftRef.current;
+      if (!input || !current || current.status === 'duplicate') return false;
+      setBusy(true);
+      setError(null);
       try {
-        const local = await downloadRecipePhoto(saved.photoUri!, saved.id);
-        saved = { ...saved, photoUri: local };
-        await recipeStore.save(saved);
+        const result = await importRecipe(input);
+        if (!result.ok) {
+          setBusy(false);
+          setError({ code: result.code, message: importErrorMessage(result.code, result.errors) });
+          return false;
+        }
+        let saved = result.recipe;
+        if (photos && result.status !== 'duplicate' && isRemotePhoto(saved.photoUri)) {
+          try {
+            const local = await downloadRecipePhoto(saved.photoUri!, saved.id);
+            saved = { ...saved, photoUri: local };
+            await recipeStore.save(saved);
+          } catch {
+            // Keep the remote URL; the recipe itself was saved.
+          }
+        }
+        // Clear before replace so beforeRemove does not warn for a recipe already stored.
+        leaveRef.current = false;
+        rememberDraft(null);
+        rememberPending(null);
+        setBlocked(false);
+        setBusy(false);
+        if (mode === 'edit' && result.status !== 'duplicate') {
+          router.replace({ pathname: '/recipe/[id]/edit', params: { id: saved.id } });
+        } else if (mode === 'open') {
+          router.replace({ pathname: '/recipe/[id]', params: { id: saved.id } });
+        }
+        return true;
       } catch {
-        // Keep the remote URL; the recipe itself was saved.
+        setBusy(false);
+        setError({ code: 'save_failed', message: 'Could not save that recipe. Try again.' });
+        return false;
       }
-    }
-    setBusy(false);
-    if (andEdit && result.status !== 'duplicate') {
-      router.replace({ pathname: '/recipe/[id]/edit', params: { id: saved.id } });
-    } else {
-      router.replace({ pathname: '/recipe/[id]', params: { id: saved.id } });
-    }
-  }
+    },
+    [photos, rememberDraft, rememberPending],
+  );
+  const commitRef = useRef(commit);
+  commitRef.current = commit;
+
+  // Ask before leaving while a non-duplicate draft is on screen. Registered with the other hooks.
+  useEffect(() => {
+    return navigation.addListener('beforeRemove', (e) => {
+      if (!leaveRef.current) return;
+      e.preventDefault();
+      Alert.alert('Save changes?', 'You have an imported recipe that hasn’t been saved.', [
+        { text: 'Keep editing', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          onPress: () => {
+            leaveRef.current = false;
+            navigation.dispatch(e.data.action);
+          },
+        },
+        {
+          text: 'Save',
+          onPress: () => {
+            void commitRef.current('none').then((saved) => {
+              if (!saved) return;
+              leaveRef.current = false;
+              navigation.dispatch(e.data.action);
+            });
+          },
+        },
+      ]);
+    });
+  }, [navigation]);
 
   const duplicate = draft?.status === 'duplicate';
+  const canSave = Boolean(draft && !duplicate && !busy);
+  const showSaveBar = Boolean((draft && !duplicate) || blocked);
+
+  function rejectEmpty(message: string) {
+    requestRef.current += 1;
+    leaveRef.current = false;
+    rememberDraft(null);
+    rememberPending(null);
+    setBlocked(false);
+    setBusy(false);
+    setError({ code: 'invalid_input', message });
+  }
 
   return (
     <MaxWidthContainer maxWidth={MAX_CONTENT_WIDTH.form}>
       <Stack.Screen options={{ title: 'Import recipe' }} />
-      <KeyboardAwareScrollView contentContainerStyle={[styles.container, { paddingBottom: 48 + bottomInset }]} testID="import-screen">
-        <Text style={styles.lead}>Paste a recipe link. The page is read as schema.org JSON-LD, then microdata or the page text.</Text>
-        <Text style={styles.label}>Recipe link</Text>
-        <TextInput
-          value={url}
-          onChangeText={setUrl}
-          placeholder="https://example.com/recipe"
-          placeholderTextColor={colors.placeholder}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          style={styles.input}
-          testID="import-url-input"
-        />
-        <Pressable
-          style={styles.button}
-          accessibilityRole="button"
-          testID="import-url-button"
-          onPress={() => {
-            const trimmed = url.trim();
-            if (!trimmed) {
-              setDraft(null);
-              setError({ code: 'invalid_input', message: 'Paste a recipe link first.' });
-              return;
-            }
-            void importLinkNow({ kind: 'url', url: trimmed, source: { channel: 'app-link' } });
-          }}>
-          <Text style={styles.buttonText}>Import link</Text>
-        </Pressable>
+      <View style={[styles.screen, { paddingBottom: bottomInset }]}>
+        <KeyboardAwareScrollView style={styles.scroll} contentContainerStyle={styles.container} testID="import-screen">
+          <Text style={styles.lead}>Paste a recipe link. The page is read as schema.org JSON-LD, then microdata or the page text.</Text>
+          <Text style={styles.label}>Recipe link</Text>
+          <TextInput
+            value={url}
+            onChangeText={(value) => {
+              setUrl(value);
+              invalidatePreview();
+            }}
+            placeholder="https://example.com/recipe"
+            placeholderTextColor={colors.placeholder}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            style={styles.input}
+            testID="import-url-input"
+          />
+          <Pressable
+            style={styles.button}
+            accessibilityRole="button"
+            testID="import-url-button"
+            onPress={() => {
+              const trimmed = url.trim();
+              if (!trimmed) {
+                rejectEmpty('Paste a recipe link first.');
+                return;
+              }
+              void preview({ kind: 'url', url: trimmed, source: { channel: 'app-link' } });
+            }}>
+            <Text style={styles.buttonText}>Import link</Text>
+          </Pressable>
 
-        <Text style={styles.label}>Or paste the recipe</Text>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder={'Title\nIngredients:\n- 2 tbsp olive oil\nSteps:\n1. Mix'}
-          placeholderTextColor={colors.placeholder}
-          style={[styles.input, styles.multiline]}
-          multiline
-          testID="import-text-input"
-        />
-        <Pressable
-          style={styles.button}
-          accessibilityRole="button"
-          testID="import-text-button"
-          onPress={() => {
-            const trimmed = text.trim();
-            if (!trimmed) {
-              setDraft(null);
-              setError({ code: 'invalid_input', message: 'Paste the recipe text first.' });
-              return;
-            }
-            void preview({ kind: 'text', text: trimmed, source: { channel: 'app-text' } });
-          }}>
-          <Text style={styles.buttonText}>Import text</Text>
-        </Pressable>
+          <Text style={styles.label}>Or paste the recipe</Text>
+          <TextInput
+            value={text}
+            onChangeText={(value) => {
+              setText(value);
+              invalidatePreview();
+            }}
+            placeholder={'Title\nIngredients:\n- 2 tbsp olive oil\nSteps:\n1. Mix'}
+            placeholderTextColor={colors.placeholder}
+            style={[styles.input, styles.multiline]}
+            multiline
+            testID="import-text-input"
+          />
+          <Pressable
+            style={styles.button}
+            accessibilityRole="button"
+            testID="import-text-button"
+            onPress={() => {
+              const trimmed = text.trim();
+              if (!trimmed) {
+                rejectEmpty('Paste the recipe text first.');
+                return;
+              }
+              void preview({ kind: 'text', text: trimmed, source: { channel: 'app-text' } });
+            }}>
+            <Text style={styles.buttonText}>Import text</Text>
+          </Pressable>
 
-        {busy ? <ActivityIndicator color={colors.primary} style={styles.spinner} /> : null}
-        {error ? (
-          <View style={styles.errorBox} testID="import-error">
-            <Text style={styles.error} testID={`import-error-${error.code}`}>
-              {error.message}
-            </Text>
-          </View>
-        ) : null}
-        {draft ? (
-          <View style={styles.draft} testID="import-draft">
-            <Text style={styles.draftTitle}>{duplicate ? 'Already in your recipes' : 'Draft'}</Text>
-            <Text style={styles.recipeTitle}>{draft.recipe.title}</Text>
-            <Text style={styles.meta}>
-              {draft.recipe.ingredients.length} ingredients · {draft.recipe.steps.length} steps
-            </Text>
-            {draft.warnings.map((warning) => (
-              <Text key={warning} style={styles.warning}>
-                • {warning}
+          {busy ? <ActivityIndicator color={colors.primary} style={styles.spinner} /> : null}
+          {error ? (
+            <View style={styles.errorBox} testID="import-error">
+              <Text style={styles.error} testID={`import-error-${error.code}`}>
+                {error.message}
               </Text>
-            ))}
-            {duplicate ? (
-              <Pressable
-                style={styles.button}
-                accessibilityRole="button"
-                testID="import-open-existing"
-                onPress={() => router.replace({ pathname: '/recipe/[id]', params: { id: draft.recipe.id } })}>
-                <Text style={styles.buttonText}>Open existing recipe</Text>
-              </Pressable>
-            ) : (
-              <View style={styles.row}>
+            </View>
+          ) : null}
+          {draft ? (
+            <View style={styles.draft} testID="import-draft">
+              <Text style={styles.draftTitle}>{duplicate ? 'Already in your recipes' : 'Draft'}</Text>
+              <Text style={styles.recipeTitle}>{draft.recipe.title}</Text>
+              <Text style={styles.meta}>
+                {draft.recipe.ingredients.length} ingredients · {draft.recipe.steps.length} steps
+              </Text>
+              {draft.warnings.map((warning) => (
+                <Text key={warning} style={styles.warning}>
+                  • {warning}
+                </Text>
+              ))}
+              {duplicate ? (
                 <Pressable
-                  style={[styles.button, styles.flex]}
+                  style={styles.button}
                   accessibilityRole="button"
-                  testID="import-save"
-                  onPress={() => void commit(false)}>
-                  <Text style={styles.buttonText}>Save recipe</Text>
+                  testID="import-open-existing"
+                  onPress={() => router.replace({ pathname: '/recipe/[id]', params: { id: draft.recipe.id } })}>
+                  <Text style={styles.buttonText}>Open existing recipe</Text>
                 </Pressable>
-                <Pressable
-                  style={[styles.secondary, styles.flex]}
-                  accessibilityRole="button"
-                  testID="import-save-edit"
-                  onPress={() => void commit(true)}>
-                  <Text style={styles.secondaryText}>Save and edit</Text>
-                </Pressable>
-              </View>
-            )}
+              ) : null}
+            </View>
+          ) : null}
+        </KeyboardAwareScrollView>
+        {showSaveBar ? (
+          <View style={styles.saveBar} testID="import-save-bar">
+            <Pressable
+              style={[styles.button, styles.barButton, styles.flex, !canSave && styles.disabled]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canSave }}
+              disabled={!canSave}
+              testID="import-save"
+              onPress={() => void commit('open')}>
+              <Text style={styles.buttonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                Save recipe
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.secondary, styles.barButton, styles.flex, !canSave && styles.disabled]}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canSave }}
+              disabled={!canSave}
+              testID="import-save-edit"
+              onPress={() => void commit('edit')}>
+              <Text style={styles.secondaryText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+                Save and edit
+              </Text>
+            </Pressable>
           </View>
         ) : null}
-      </KeyboardAwareScrollView>
+      </View>
     </MaxWidthContainer>
   );
 }
@@ -291,7 +381,21 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 }
 
 const useStyles = makeStyles((colors) => ({
+  screen: { flex: 1 },
+  scroll: { flex: 1 },
   container: { padding: 16, paddingBottom: 48 },
+  saveBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  barButton: { marginBottom: 0 },
+  disabled: { opacity: 0.5 },
   lead: { color: colors.muted, marginBottom: 16, fontSize: 15, lineHeight: 22 },
   label: { color: colors.text, fontWeight: '600', marginBottom: 6 },
   input: {
@@ -347,6 +451,5 @@ const useStyles = makeStyles((colors) => ({
   recipeTitle: { color: colors.text, fontSize: 20, fontWeight: '700' },
   meta: { color: colors.muted, marginTop: 6, marginBottom: 8 },
   warning: { color: colors.text, marginBottom: 4 },
-  row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
 }));
