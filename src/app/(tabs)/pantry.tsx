@@ -7,14 +7,8 @@ import { FeatureLocked } from '@/components/feature-gate';
 import { KeyboardAwareScrollView, MAX_CONTENT_WIDTH, MaxWidthContainer, useBottomInset } from '@/components/layout';
 import { useFeature, useFeatureVisible } from '@/hooks/use-feature';
 import { useOnDataChange } from '@/hooks/use-on-data-change';
-import {
-  PANTRY_CATEGORIES,
-  expiryState,
-  filterSortPantry,
-  pantryCardText,
-  pantryCategories,
-  type PantrySort,
-} from '@/lib/pantry';
+import { formatQuantity } from '@/lib/ingredients';
+import { PANTRY_CATEGORIES, filterSortPantry, pantryCategories, type PantrySort } from '@/lib/pantry';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { pantryStore } from '@/storage/pantry';
 import type { PantryItem } from '@/types/recipe';
@@ -289,8 +283,10 @@ export default function PantryScreen() {
         </View>
       ) : null}
       {shownItems.map((item) => {
-        const expiry = expiryState(item.expiresAt);
-        const card = pantryCardText(item);
+        const quantityLabel =
+          typeof item.quantity === 'number' && Number.isFinite(item.quantity)
+            ? `Quantity: ${formatQuantity(item.quantity)}`
+            : null;
         return (
           <Pressable
             key={item.id}
@@ -301,18 +297,8 @@ export default function PantryScreen() {
               setError('');
               setDraft(draftFor(item));
             }}>
-            <Text style={styles.itemName}>{card.title}</Text>
-            <Text style={styles.muted}>{card.detail}</Text>
-            {item.expiresAt ? (
-              <Text style={expiry === 'expired' ? styles.error : styles.expiry}>
-                {expiry === 'expired' ? 'Expired' : expiry === 'soon' ? 'Expires soon' : 'Expires'} {item.expiresAt}
-              </Text>
-            ) : null}
-            {item.notes ? (
-              <Text style={styles.muted} testID={`pantry-item-notes-${item.id}`}>
-                {item.notes}
-              </Text>
-            ) : null}
+            <Text style={styles.itemName}>{item.name}</Text>
+            {quantityLabel ? <Text style={styles.itemQuantity}>{quantityLabel}</Text> : null}
           </Pressable>
         );
       })}
@@ -347,10 +333,20 @@ const useStyles = makeStyles((colors) => ({
   wrap: { flexWrap: 'wrap' },
   notes: { height: 192, minHeight: 192, textAlignVertical: 'top' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  card: { backgroundColor: colors.card, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border, minHeight: 44 },
-  itemName: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  itemName: { color: colors.text, fontSize: 16, fontWeight: '600', flexGrow: 1, flexShrink: 1, minWidth: 0 },
+  itemQuantity: { color: colors.text, fontSize: 16, fontWeight: '600', flexGrow: 0, flexShrink: 0 },
   muted: { color: colors.muted, marginTop: 2 },
-  expiry: { color: colors.primary, marginTop: 2 },
   error: { color: colors.danger, marginTop: 2 },
   primaryBtn: {
     backgroundColor: colors.primary,

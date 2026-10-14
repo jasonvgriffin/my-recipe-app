@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 
 import { featureGate, LocalFreeEntitlements, NoEntitlements } from '@/entitlements';
@@ -36,15 +36,22 @@ describe('pantry screen (spec #21)', () => {
     fireEvent.changeText(screen.getByTestId('pantry-expiry-input'), '2020-01-01');
     await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
 
-    expect(await screen.findByText('Chicken breast')).toBeTruthy();
-    expect(screen.getByText(/2 lb · Perdue · Meat/)).toBeTruthy();
-    expect(screen.getByText(/Expired 2020-01-01/)).toBeTruthy();
+    const row = await screen.findByTestId(/^pantry-item-/);
+    expect(within(row).getByText('Chicken breast')).toBeTruthy();
+    expect(within(row).getByText('Quantity: 2')).toBeTruthy();
+    expect(within(row).queryByText('Meat')).toBeNull();
+    expect(within(row).queryByText(/Perdue/)).toBeNull();
+    expect(within(row).queryByText(/lb/)).toBeNull();
+    expect(within(row).queryByText(/Expired/)).toBeNull();
+    expect(screen.getByTestId('pantry-filter-Meat')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId(/^pantry-item-/));
+    fireEvent.press(row);
     expect(screen.getByTestId('pantry-brand-input').props.value).toBe('Perdue');
+    expect(screen.getByTestId('pantry-category-input').props.value).toBe('Meat');
     fireEvent.changeText(screen.getByTestId('pantry-quantity-input'), '4');
     await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
-    expect(await screen.findByText(/4 lb · Perdue · Meat/)).toBeTruthy();
+    expect(await screen.findByText('Quantity: 4')).toBeTruthy();
+    expect(screen.queryByText('Quantity: 2')).toBeNull();
 
     fireEvent.press(screen.getByTestId(/^pantry-item-/));
     await act(async () => fireEvent.press(screen.getByTestId('pantry-remove-button')));
@@ -79,6 +86,66 @@ describe('pantry screen (spec #21)', () => {
     renderPantry();
     expect(await screen.findByTestId('feature-locked-pantry')).toBeTruthy();
     expect(screen.queryByText(/buy|upgrade|subscribe|purchase/i)).toBeNull();
+  });
+});
+
+describe('pantry row quantity (R10)', () => {
+  it('shows Quantity: N beside the name and leaves category, brand, expiry, and notes off the row', async () => {
+    const { pantryStore } = require('@/storage/pantry') as typeof import('@/storage/pantry');
+    const { StyleSheet } = require('react-native') as typeof import('react-native');
+    const candy = await pantryStore.saveDetails({
+      name: "M&M's",
+      quantity: 2,
+      unit: 'bag',
+      category: 'Snacks',
+      brand: 'Mars',
+      expiresAt: '2020-01-01',
+      notes: 'Top shelf',
+    });
+    const oil = await pantryStore.saveDetails({ name: 'Olive oil', category: 'Pantry' });
+    const salt = await pantryStore.saveDetails({ name: 'Salt', quantity: 0, unit: 'tsp', category: 'Spices' });
+    renderPantry();
+
+    const candyRow = await screen.findByTestId(`pantry-item-${candy.id}`);
+    const name = within(candyRow).getByText("M&M's");
+    const quantity = within(candyRow).getByText('Quantity: 2');
+    expect(within(candyRow).queryByText('Snacks')).toBeNull();
+    expect(within(candyRow).queryByText(/Mars/)).toBeNull();
+    expect(within(candyRow).queryByText(/bag/)).toBeNull();
+    expect(within(candyRow).queryByText(/Expired/)).toBeNull();
+    expect(within(candyRow).queryByText('Top shelf')).toBeNull();
+    expect(StyleSheet.flatten(name.props.style)).toEqual(expect.objectContaining({ flexShrink: 1, minWidth: 0 }));
+    expect(StyleSheet.flatten(quantity.props.style)).toEqual(expect.objectContaining({ flexShrink: 0 }));
+    expect(quantity.props.numberOfLines).toBeUndefined();
+    expect(quantity.props.ellipsizeMode).toBeUndefined();
+
+    const oilRow = screen.getByTestId(`pantry-item-${oil.id}`);
+    expect(within(oilRow).getByText('Olive oil')).toBeTruthy();
+    expect(within(oilRow).queryByText(/Quantity/)).toBeNull();
+    expect(within(oilRow).queryByText('Pantry')).toBeNull();
+
+    const saltRow = screen.getByTestId(`pantry-item-${salt.id}`);
+    expect(within(saltRow).getByText('Quantity: 0')).toBeTruthy();
+    expect(within(saltRow).queryByText('Spices')).toBeNull();
+    expect(within(saltRow).queryByText(/tsp/)).toBeNull();
+  });
+
+  it('opens the editor from the row and keeps a category saved there', async () => {
+    const { pantryStore } = require('@/storage/pantry') as typeof import('@/storage/pantry');
+    const rice = await pantryStore.saveDetails({ name: 'Rice', quantity: 1 });
+    renderPantry();
+    fireEvent.press(await screen.findByTestId(`pantry-item-${rice.id}`));
+    expect(screen.getByText('Edit item')).toBeTruthy();
+    expect(screen.getByTestId('pantry-category-input').props.value).toBe('');
+    fireEvent.changeText(screen.getByTestId('pantry-category-input'), 'Grains');
+    await act(async () => fireEvent.press(screen.getByTestId('pantry-save-button')));
+
+    const row = await screen.findByTestId(`pantry-item-${rice.id}`);
+    expect(within(row).getByText('Quantity: 1')).toBeTruthy();
+    expect(within(row).queryByText('Grains')).toBeNull();
+    fireEvent.press(row);
+    expect(screen.getByTestId('pantry-category-input').props.value).toBe('Grains');
+    expect((await pantryStore.list())[0].category).toBe('Grains');
   });
 });
 
