@@ -47,6 +47,13 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - **Servings scaling is display-only.** The stepper does not write the recipe. Fractions and mixed numbers go through `parseIngredient` / `scaleIngredient`. A line that does not parse stays as written.
 - **Fetch `origin/main` before branching.** This VM’s checkout was behind the sweetener-rule removal. Branching from the stale snapshot would have put that rule back.
 
+## v1.1.1 (2026-10-14)
+
+- **The idle “All changes saved” line is the recipe screen, not the import write.** Hiding that line must leave rating, cooked, category, and unit saves immediate. A link import is a separate draft: dry-run preview, pinned Save, and a leave warning. A duplicate notice is not an unsaved draft.
+- **A fold drops state that lives in the secondary pane.** `TwoPaneLayout` unmounts that pane below 600dp. The unsaved meal has to live outside the pane (a module both the tab and the day route read) or opening the day on a phone loses the card.
+- **Do not write a ref during render.** `commitRef.current = commit` fails `react-hooks/refs`. Close over the callback in the effect that uses it.
+- **`findBy*` inside `act()` does not retry.** Wait for the control, then press it in `act`.
+
 ## 2026-10-13
 
 - **No house sweetener restriction.** Jason dropped it. Do not reject a recipe, an import, or an edit based on which sweetener it uses, and do not put a preferred sweetener back into validation, import errors, placeholders, or docs. Diabetic-friendly still means track servings.
@@ -82,6 +89,9 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 ### Process and usage
 - Before deleting a dependency, search every import. One package can serve a feature you are keeping.
 - A cloud VM snapshot can be behind the remote default branch. Fetch that branch before you branch.
+- Unsaved UI that must survive a layout change cannot live in a pane that unmounts below a width breakpoint. Keep it in the parent or a store both widths read.
+- Do not assign `ref.current` during render. React's refs lint rejects it. Update the ref in an effect, or close over the latest callback in the effect dependencies.
+- Do not wrap `findBy*` inside `act()`. The query does not retry there. Wait for the control, then press it inside `act`.
 - A Google Docs markdown export escapes punctuation (`\+`, `\_`, `\#`) and wraps sentences in backticks. Unescape so it renders. Do not rewrite the author's sentences.
 - Batch requests into fewer, larger versions.
 - One release event builds once (concurrency group; skip CI on docs-only commits).
