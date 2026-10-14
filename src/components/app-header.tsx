@@ -7,16 +7,33 @@ import { makeStyles, useColors } from '@/hooks/use-theme';
 
 export const APP_TITLE = 'My Recipe App';
 
+/** Settings gear glyph. The tab header keeps this width clear so the title cannot cover it. */
+export const SETTINGS_GEAR_ICON_SIZE = 22;
+
+/**
+ * Space between the gear and the screen edge when the safe-area inset is 0.
+ * Design spacing scale (docs/DESIGN.md): 16.
+ */
+export const HEADER_HORIZONTAL_PADDING = 16;
+
 /**
  * Header title on every main screen: the app name, centered and fairly large, in the top banner (with the settings
  * gear on the right). v1.0.4: the section name is no longer in the banner; `SectionLayout` shows it as a page title
  * just below. Used as `headerTitle` with `headerTitleAlign: 'center'` by the tab layout and the root stack.
  */
-export function AppHeaderTitle() {
+export function AppHeaderTitle({ fillWidth = false }: { fillWidth?: boolean }) {
   const styles = useStyles();
   return (
-    <View style={styles.title} testID="app-header">
-      <Text style={styles.app} accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+    <View
+      pointerEvents={fillWidth ? 'box-none' : 'auto'}
+      style={[styles.title, fillWidth && styles.titleFill]}
+      testID="app-header">
+      <Text
+        style={[styles.app, fillWidth && styles.appFill]}
+        accessibilityRole="header"
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}>
         {APP_TITLE}
       </Text>
     </View>
@@ -55,7 +72,7 @@ export function SettingsGearButton() {
   return (
     <Link href="/settings" asChild>
       <Pressable accessibilityLabel="Settings" hitSlop={12} style={styles.gear} testID="settings-button">
-        <Ionicons name="settings-outline" size={22} color={colors.text} />
+        <Ionicons name="settings-outline" size={SETTINGS_GEAR_ICON_SIZE} color={colors.text} />
       </Pressable>
     </Link>
   );
@@ -63,7 +80,10 @@ export function SettingsGearButton() {
 
 const useStyles = makeStyles((colors) => ({
   title: { alignItems: 'center', justifyContent: 'center' },
+  // Tab header only: take the inset title slot so the label shrinks instead of drawing over the gear.
+  titleFill: { alignSelf: 'stretch', width: '100%', minWidth: 0, maxWidth: '100%' },
   app: { color: colors.primary, fontSize: 28, lineHeight: 34, fontWeight: '800' },
+  appFill: { width: '100%', textAlign: 'center' },
   section: {
     color: colors.text,
     fontSize: 22,
@@ -75,5 +95,5 @@ const useStyles = makeStyles((colors) => ({
     paddingBottom: 4,
   },
   layout: { flex: 1 },
-  gear: { paddingHorizontal: 16 },
+  gear: { paddingHorizontal: HEADER_HORIZONTAL_PADDING },
 }));

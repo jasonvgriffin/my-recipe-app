@@ -5,7 +5,13 @@ import { Pressable, Text, View, type ColorValue, type GestureResponderEvent, typ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddMenuSheet } from '@/components/add-menu-sheet';
-import { AppHeaderTitle, SectionLayout, SettingsGearButton } from '@/components/app-header';
+import {
+  AppHeaderTitle,
+  HEADER_HORIZONTAL_PADDING,
+  SectionLayout,
+  SETTINGS_GEAR_ICON_SIZE,
+  SettingsGearButton,
+} from '@/components/app-header';
 import { BottomBarCoversInsetProvider, TAB_BAR, TAB_LABEL_MIN_SCALE } from '@/components/layout';
 import { useFeatureVisible } from '@/hooks/use-feature';
 import { useWindowSizeClass } from '@/hooks/use-window-size-class';
@@ -42,6 +48,37 @@ function TabLabel({ color, children }: { color: string; children: string }) {
       {children}
     </Text>
   );
+}
+
+/**
+ * Tab-header chrome for the settings gear. The right slot keeps the safe-area inset plus horizontal
+ * padding (a zero inset is still not flush). The centered title is inset by the same amount on both
+ * sides, including the gear, so it cannot cover the button. The top inset is applied here for the
+ * bottom bar and the side rail. Stack screens do not use this.
+ */
+function tabHeaderChrome(insets: { top: number; left: number; right: number }) {
+  const paddingRight = insets.right + HEADER_HORIZONTAL_PADDING;
+  // The header also applies marginEnd for the right inset, outside this padding.
+  const gearReach = SETTINGS_GEAR_ICON_SIZE + HEADER_HORIZONTAL_PADDING * 2 + paddingRight + insets.right;
+  const side = Math.max(gearReach, insets.left + HEADER_HORIZONTAL_PADDING);
+  return {
+    headerStatusBarHeight: insets.top,
+    headerRightContainerStyle: {
+      paddingRight,
+      // flexBasis 0 on the slot collapses on web and clips the gear. Size it to the button.
+      flexGrow: 0,
+      flexShrink: 0,
+      flexBasis: 'auto' as const,
+    },
+    headerTitleContainerStyle: {
+      position: 'absolute' as const,
+      left: side,
+      right: side,
+      top: 0,
+      bottom: 0,
+      alignItems: 'stretch' as const,
+    },
+  };
 }
 
 type SlotButtonProps = {
@@ -133,9 +170,11 @@ export default function TabsLayout() {
           tabBarPosition: useNavigationRail ? 'left' : 'bottom',
           tabBarVariant: useNavigationRail ? 'material' : 'uikit',
           tabBarLabelPosition: useNavigationRail ? 'below-icon' : undefined,
+          ...tabHeaderChrome(insets),
           headerStyle: { backgroundColor: colors.card },
           headerTintColor: colors.text,
           headerTitleAlign: 'center',
+          headerTitle: () => <AppHeaderTitle fillWidth />,
           headerRight: () => <SettingsGearButton />,
           tabBarStyle: {
             backgroundColor: colors.card,
@@ -176,7 +215,6 @@ export default function TabsLayout() {
           name="index"
           options={{
             title: 'Recipes',
-            headerTitle: () => <AppHeaderTitle />,
             tabBarButtonTestID: 'tab-recipes',
             tabBarIcon: ({ color }) => <TabIcon name="book-outline" color={color} />,
           }}
@@ -185,7 +223,6 @@ export default function TabsLayout() {
           name="meal-plan"
           options={{
             title: 'Meal Plan',
-            headerTitle: () => <AppHeaderTitle />,
             href: showMealPlan ? undefined : null,
             tabBarButtonTestID: 'tab-meal-plan',
             tabBarIcon: ({ color }) => <TabIcon name="calendar-outline" color={color} />,
@@ -221,7 +258,6 @@ export default function TabsLayout() {
           name="shopping"
           options={{
             title: 'Shopping',
-            headerTitle: () => <AppHeaderTitle />,
             href: showShopping ? undefined : null,
             tabBarButtonTestID: 'tab-shopping',
             tabBarIcon: ({ color }) => <TabIcon name="cart-outline" color={color} />,
@@ -231,14 +267,13 @@ export default function TabsLayout() {
           name="more"
           options={{
             title: 'More',
-            headerTitle: () => <AppHeaderTitle />,
             tabBarButtonTestID: 'tab-more',
             tabBarIcon: ({ color }) => <TabIcon name="ellipsis-horizontal" color={color} />,
           }}
         />
         <Tabs.Screen
           name="pantry"
-          options={{ title: 'Pantry', headerTitle: () => <AppHeaderTitle />, href: null }}
+          options={{ title: 'Pantry', href: null }}
         />
       </Tabs>
       <AddMenuSheet visible={menuOpen} onClose={() => setMenuOpen(false)} />
