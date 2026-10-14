@@ -263,7 +263,6 @@ export function ShoppingListView({
                     testID={`shop-item-notes-${item.id}`}
                   />
                 ) : null}
-                {item.recipeIds.length === 0 ? <Text style={styles.manual}>Added by you</Text> : null}
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -367,5 +366,4 @@ const useStyles = makeStyles((colors) => ({
   itemBody: { flex: 1 },
   itemText: { color: colors.text, fontSize: 16 },
   checked: { color: colors.muted, textDecorationLine: 'line-through' },
-  manual: { color: colors.muted, fontSize: 12, marginTop: 2 },
 }));

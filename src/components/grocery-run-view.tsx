@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Modal, Pressable, SectionList, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, Text, View } from 'react-native';
 
 import { useBottomInset } from '@/components/layout';
-import { groupByAisle, shoppingProgress } from '@/lib/shopping';
+import { shoppingProgress } from '@/lib/shopping';
 import { makeStyles } from '@/hooks/use-theme';
 import type { ShoppingListItem } from '@/types/meal-plan';
 
@@ -14,8 +14,8 @@ export interface GroceryRunViewProps {
 }
 
 /**
- * Focused buy list (spec #18): aisle groups, large targets, progress, undo.
- * The screen keeps the display awake and owns persistence.
+ * Focused buy list (spec #18): one flat checklist, large targets, progress, undo.
+ * The screen keeps the display awake and owns persistence. Aisle values stay on the items.
  */
 export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunViewProps) {
   const bottomInset = useBottomInset();
@@ -23,11 +23,6 @@ export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunV
   const [notesFor, setNotesFor] = useState<ShoppingListItem | null>(null);
   const progress = shoppingProgress(items);
   const percent = Math.round(progress.fraction * 100);
-  const sections = groupByAisle(items).map((group) => ({
-    title: group.aisle,
-    data: group.items,
-    remaining: group.items.filter((i) => !i.checked).length,
-  }));
 
   const header = (
     <View style={styles.header}>
@@ -58,20 +53,13 @@ export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunV
 
   return (
     <>
-    <SectionList
+    <FlatList
       style={styles.list}
       contentContainerStyle={[styles.content, { paddingBottom: 48 + bottomInset }]}
-      sections={sections}
+      data={items}
       keyExtractor={(item) => item.id}
       ListHeaderComponent={header}
       ListEmptyComponent={<Text style={styles.empty}>Nothing to buy.</Text>}
-      stickySectionHeadersEnabled={false}
-      renderSectionHeader={({ section }) => (
-        <Text style={styles.aisle} accessibilityRole="header" testID={`grocery-aisle-${section.title}`}>
-          {section.title}
-          {section.remaining > 0 ? ` · ${section.remaining} left` : ''}
-        </Text>
-      )}
       renderItem={({ item }) => (
         <View style={styles.row} testID={`grocery-item-${item.id}`}>
           <Pressable
@@ -140,26 +128,6 @@ export function ItemNotesSheet({
   );
 }
 
-/** Aisle counts for the expanded secondary pane. */
-export function GroceryAisleSummary({ items }: { items: ShoppingListItem[] }) {
-  const styles = useStyles();
-  const groups = groupByAisle(items);
-  return (
-    <View style={styles.summary} testID="grocery-summary">
-      <Text style={styles.summaryTitle}>By aisle</Text>
-      {groups.length === 0 ? <Text style={styles.empty}>No aisles yet.</Text> : null}
-      {groups.map((group) => {
-        const left = group.items.filter((i) => !i.checked).length;
-        return (
-          <Text key={group.aisle} style={styles.summaryRow}>
-            {group.aisle} · {left} left
-          </Text>
-        );
-      })}
-    </View>
-  );
-}
-
 const useStyles = makeStyles((colors) => ({
   list: { flex: 1 },
   content: { padding: 16, paddingBottom: 48 },
@@ -179,7 +147,6 @@ const useStyles = makeStyles((colors) => ({
   undoText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
   undoTextOff: { color: colors.placeholder },
   done: { color: colors.primary, fontWeight: '700' },
-  aisle: { color: colors.muted, fontWeight: '800', marginTop: 16, marginBottom: 8, fontSize: 14 },
   row: {
     minHeight: 64,
     flexDirection: 'row',
@@ -238,7 +205,4 @@ const useStyles = makeStyles((colors) => ({
   notesCloseText: { color: colors.primaryText, fontWeight: '700' },
   itemChecked: { color: colors.muted, textDecorationLine: 'line-through' },
   empty: { color: colors.muted, textAlign: 'center', marginTop: 24 },
-  summary: { padding: 16, gap: 8 },
-  summaryTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  summaryRow: { color: colors.text, fontSize: 16 },
 }));

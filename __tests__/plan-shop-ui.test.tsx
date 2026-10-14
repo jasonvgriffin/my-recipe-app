@@ -317,7 +317,7 @@ describe.each([
     fireEvent.changeText(screen.getByTestId('manual-input'), '2 lemons');
     await act(async () => fireEvent.press(screen.getByTestId('add-manual')));
     expect(await screen.findByText('2 lemons')).toBeTruthy();
-    expect(screen.getByText('Added by you')).toBeTruthy();
+    expect(screen.queryByText('Added by you')).toBeNull();
 
     await act(async () => fireEvent.press(screen.getByTestId('clear-checked')));
     await waitFor(() => expect(screen.queryByText(/green beans/i)).toBeNull());
@@ -360,18 +360,20 @@ describe('grocery run (spec #18)', () => {
   it.each([
     ['compact', COMPACT],
     ['expanded', EXPANDED],
-  ])('keeps the screen awake, groups by aisle, and undoes a check at %s', async (_label, width) => {
+  ])('keeps the screen awake, shows one flat list, and undoes a check at %s', async (_label, width) => {
     mockWidth = width;
     const recipe = await chicken();
     const week = toIsoDate(startOfWeek(new Date()));
     await mealPlanStore.addEntry(week, recipe.id, 'dinner');
     renderRouter({ index: Grocery(), 'grocery-run': Grocery() }, { initialUrl: `/grocery-run?weekStart=${week}` });
     expect(await screen.findByText(/green beans/i)).toBeTruthy();
-    expect(screen.getByTestId('grocery-aisle-Produce')).toBeTruthy();
-    expect(screen.getByTestId('grocery-aisle-Meat & seafood')).toBeTruthy();
+    expect(screen.queryByTestId('grocery-aisle-Produce')).toBeNull();
+    expect(screen.queryByTestId('grocery-aisle-Meat & seafood')).toBeNull();
+    expect(screen.queryByText(/left$/)).toBeNull();
+    expect(screen.queryByText('By aisle')).toBeNull();
+    expect(screen.queryByTestId('grocery-summary')).toBeNull();
     expect(useKeepAwake).toHaveBeenCalledWith('grocery-run', { suppressDeactivateWarnings: true });
-    expect(screen.getByTestId(width >= 600 ? 'grocery-layout-dual' : 'grocery-layout-single')).toBeTruthy();
-    if (width >= 600) expect(screen.getByTestId('grocery-summary')).toBeTruthy();
+    expect(screen.queryByTestId('grocery-layout-dual')).toBeNull();
 
     const progressText = () => String(screen.getByTestId('grocery-progress').props.children);
     expect(progressText()).toMatch(/^0 of /);
@@ -386,7 +388,8 @@ describe('grocery run (spec #18)', () => {
     const recipe = await chicken();
     renderRouter({ 'grocery-run': Grocery() }, { initialUrl: `/grocery-run?recipeId=${recipe.id}` });
     expect(await screen.findByText(/green beans/i)).toBeTruthy();
-    expect(screen.getByTestId('grocery-layout-dual')).toBeTruthy();
+    expect(screen.queryByTestId('grocery-layout-dual')).toBeNull();
+    expect(screen.queryByText('By aisle')).toBeNull();
   });
 
   it('opens notes without checking the item off; only the checkbox toggles', () => {
