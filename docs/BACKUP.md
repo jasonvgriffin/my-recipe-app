@@ -15,7 +15,7 @@ file, which Google Drive refused to save from the share sheet; those files still
 | `version` | Schema version (`BACKUP_VERSION`, 1). Newer files are refused with "update the app"; older ones are upgraded in `parseBackup` |
 | `exportedAt`, `appVersion` | When and from which app version |
 | `data.recipes` | Every recipe: ingredients, steps, notes, tags, ratings, categories, servings, units, cooked flag + cooked history, source link, photo link |
-| `data.categories`, `data.meal_plan_entries`, `data.shopping_items`, `data.pantry_items` | The other collections |
+| `data.categories`, `data.meal_plan_entries`, `data.shopping_items`, `data.pantry_items` | The other collections. A meal-plan row is a recipe id, or (v1.1.3) a custom title with no recipe id. Older rows that only have a recipe id still restore. The file version stays 1 |
 | `data.barcode_items` | Present so a 1.0.x file still parses. v1.1.0 writes `[]` and does not restore a barcode cache |
 | `settings` | Units, optional-feature toggles, appearance (theme + accent). `cookingModeKeepAwake` from an old file is ignored |
 | `photos` | Each recipe's local photo, base64, by recipe id (web photos stay URLs) |

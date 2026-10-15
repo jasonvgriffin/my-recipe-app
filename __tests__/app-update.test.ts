@@ -121,15 +121,15 @@ describe('install handoff', () => {
   });
 });
 
-describe('v1.1.2 manifest', () => {
+describe('v1.1.3 manifest', () => {
   it('requests install permission and can see the package installer', () => {
     const { readFileSync } = jest.requireActual('fs') as { readFileSync: (path: string, encoding: string) => string };
     const { join } = jest.requireActual('path') as { join: (...parts: string[]) => string };
     const app = JSON.parse(readFileSync(join(process.cwd(), 'app.json'), 'utf8')) as {
       expo: { version: string; android: { versionCode: number; permissions: string[] } };
     };
-    expect(app.expo.version).toBe('1.1.2');
-    expect(app.expo.android.versionCode).toBe(13);
+    expect(app.expo.version).toBe('1.1.3');
+    expect(app.expo.android.versionCode).toBe(14);
     expect(app.expo.android.permissions).toContain('android.permission.REQUEST_INSTALL_PACKAGES');
     const manifest = readFileSync(
       join(process.cwd(), 'modules/recipe-share/android/src/main/AndroidManifest.xml'),

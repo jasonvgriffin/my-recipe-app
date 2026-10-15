@@ -47,6 +47,12 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - **Servings scaling is display-only.** The stepper does not write the recipe. Fractions and mixed numbers go through `parseIngredient` / `scaleIngredient`. A line that does not parse stays as written.
 - **Fetch `origin/main` before branching.** This VM’s checkout was behind the sweetener-rule removal. Branching from the stale snapshot would have put that rule back.
 
+## v1.1.3 (2026-10-15)
+
+- **A custom meal omits `recipeId`.** An empty string still passes `typeof recipeId === 'string'`. The day card then says "Recipe unavailable", and a backup row looks like a missing recipe. Store `title` and leave `recipeId` off the object.
+- **Save that leaves the day belongs on the day route.** The wide meal-plan pane already shows the calendar beside the day. `router.back()` from that pane leaves the Meal Plan tab.
+- **Do not bump `BACKUP_VERSION` for an optional field.** The file schema is a loose record. A higher version makes the previous app refuse the whole file. An old row with only `recipeId` still loads. A new custom row is skipped by an older install and kept by this one.
+
 ## v1.1.2 (2026-10-14)
 
 - **Purple keeps the white on-color.** `#9D5DEE` is about 4.01:1 for white on the fill, 4.01:1 against white, 4.07:1 against the dark card, and 3.73:1 against the light page `#F5F7F5`. That clears the 3:1 bar. Do not switch Purple to the dark on-color.
@@ -100,6 +106,7 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - Do not assign `ref.current` during render. React's refs lint rejects it. Update the ref in an effect, or close over the latest callback in the effect dependencies.
 - Do not wrap `findBy*` inside `act()`. The query does not retry there. Wait for the control, then press it inside `act`.
 - A saved setting's default is also the fallback for a missing or unknown stored value. Changing the default changes that fallback. A value the user already saved stays.
+- When an older reader rejects a whole file because its version is newer, keep an optional field on the current version. The old reader skips rows it cannot parse. The new reader still loads the old file.
 - Android "install unknown apps" is an app-op. Listing `REQUEST_INSTALL_PACKAGES` in the manifest does not show a permission dialog. Open the system settings screen for this package.
 - Do not import a native module until the platform check has passed. The web build is what the screenshots are taken from.
 - A Google Docs markdown export escapes punctuation (`\+`, `\_`, `\#`) and wraps sentences in backticks. Unescape so it renders. Do not rewrite the author's sentences.

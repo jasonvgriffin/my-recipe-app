@@ -26,7 +26,16 @@ import type { Category, Recipe } from '@/types/recipe';
  * One day's plan: assign a recipe to a meal, move it, or remove it (spec #11).
  * Used in the expanded secondary pane and on the compact day route. Writes go through the meal-plan store.
  */
-export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => void }) {
+export function DayPlan({
+  date,
+  onChanged,
+  onSaved,
+}: {
+  date: IsoDate;
+  onChanged?: () => void;
+  /** Phone day route: leave for the calendar after Save. The wide pane omits this; the calendar is already beside it. */
+  onSaved?: () => void;
+}) {
   const bottomInset = useBottomInset();
   const styles = useStyles();
   const colors = useColors();
@@ -36,6 +45,8 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
   const [slot, setSlot] = useState<string | undefined>(undefined);
   const [query, setQuery] = useState('');
   const [servingsText, setServingsText] = useState('');
+  const [addOpen, setAddOpen] = useState<'recipe' | 'custom' | null>(null);
+  const [customTitle, setCustomTitle] = useState('');
   const storedPending = useSyncExternalStore(subscribePendingMeal, getPendingMeal, getPendingMeal);
   const pending = storedPending?.date === date ? storedPending : null;
 
@@ -122,7 +133,23 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
     }
     setPendingMeal(null);
     setServingsText('');
+    setAddOpen(null);
     await changed();
+    onSaved?.();
+  }
+
+  async function saveCustom() {
+    const title = customTitle.trim();
+    if (!title) return;
+    await mealPlanStore.placeCustomEntry({ date, title, slot });
+    setCustomTitle('');
+    setAddOpen(null);
+    await changed();
+    onSaved?.();
+  }
+
+  function toggleAdd(which: 'recipe' | 'custom') {
+    setAddOpen((current) => (current === which ? null : which));
   }
 
   async function setSlotFor(entry: MealPlanEntry, categoryId: string) {
@@ -177,9 +204,10 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
             <Text style={styles.groupLabel}>{group.label}</Text>
             {group.items.map((entry) => {
               const isPending = entry.id === PENDING_ENTRY_ID;
-              const recipe = byId.get(entry.recipeId);
-              const title = recipe?.title ?? 'Recipe unavailable';
+              const recipe = entry.recipeId ? byId.get(entry.recipeId) : undefined;
+              const title = recipe?.title ?? (entry.recipeId ? 'Recipe unavailable' : entry.title?.trim() || 'Meal');
               const servings = entry.servings ?? recipe?.servings;
+              const isCustom = !entry.recipeId;
               return (
                 <View key={entry.id} style={styles.entry} testID={isPending ? 'pending-meal' : `entry-${entry.id}`}>
                   <Text style={styles.title}>{title}</Text>
@@ -195,6 +223,7 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
                       />
                     ))}
                   </View>
+                  {isCustom ? null : (
                   <View style={styles.row}>
                     <Pressable
                       accessibilityRole="button"
@@ -220,6 +249,7 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
                       <Text style={styles.iconBtnText}>+</Text>
                     </Pressable>
                   </View>
+                  )}
                   <View style={styles.row}>
                     {isPending ? null : (
                       <Pressable
@@ -258,60 +288,108 @@ export function DayPlan({ date, onChanged }: { date: IsoDate; onChanged?: () => 
 
         {pending ? null : (
           <>
-            <Text style={styles.section}>Add a recipe</Text>
-            <View style={styles.row}>
-              {categories.map((c) => (
-                <SlotChip
-                  key={c.id}
-                  label={c.name}
-                  active={slot === c.id}
-                  onPress={() => setSlot(c.id)}
-                  testID={`new-slot-${c.id}`}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add a recipe"
+              accessibilityState={{ expanded: addOpen === 'recipe' }}
+              onPress={() => toggleAdd('recipe')}
+              style={[styles.addToggle, addOpen === 'recipe' && styles.addToggleOpen]}
+              testID="add-recipe-toggle">
+              <Text style={[styles.addToggleText, addOpen === 'recipe' && styles.addToggleTextOpen]}>Add a recipe</Text>
+            </Pressable>
+            {addOpen === 'recipe' ? (
+              <View style={styles.panel} testID="add-recipe-panel">
+                <View style={styles.row}>
+                  {categories.map((c) => (
+                    <SlotChip
+                      key={c.id}
+                      label={c.name}
+                      active={slot === c.id}
+                      onPress={() => setSlot(c.id)}
+                      testID={`new-slot-${c.id}`}
+                    />
+                  ))}
+                </View>
+                <TextInput
+                  value={servingsText}
+                  onChangeText={setServingsText}
+                  placeholder="Servings (optional)"
+                  placeholderTextColor={colors.placeholder}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                  testID="new-servings"
                 />
-              ))}
-            </View>
-            <TextInput
-              value={servingsText}
-              onChangeText={setServingsText}
-              placeholder="Servings (optional)"
-              placeholderTextColor={colors.placeholder}
-              keyboardType="number-pad"
-              style={styles.input}
-              testID="new-servings"
-            />
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search recipes"
-              placeholderTextColor={colors.placeholder}
-              autoCapitalize="none"
-              style={styles.input}
-              testID="recipe-search"
-            />
-            {matches.length === 0 ? <Text style={styles.empty}>No recipes to add.</Text> : null}
-            {matches.map((recipe) => (
-              <Pressable
-                key={recipe.id}
-                accessibilityRole="button"
-                accessibilityLabel={`Add ${recipe.title}`}
-                onPress={() => addRecipe(recipe)}
-                style={styles.addRow}
-                testID={`add-recipe-${recipe.id}`}>
-                <Text style={styles.addTitle}>{recipe.title}</Text>
-                <Text style={styles.addMeta}>Add to {selectedCategory?.name ?? ANY_TIME_LABEL}</Text>
-              </Pressable>
-            ))}
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search recipes"
+                  placeholderTextColor={colors.placeholder}
+                  autoCapitalize="none"
+                  style={styles.input}
+                  testID="recipe-search"
+                />
+                {matches.length === 0 ? <Text style={styles.empty}>No recipes to add.</Text> : null}
+                {matches.map((recipe) => (
+                  <Pressable
+                    key={recipe.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add ${recipe.title}`}
+                    onPress={() => addRecipe(recipe)}
+                    style={styles.addRow}
+                    testID={`add-recipe-${recipe.id}`}>
+                    <Text style={styles.addTitle}>{recipe.title}</Text>
+                    <Text style={styles.addMeta}>Add to {selectedCategory?.name ?? ANY_TIME_LABEL}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Add custom entry"
+              accessibilityState={{ expanded: addOpen === 'custom' }}
+              onPress={() => toggleAdd('custom')}
+              style={[styles.addToggle, addOpen === 'custom' && styles.addToggleOpen]}
+              testID="add-custom-toggle">
+              <Text style={[styles.addToggleText, addOpen === 'custom' && styles.addToggleTextOpen]}>
+                Add custom entry
+              </Text>
+            </Pressable>
+            {addOpen === 'custom' ? (
+              <View style={styles.panel} testID="add-custom-panel">
+                <View style={styles.row}>
+                  {categories.map((c) => (
+                    <SlotChip
+                      key={c.id}
+                      label={c.name}
+                      active={slot === c.id}
+                      onPress={() => setSlot(c.id)}
+                      testID={`custom-slot-${c.id}`}
+                    />
+                  ))}
+                </View>
+                <TextInput
+                  value={customTitle}
+                  onChangeText={setCustomTitle}
+                  placeholder="Meal name"
+                  placeholderTextColor={colors.placeholder}
+                  style={styles.input}
+                  testID="custom-entry-title"
+                />
+              </View>
+            ) : null}
           </>
         )}
       </KeyboardAwareScrollView>
-      {pending ? (
+      {pending || addOpen === 'custom' ? (
         <View style={[styles.saveBar, { paddingBottom: 8 + bottomInset }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Save meal"
-            onPress={() => void savePending()}
-            style={styles.saveBtn}
-            testID="save-planned-meal">
+            accessibilityLabel={pending ? 'Save meal' : 'Save custom entry'}
+            accessibilityState={{ disabled: !pending && customTitle.trim().length === 0 }}
+            disabled={!pending && customTitle.trim().length === 0}
+            onPress={() => void (pending ? savePending() : saveCustom())}
+            style={[styles.saveBtn, !pending && customTitle.trim().length === 0 && styles.saveBtnDisabled]}
+            testID={pending ? 'save-planned-meal' : 'custom-entry-save'}>
             <Text style={styles.saveBtnText}>Save</Text>
           </Pressable>
         </View>
@@ -362,10 +440,26 @@ const useStyles = makeStyles((colors) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveBtnText: { color: colors.primaryText, fontWeight: '700', fontSize: 16 },
+  saveBtnDisabled: { opacity: 0.45 },
+  saveBtnText: { color: colors.primaryText, fontWeight: '700', fontSize: 16, textAlign: 'center' },
+  addToggle: {
+    minHeight: 48,
+    marginTop: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  addToggleOpen: { backgroundColor: colors.primary, borderColor: colors.primary },
+  addToggleText: { color: colors.primary, fontWeight: '700', fontSize: 16, textAlign: 'center', flexShrink: 1 },
+  addToggleTextOpen: { color: colors.primaryText },
+  panel: { gap: 8 },
   heading: { color: colors.text, fontSize: 20, fontWeight: '700' },
   empty: { color: colors.muted, marginVertical: 4 },
-  section: { color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 16 },
   group: { gap: 8, marginTop: 8 },
   groupLabel: { color: colors.muted, fontWeight: '700', textTransform: 'uppercase', fontSize: 12 },
   entry: {

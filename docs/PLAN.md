@@ -31,6 +31,8 @@ Contact Us is gone. Version `1.1.0`, `versionCode` 11, same release keystore.
 
 **v1.1.2 (Jason approved):** Settings can check GitHub for a newer release and, on Android, download that `.apk` and hand it to the system installer. The More Settings card mentions updates. New installs use the Purple accent; a saved accent is kept. Version `1.1.2`, `versionCode` 13, same release keystore.
 
+**v1.1.3 (Jason approved):** On the meal-plan day, Save returns to the calendar. Add a recipe and Add custom entry start collapsed. A custom entry is a title with no recipe id, shows on the day and the calendar, and survives backup and restore. Version `1.1.3`, `versionCode` 14, same release keystore.
+
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
 - [x] Expo SDK 57 + TypeScript + expo-router scaffold

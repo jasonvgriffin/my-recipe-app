@@ -72,6 +72,9 @@ describe.each([
       expect(screen).toHavePathname(`/meal-plan/${today}`);
     }
     expect(await screen.findByText('Nothing planned')).toBeTruthy();
+    expect(screen.queryByTestId('recipe-search')).toBeNull();
+    expect(screen.queryByTestId('custom-entry-title')).toBeNull();
+    await act(async () => fireEvent.press(screen.getByTestId('add-recipe-toggle')));
     await act(async () => fireEvent.press(await screen.findByLabelText('Add Lemon Herb Chicken Thighs')));
     expect(await screen.findByLabelText('Remove Lemon Herb Chicken Thighs')).toBeTruthy();
     expect(screen.getByText('6 servings')).toBeTruthy();
@@ -86,7 +89,13 @@ describe.each([
     await act(async () => fireEvent.press(screen.getByTestId('save-planned-meal')));
     expect(await mealPlanStore.entriesForDates([today])).toHaveLength(1);
 
-    await act(async () => fireEvent.press(screen.getByLabelText('Move Lemon Herb Chicken Thighs to the next day')));
+    if (width < 600) {
+      await waitFor(() => expect(screen).toHavePathname('/'));
+      await act(async () => fireEvent.press(screen.getByTestId(`day-${today}`)));
+      expect(screen).toHavePathname(`/meal-plan/${today}`);
+    }
+
+    await act(async () => fireEvent.press(await screen.findByLabelText('Move Lemon Herb Chicken Thighs to the next day')));
     await waitFor(() => expect(screen.queryByLabelText('Remove Lemon Herb Chicken Thighs')).toBeNull());
 
     const next = addDays(today, 1);
@@ -160,6 +169,7 @@ describe('meal plan category chips', () => {
     const placed = await mealPlanStore.placeEntry({ date: today, recipeId: recipe.id, slot: dinner.id });
 
     renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
+    await act(async () => fireEvent.press(await screen.findByTestId('add-recipe-toggle')));
     expect(await screen.findByTestId(`new-slot-${dinner.id}`)).toBeTruthy();
 
     const tree = JSON.stringify(screen.toJSON());
@@ -216,6 +226,7 @@ describe('meal plan category chips', () => {
     renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
     const today = toIsoDate(new Date());
     expect(await screen.findByText('Nothing planned')).toBeTruthy();
+    await act(async () => fireEvent.press(await screen.findByTestId('add-recipe-toggle')));
     await act(async () => fireEvent.press(await screen.findByLabelText('Add Lemon Herb Chicken Thighs')));
 
     expect(await screen.findByTestId('pending-meal')).toBeTruthy();
@@ -245,6 +256,7 @@ describe('meal plan category chips', () => {
     const today = toIsoDate(new Date());
     const other = addDays(today, 1);
     const expanded = renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
+    await act(async () => fireEvent.press(await screen.findByTestId('add-recipe-toggle')));
     expect(await screen.findByText('Lemon Herb Chicken Thighs')).toBeTruthy();
     await act(async () => fireEvent.press(screen.getByLabelText('Add Lemon Herb Chicken Thighs')));
     expect(await screen.findByTestId('pending-meal')).toBeTruthy();
@@ -274,6 +286,7 @@ describe('meal plan category chips', () => {
     await mealPlanStore.addEntry(today, recipe.id, 'dinner');
     renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
     expect(await screen.findByLabelText(`Remove ${recipe.title}`)).toBeTruthy();
+    await act(async () => fireEvent.press(screen.getByTestId('add-recipe-toggle')));
     await act(async () => fireEvent.press(screen.getByLabelText(`Add ${recipe.title}`)));
     expect(screen.queryByTestId('pending-meal')).toBeNull();
     expect(screen.getByText('Add a recipe')).toBeTruthy();
@@ -287,6 +300,75 @@ describe('meal plan category chips', () => {
     await mealPlanStore.addEntry(today, recipe.id);
     renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
     expect(await screen.findByText('Any time')).toBeTruthy();
+  });
+});
+
+describe.each([
+  ['compact', COMPACT],
+  ['expanded', EXPANDED],
+])('custom meal at %s', (_label, width) => {
+  beforeEach(() => {
+    mockWidth = width;
+  });
+
+  it('starts collapsed, and opening one add section closes the other', async () => {
+    await recipeStore.prepareCategories();
+    renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
+    const today = toIsoDate(new Date());
+    if (width < 600) {
+      await act(async () => fireEvent.press(await screen.findByTestId(`day-${today}`)));
+    }
+    expect(await screen.findByText('Nothing planned')).toBeTruthy();
+    expect(screen.queryByTestId('recipe-search')).toBeNull();
+    expect(screen.queryByTestId('custom-entry-title')).toBeNull();
+    expect(screen.getByTestId('add-recipe-toggle').props.accessibilityState).toMatchObject({ expanded: false });
+    expect(screen.getByTestId('add-custom-toggle').props.accessibilityState).toMatchObject({ expanded: false });
+
+    await act(async () => fireEvent.press(screen.getByTestId('add-recipe-toggle')));
+    expect(await screen.findByTestId('recipe-search')).toBeTruthy();
+    expect(screen.getByTestId('new-servings')).toBeTruthy();
+    expect(screen.queryByTestId('custom-entry-title')).toBeNull();
+
+    await act(async () => fireEvent.press(screen.getByTestId('add-custom-toggle')));
+    expect(await screen.findByTestId('custom-entry-title')).toBeTruthy();
+    expect(screen.queryByTestId('recipe-search')).toBeNull();
+    expect(screen.getByTestId('custom-entry-save').props.accessibilityState).toMatchObject({ disabled: true });
+    await act(async () => fireEvent.press(screen.getByTestId('custom-entry-save')));
+    expect(await mealPlanStore.entriesForDates([today])).toHaveLength(0);
+    expect(screen.getByTestId('custom-entry-title')).toBeTruthy();
+  });
+
+  it('saves a custom entry without a recipe, shows it on the day and calendar, and removes it', async () => {
+    await recipeStore.prepareCategories();
+    const lunch = (await recipeStore.listCategories()).find((c) => c.name === 'Lunch');
+    if (!lunch) throw new Error('Lunch category missing');
+    renderRouter({ index: MealPlan(), 'meal-plan/[date]': DayRoute() }, { initialUrl: '/' });
+    const today = toIsoDate(new Date());
+    if (width < 600) {
+      await act(async () => fireEvent.press(await screen.findByTestId(`day-${today}`)));
+    }
+    await act(async () => fireEvent.press(await screen.findByTestId('add-custom-toggle')));
+    fireEvent.changeText(screen.getByTestId('custom-entry-title'), '  Rotisserie chicken  ');
+    await act(async () => fireEvent.press(screen.getByTestId(`custom-slot-${lunch.id}`)));
+    await act(async () => fireEvent.press(screen.getByTestId('custom-entry-save')));
+
+    const stored = await mealPlanStore.entriesForDates([today]);
+    expect(stored).toHaveLength(1);
+    expect(stored[0].title).toBe('Rotisserie chicken');
+    expect(stored[0].recipeId).toBeUndefined();
+    expect(stored[0].slot).toBe(lunch.id);
+    expect(stored[0].servings).toBeUndefined();
+
+    if (width < 600) {
+      await waitFor(() => expect(screen).toHavePathname('/'));
+      expect(await screen.findByText('Rotisserie chicken')).toBeTruthy();
+      await act(async () => fireEvent.press(screen.getByTestId(`day-${today}`)));
+    }
+    expect(await screen.findByLabelText('Remove Rotisserie chicken')).toBeTruthy();
+    expect(screen.queryByText(/servings/i)).toBeNull();
+    await act(async () => fireEvent.press(screen.getByLabelText('Remove Rotisserie chicken')));
+    await waitFor(() => expect(screen.queryByLabelText('Remove Rotisserie chicken')).toBeNull());
+    expect(await mealPlanStore.entriesForDates([today])).toHaveLength(0);
   });
 });
 

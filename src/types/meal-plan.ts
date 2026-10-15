@@ -15,13 +15,22 @@ export type LegacyMealSlot = (typeof MEAL_SLOTS)[number];
 /** A recipe category id, or a legacy meal name from `MEAL_SLOTS`. */
 export type MealSlot = string;
 
-/** A recipe placed on a calendar day (spec #11). */
+/**
+ * A meal on a calendar day (spec #11).
+ * A saved recipe sets `recipeId`. A custom entry (v1.1.3) sets `title` and omits `recipeId`.
+ */
 export interface MealPlanEntry extends SyncMeta {
   date: IsoDate;
-  recipeId: string;
+  /**
+   * Saved recipe. Absent on a custom entry.
+   * Older rows always have this. Do not store an empty string: that still looks like a recipe id.
+   */
+  recipeId?: string;
+  /** Free-text meal that is not a saved recipe (pantry item, store-bought, and so on). v1.1.3. */
+  title?: string;
   /** Category id, or a legacy `breakfast` | `lunch` | `dinner` | `snack`. Omitted means any time. */
   slot?: MealSlot;
-  /** Optional servings override for scaling the shopping list later. */
+  /** Optional servings override for scaling the shopping list later. Recipe entries only. */
   servings?: number;
 }
 
@@ -57,11 +66,15 @@ export interface ShoppingList {
 /**
  * Permissive on purpose: a category id, a legacy meal name, a missing slot, or any other slot string
  * still loads. Slot is not checked, so an old backup row is not dropped.
+ * A row needs a recipe id or a custom title. A row with neither is dropped.
  */
 export function isMealPlanEntry(v: unknown): v is MealPlanEntry {
   if (typeof v !== 'object' || v === null) return false;
   const e = v as Record<string, unknown>;
-  return typeof e.id === 'string' && typeof e.date === 'string' && typeof e.recipeId === 'string';
+  if (typeof e.id !== 'string' || typeof e.date !== 'string') return false;
+  const recipeId = typeof e.recipeId === 'string' && e.recipeId.trim().length > 0;
+  const title = typeof e.title === 'string' && e.title.trim().length > 0;
+  return recipeId || title;
 }
 
 export function isShoppingListItem(v: unknown): v is ShoppingListItem {

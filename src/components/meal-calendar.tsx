@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import { WEEKDAY_LABELS, formatLongDate } from '@/lib/dates';
+import { mealEntryCalendarTitle } from '@/lib/meal-plan';
 import { makeStyles } from '@/hooks/use-theme';
 import type { IsoDate, MealPlanEntry } from '@/types/meal-plan';
 import type { Recipe } from '@/types/recipe';
@@ -62,7 +63,7 @@ export function MealCalendar({
           const dayEntries = entriesByDate.get(iso) ?? [];
           const outside = inMonth ? !inMonth(iso) : false;
           const titles = dayEntries
-            .map((e) => recipes.get(e.recipeId)?.title)
+            .map((e) => mealEntryCalendarTitle(e, recipes))
             .filter((t): t is string => Boolean(t));
           return (
             <Pressable
