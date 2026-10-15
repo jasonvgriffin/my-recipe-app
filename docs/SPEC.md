@@ -288,3 +288,10 @@ Version `1.1.3`, Android `versionCode` 14. Same release signing key as 1.0.x thr
 
 - **Meal plan day** (#11). Add a recipe is a button. It starts collapsed and opens the category chips, optional servings, search, and recipe list. Add custom entry is a second button. It starts collapsed and opens a meal name, the same category chips, and Save. Saving a planned recipe or a custom entry on the day route returns to the calendar. On a wide layout the calendar is already beside the day, so Save stays there.
 - **Custom entries.** A meal that is not a saved recipe (a pantry item, something store-bought) stores a title and no recipe id. It shows on the day and on the calendar cell, and it can be moved or removed. It has no servings stepper and it is left out of the shopping list. Old meal-plan rows and old backups still load. The backup file version stays 1.
+
+## v1.1.4 (Jason, Oct 2026)
+
+Version `1.1.4`, Android `versionCode` 15. Same release signing key as 1.0.x through 1.1.3.
+
+- **Update download.** Settings → Updates still checks only when you tap Check for updates. The APK download now uses Android's DownloadManager, so it keeps going while the screen is locked and the phone shows the system download notification. Progress in Settings is polled from that download. When it finishes, the app opens the installer if it is on screen, and otherwise the next time you come back. The file is still handed over through the file-system content URI. No new permission. The Updates section says you must allow this app to install unknown apps before you update.
+- **Release notes.** Headings and bullets in the GitHub notes are shown as headings and bullets. The raw `#` and `-` marks are not shown.

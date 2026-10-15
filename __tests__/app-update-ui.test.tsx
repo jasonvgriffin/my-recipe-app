@@ -3,7 +3,7 @@
  */
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { UPDATE_MESSAGES } from '@/lib/app-update';
 
@@ -11,6 +11,8 @@ const mockInstall = {
   canInstallPackages: jest.fn(async () => true),
   openInstallPermissionSettings: jest.fn(async () => {}),
   startApkInstall: jest.fn(async (..._args: unknown[]) => ({ kind: 'installed' as const })) as jest.Mock,
+  resumeApkInstall: jest.fn(async () => ({ kind: 'installed' as const })) as jest.Mock,
+  claimPendingApkResume: jest.fn(() => null as string | null),
 };
 
 jest.mock('@/lib/app-update-install', () => mockInstall);
@@ -48,6 +50,10 @@ beforeEach(async () => {
   mockInstall.openInstallPermissionSettings.mockReset();
   mockInstall.startApkInstall.mockReset();
   mockInstall.startApkInstall.mockResolvedValue({ kind: 'installed' });
+  mockInstall.resumeApkInstall.mockReset();
+  mockInstall.resumeApkInstall.mockResolvedValue({ kind: 'installed' });
+  mockInstall.claimPendingApkResume.mockReset();
+  mockInstall.claimPendingApkResume.mockReturnValue(null);
   globalThis.fetch = fetchMock as unknown as typeof fetch;
   jest.replaceProperty(Platform, 'OS', 'ios');
 });
@@ -61,6 +67,7 @@ describe('Settings updates', () => {
   it('does not check until the button is pressed, then says the app is current', async () => {
     fetchMock.mockResolvedValue(jsonRelease({ tag_name: 'v1.1.1', body: '', assets: [] }));
     const button = await openSettings();
+    expect(screen.getByText("Before updating, you must change the app's permissions to allow it to install unknown apps.")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
     await act(async () => {
       fireEvent.press(button);
@@ -183,5 +190,62 @@ describe('Settings updates', () => {
       fireEvent.press(screen.getByTestId('settings-allow-installs'));
     });
     expect(mockInstall.openInstallPermissionSettings).toHaveBeenCalled();
+  });
+
+  it('renders release-note headings and bullets without the markdown marks', async () => {
+    fetchMock.mockResolvedValue(
+      jsonRelease({
+        tag_name: 'v1.2.0',
+        body: '## What changed\n\n- Updates keep downloading with the screen locked\n- Notes are easier to read',
+        assets: [{ name: 'my-recipe-app-1.2.0.apk', browser_download_url: 'https://example.com/app.apk' }],
+      }),
+    );
+    const button = await openSettings();
+    await act(async () => {
+      fireEvent.press(button);
+    });
+    expect(await screen.findByText('What changed')).toBeTruthy();
+    expect(screen.getByText(/Updates keep downloading with the screen locked/)).toBeTruthy();
+    expect(screen.getByText(/Notes are easier to read/)).toBeTruthy();
+    expect(screen.queryByText(/##/)).toBeNull();
+    expect(screen.getByTestId('settings-update-notes')).not.toHaveTextContent('##');
+  });
+
+  it('opens the installer on the next resume when the download finished in the background', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    (AppState as { currentState: string }).currentState = 'background';
+    const changes: Array<(state: string) => void> = [];
+    const appStateSpy = jest.spyOn(AppState, 'addEventListener').mockImplementation((type, handler) => {
+      if (type === 'change') changes.push(handler as (state: string) => void);
+      return { remove: jest.fn() };
+    });
+    const contentUri = 'content://com.jasonvgriffin.myrecipeapp.FileSystemFileProvider/cached_expo_files/update.apk';
+    mockInstall.startApkInstall.mockImplementation(async () => {
+      mockInstall.claimPendingApkResume.mockReturnValueOnce(contentUri);
+      return { kind: 'awaiting-resume', contentUri };
+    });
+    fetchMock.mockResolvedValue(
+      jsonRelease({
+        tag_name: 'v1.2.0',
+        body: 'Notes',
+        assets: [{ name: 'app.apk', browser_download_url: 'https://example.com/app.apk' }],
+      }),
+    );
+    const button = await openSettings();
+    await act(async () => {
+      fireEvent.press(button);
+    });
+    const update = await screen.findByTestId('settings-install-update');
+    await act(async () => {
+      fireEvent.press(update);
+    });
+    expect(await screen.findByText('Downloading 100%')).toBeTruthy();
+    expect(mockInstall.resumeApkInstall).not.toHaveBeenCalled();
+    await act(async () => {
+      changes.at(-1)?.('active');
+    });
+    appStateSpy.mockRestore();
+    expect(mockInstall.resumeApkInstall).toHaveBeenCalledWith(contentUri);
+    expect(await screen.findByText(UPDATE_MESSAGES.handedOff)).toBeTruthy();
   });
 });
