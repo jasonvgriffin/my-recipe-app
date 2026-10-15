@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import {
   LATEST_RELEASE_URL,
@@ -8,7 +8,21 @@ import {
   pickApkAsset,
   updateErrorMessage,
 } from '@/lib/app-update';
-import { startApkInstall } from '@/lib/app-update-install';
+import { apkInstallConfig, claimPendingApkResume, resumeApkInstall, startApkInstall } from '@/lib/app-update-install';
+import { parseReleaseNotes } from '@/lib/release-notes';
+
+const share = {
+  canRequestPackageInstalls: jest.fn(() => true),
+  openUnknownAppSources: jest.fn(async () => {}),
+  installApk: jest.fn(async () => {}),
+  enqueueApkDownload: jest.fn(async () => 11),
+  queryApkDownload: jest.fn(async (): Promise<{ state: string; bytes?: number; total?: number; contentUri?: string }> => ({
+    state: 'failed',
+  })),
+};
+const realLoadNative = apkInstallConfig.loadNative;
+
+const CONTENT_URI = 'content://com.jasonvgriffin.myrecipeapp.FileSystemFileProvider/cached_expo_files/my-recipe-app-update.apk';
 
 function releaseResponse(status: number, body: string, headers: Record<string, string> = {}): Response {
   return {
@@ -109,32 +123,127 @@ describe('checkForUpdate', () => {
   });
 });
 
+describe('release notes', () => {
+  it('turns headings and bullets into text, and leaves a plain line alone', () => {
+    expect(parseReleaseNotes('## What changed\n\n- Updates download with the screen locked\n* Notes are easier to read')).toEqual([
+      { kind: 'heading', text: 'What changed' },
+      { kind: 'bullet', text: 'Updates download with the screen locked' },
+      { kind: 'bullet', text: 'Notes are easier to read' },
+    ]);
+    expect(parseReleaseNotes('1. First\n\nSee [the notes](https://example.com) and **bold**.')).toEqual([
+      { kind: 'bullet', text: 'First' },
+      { kind: 'paragraph', text: 'See the notes and bold.' },
+    ]);
+    expect(parseReleaseNotes('Plain note.')).toEqual([{ kind: 'paragraph', text: 'Plain note.' }]);
+  });
+});
+
 describe('install handoff', () => {
   const original = Platform.OS;
+  const originalState = AppState.currentState;
+
+  beforeEach(() => {
+    apkInstallConfig.pollMs = 0;
+    apkInstallConfig.loadNative = async () => share;
+    share.canRequestPackageInstalls.mockReset();
+    share.canRequestPackageInstalls.mockReturnValue(true);
+    share.installApk.mockReset();
+    share.installApk.mockResolvedValue(undefined);
+    share.enqueueApkDownload.mockReset();
+    share.enqueueApkDownload.mockResolvedValue(11);
+    share.queryApkDownload.mockReset();
+    share.queryApkDownload.mockResolvedValue({ state: 'failed' });
+    (AppState as { currentState: string | null }).currentState = 'active';
+    claimPendingApkResume();
+  });
+
   afterEach(() => {
+    apkInstallConfig.pollMs = 500;
+    apkInstallConfig.loadNative = realLoadNative;
     jest.replaceProperty(Platform, 'OS', original);
+    (AppState as { currentState: string | null }).currentState = originalState;
   });
 
   it('does not touch native modules off Android', async () => {
     jest.replaceProperty(Platform, 'OS', 'web');
     await expect(startApkInstall('https://example.com/app.apk', () => {})).resolves.toEqual({ kind: 'unsupported' });
+    expect(share.enqueueApkDownload).not.toHaveBeenCalled();
+  });
+
+  it('polls DownloadManager and opens the installer when the app is in front', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    share.queryApkDownload
+      .mockResolvedValueOnce({ state: 'running', bytes: 42, total: 100 })
+      .mockResolvedValueOnce({ state: 'successful', contentUri: CONTENT_URI });
+    const seen: (number | null)[] = [];
+    await expect(startApkInstall('https://example.com/app.apk', (percent) => seen.push(percent))).resolves.toEqual({ kind: 'installed' });
+    expect(seen).toEqual([42, 100]);
+    expect(share.enqueueApkDownload).toHaveBeenCalledWith('https://example.com/app.apk');
+    expect(share.installApk).toHaveBeenCalledWith(CONTENT_URI);
+  });
+
+  it('waits for the next resume when the download finishes in the background', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    (AppState as { currentState: string }).currentState = 'background';
+    share.queryApkDownload.mockResolvedValue({ state: 'successful', contentUri: CONTENT_URI });
+    await expect(startApkInstall('https://example.com/app.apk', () => {})).resolves.toEqual({
+      kind: 'awaiting-resume',
+      contentUri: CONTENT_URI,
+    });
+    expect(share.installApk).not.toHaveBeenCalled();
+    expect(claimPendingApkResume()).toBe(CONTENT_URI);
+    expect(claimPendingApkResume()).toBeNull();
+    await expect(resumeApkInstall(CONTENT_URI)).resolves.toEqual({ kind: 'installed' });
+    expect(share.installApk).toHaveBeenCalledWith(CONTENT_URI);
+  });
+
+  it('asks for permission before downloading, and reports a failed download', async () => {
+    jest.replaceProperty(Platform, 'OS', 'android');
+    share.canRequestPackageInstalls.mockReturnValue(false);
+    await expect(startApkInstall('https://example.com/app.apk', () => {})).resolves.toEqual({ kind: 'needs-permission' });
+    expect(share.enqueueApkDownload).not.toHaveBeenCalled();
+
+    share.canRequestPackageInstalls.mockReturnValue(true);
+    share.queryApkDownload.mockResolvedValue({ state: 'failed' });
+    await expect(startApkInstall('https://example.com/app.apk', () => {})).resolves.toEqual({
+      kind: 'error',
+      message: UPDATE_MESSAGES.downloadFailed,
+    });
+    share.enqueueApkDownload.mockRejectedValue(new Error('disabled'));
+    await expect(startApkInstall('https://example.com/app.apk', () => {})).resolves.toEqual({
+      kind: 'error',
+      message: UPDATE_MESSAGES.downloadFailed,
+    });
+    expect(share.installApk).not.toHaveBeenCalled();
   });
 });
 
-describe('v1.1.3 manifest', () => {
-  it('requests install permission and can see the package installer', () => {
+describe('v1.1.4 manifest', () => {
+  it('requests install permission and downloads through DownloadManager without a new permission', () => {
     const { readFileSync } = jest.requireActual('fs') as { readFileSync: (path: string, encoding: string) => string };
     const { join } = jest.requireActual('path') as { join: (...parts: string[]) => string };
     const app = JSON.parse(readFileSync(join(process.cwd(), 'app.json'), 'utf8')) as {
-      expo: { version: string; android: { versionCode: number; permissions: string[] } };
+      expo: { version: string; android: { versionCode: number; permissions: string[]; blockedPermissions: string[] } };
     };
-    expect(app.expo.version).toBe('1.1.3');
-    expect(app.expo.android.versionCode).toBe(14);
-    expect(app.expo.android.permissions).toContain('android.permission.REQUEST_INSTALL_PACKAGES');
-    const manifest = readFileSync(
-      join(process.cwd(), 'modules/recipe-share/android/src/main/AndroidManifest.xml'),
+    expect(app.expo.version).toBe('1.1.4');
+    expect(app.expo.android.versionCode).toBe(15);
+    expect(app.expo.android.permissions).toEqual([
+      'android.permission.VIBRATE',
+      'android.permission.REQUEST_INSTALL_PACKAGES',
+    ]);
+    expect(app.expo.android.blockedPermissions).toContain('android.permission.POST_NOTIFICATIONS');
+    const manifest = readFileSync(join(process.cwd(), 'modules/recipe-share/android/src/main/AndroidManifest.xml'), 'utf8');
+    expect(manifest).toContain('application/vnd.android.package-archive');
+    expect(manifest).not.toContain('POST_NOTIFICATIONS');
+    const kotlin = readFileSync(
+      join(process.cwd(), 'modules/recipe-share/android/src/main/java/expo/modules/recipeshare/ApkInstallModule.kt'),
       'utf8',
     );
-    expect(manifest).toContain('application/vnd.android.package-archive');
+    expect(kotlin).toContain('DownloadManager');
+    expect(kotlin).toContain('VISIBILITY_VISIBLE_NOTIFY_COMPLETED');
+    expect(kotlin).toContain('FileSystemFileProvider');
+    const install = readFileSync(join(process.cwd(), 'src/lib/app-update-install.ts'), 'utf8');
+    expect(install).not.toContain('expo-file-system');
+    expect(install).toContain('enqueueApkDownload');
   });
 });

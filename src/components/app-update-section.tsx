@@ -1,5 +1,6 @@
 /**
- * Settings → Updates (v1.1.2). Manual only: nothing runs until Check for updates.
+ * Settings → Updates (v1.1.2, download via DownloadManager in v1.1.4).
+ * Manual only: nothing runs until Check for updates.
  * On web, Update does not download or open an installer.
  */
 import { useLocalSearchParams } from 'expo-router';
@@ -9,7 +10,16 @@ import { AppState, Platform, Pressable, Text, View } from 'react-native';
 import { appVersion } from '@/config';
 import { makeStyles, useColors } from '@/hooks/use-theme';
 import { checkForUpdate, UPDATE_MESSAGES, updateErrorMessage, type UpdateCheck } from '@/lib/app-update';
-import { canInstallPackages, openInstallPermissionSettings, startApkInstall } from '@/lib/app-update-install';
+import {
+  canInstallPackages,
+  claimPendingApkResume,
+  openInstallPermissionSettings,
+  resumeApkInstall,
+  startApkInstall,
+} from '@/lib/app-update-install';
+import { parseReleaseNotes } from '@/lib/release-notes';
+
+const UPDATE_HELP = "Before updating, you must change the app's permissions to allow it to install unknown apps.";
 
 type Phase =
   | { kind: 'idle' }
@@ -31,7 +41,7 @@ function previewPhase(value: string | string[] | undefined): Phase | null {
       return {
         kind: 'available',
         version: '1.2.0',
-        notes: 'Purple is the default accent for new installs.\nCheck for updates from Settings.',
+        notes: '## What changed\n\n- Purple is the default accent for new installs.\n- Check for updates from Settings.',
         apkUrl: 'https://example.com/my-recipe-app-1.2.0.apk',
       };
     case 'downloading':
@@ -53,19 +63,11 @@ export function AppUpdateSection() {
   const running = useRef(false);
   const busy = phase.kind === 'checking' || phase.kind === 'downloading';
 
-  const runInstall = useCallback(async (apkUrl: string) => {
-    if (Platform.OS !== 'android' || running.current) return;
+  const finishInstall = useCallback(async (contentUri: string) => {
+    if (running.current) return;
     running.current = true;
     try {
-      const allowed = await canInstallPackages();
-      if (!allowed) {
-        setPhase({ kind: 'needs-permission' });
-        return;
-      }
-      setPhase({ kind: 'downloading', percent: null });
-      const result = await startApkInstall(apkUrl, (percent) => {
-        setPhase({ kind: 'downloading', percent });
-      });
+      const result = await resumeApkInstall(contentUri);
       if (result.kind === 'installed') {
         pending.current = null;
         setPhase({ kind: 'handed-off' });
@@ -85,14 +87,65 @@ export function AppUpdateSection() {
     }
   }, []);
 
+  const runInstall = useCallback(async (apkUrl: string) => {
+    if (Platform.OS !== 'android' || running.current) return;
+    running.current = true;
+    let resumeNow = false;
+    try {
+      const allowed = await canInstallPackages();
+      if (!allowed) {
+        setPhase({ kind: 'needs-permission' });
+        return;
+      }
+      setPhase({ kind: 'downloading', percent: null });
+      const result = await startApkInstall(apkUrl, (percent) => {
+        setPhase({ kind: 'downloading', percent });
+      });
+      if (result.kind === 'installed') {
+        pending.current = null;
+        setPhase({ kind: 'handed-off' });
+        return;
+      }
+      if (result.kind === 'awaiting-resume') {
+        pending.current = { apkUrl };
+        setPhase({ kind: 'downloading', percent: 100 });
+        resumeNow = AppState.currentState === 'active';
+      } else if (result.kind === 'needs-permission') {
+        setPhase({ kind: 'needs-permission' });
+      } else if (result.kind === 'error') {
+        setPhase({ kind: 'error', message: result.message });
+      } else {
+        setPhase({ kind: 'error', message: UPDATE_MESSAGES.installerFailed });
+      }
+    } finally {
+      running.current = false;
+    }
+    if (resumeNow) {
+      const uri = claimPendingApkResume();
+      if (uri) await finishInstall(uri);
+    }
+  }, [finishInstall]);
+
   useEffect(() => {
-    if (phase.kind !== 'needs-permission') return;
+    const openFinishedDownload = () => {
+      const uri = claimPendingApkResume();
+      if (!uri) return;
+      void finishInstall(uri);
+    };
+    if (AppState.currentState === 'active') openFinishedDownload();
     const sub = AppState.addEventListener('change', (next) => {
-      if (next !== 'active' || !pending.current) return;
-      void runInstall(pending.current.apkUrl);
+      if (next !== 'active') return;
+      const uri = claimPendingApkResume();
+      if (uri) {
+        void finishInstall(uri);
+        return;
+      }
+      if (phase.kind === 'needs-permission' && pending.current) {
+        void runInstall(pending.current.apkUrl);
+      }
     });
     return () => sub.remove();
-  }, [phase.kind, runInstall]);
+  }, [phase.kind, runInstall, finishInstall]);
 
   async function onCheck() {
     if (checking.current || running.current) return;
@@ -118,7 +171,7 @@ export function AppUpdateSection() {
   return (
     <View testID="settings-updates" style={styles.wrap}>
       <Text style={styles.section}>Updates</Text>
-      <Text style={styles.help}>Look for a newer version when you want one. Nothing checks in the background.</Text>
+      <Text style={styles.help}>{UPDATE_HELP}</Text>
       {phase.kind === 'up-to-date' ? (
         <Text style={styles.status} testID="settings-update-status" accessibilityLiveRegion="polite">
           {UPDATE_MESSAGES.upToDate}
@@ -129,11 +182,7 @@ export function AppUpdateSection() {
           <Text style={styles.status} accessibilityLiveRegion="polite">
             Version {phase.version}
           </Text>
-          {phase.notes ? (
-            <Text style={styles.notes} testID="settings-update-notes">
-              {phase.notes}
-            </Text>
-          ) : null}
+          {phase.notes ? <ReleaseNotes notes={phase.notes} /> : null}
         </View>
       ) : null}
       {phase.kind === 'downloading' ? (
@@ -205,6 +254,24 @@ export function AppUpdateSection() {
   );
 }
 
+function ReleaseNotes({ notes }: { notes: string }) {
+  const styles = useStyles();
+  const parsed = parseReleaseNotes(notes);
+  const blocks = parsed.length > 0 ? parsed : [{ kind: 'paragraph' as const, text: notes }];
+  return (
+    <View testID="settings-update-notes" style={styles.notesBlock}>
+      {blocks.map((block, index) => (
+        <Text
+          key={`${block.kind}-${index}`}
+          accessibilityRole={block.kind === 'heading' ? 'header' : undefined}
+          style={block.kind === 'heading' ? styles.noteHeading : styles.notes}>
+          {block.kind === 'bullet' ? `\u2022  ${block.text}` : block.text}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 function phaseFromCheck(result: UpdateCheck): Phase {
   if (result.kind === 'up-to-date') return { kind: 'up-to-date' };
   if (result.kind === 'error') return { kind: 'error', message: updateErrorMessage(result.reason) };
@@ -216,6 +283,8 @@ const useStyles = makeStyles((colors) => ({
   section: { color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 8 },
   help: { color: colors.muted },
   status: { color: colors.text, fontSize: 16, fontWeight: '600' },
+  notesBlock: { gap: 4 },
+  noteHeading: { color: colors.text, fontSize: 16, fontWeight: '700' },
   notes: { color: colors.text, fontSize: 15 },
   error: { color: colors.danger },
   button: {

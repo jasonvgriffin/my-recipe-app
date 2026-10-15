@@ -52,9 +52,18 @@ export function setAppIcon(target: string, aliasSuffixes: string[]): Promise<str
   return requireNativeModule<RecipeShareNative>('RecipeShare').setAppIcon(target, aliasSuffixes);
 }
 
+export interface ApkDownloadSnapshot {
+  state: 'running' | 'successful' | 'failed';
+  bytes?: number;
+  total?: number;
+  contentUri?: string;
+}
+
 interface ApkInstallNative {
   canRequestPackageInstalls(): boolean;
   openUnknownAppSources(): Promise<void>;
+  enqueueApkDownload(url: string): Promise<number>;
+  queryApkDownload(id: number): Promise<ApkDownloadSnapshot>;
   installApk(contentUri: string): Promise<void>;
 }
 
@@ -66,6 +75,16 @@ export function canRequestPackageInstalls(): boolean {
 /** Opens the system screen where the user allows installs from this app. */
 export function openUnknownAppSources(): Promise<void> {
   return requireNativeModule<ApkInstallNative>('ApkInstall').openUnknownAppSources();
+}
+
+/** Enqueue an APK on Android DownloadManager. The download continues with the screen locked. */
+export function enqueueApkDownload(url: string): Promise<number> {
+  return requireNativeModule<ApkInstallNative>('ApkInstall').enqueueApkDownload(url);
+}
+
+/** Progress or completion for a DownloadManager id. A finished file's contentUri is this app's file provider. */
+export function queryApkDownload(id: number): Promise<ApkDownloadSnapshot> {
+  return requireNativeModule<ApkInstallNative>('ApkInstall').queryApkDownload(id);
 }
 
 /** Starts the system package installer for a content URI from this app's file provider. */

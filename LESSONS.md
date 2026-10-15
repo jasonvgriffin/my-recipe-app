@@ -47,6 +47,12 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - **Servings scaling is display-only.** The stepper does not write the recipe. Fractions and mixed numbers go through `parseIngredient` / `scaleIngredient`. A line that does not parse stays as written.
 - **Fetch `origin/main` before branching.** This VM’s checkout was behind the sweetener-rule removal. Branching from the stale snapshot would have put that rule back.
 
+## v1.1.4 (2026-10-15)
+
+- **DownloadManager cannot write the private cache.** The update file lands in the app's external-files folder, then a copy in the cache is what `FileSystemFileProvider` shares. That provider only lists `files-path` and `cache-path`. Do not add a second FileProvider. The system DownloadManager posts the notification, so this app still does not request `POST_NOTIFICATIONS`.
+- **Open the installer only in the foreground.** A download that finishes while the app is backgrounded keeps its content URI and the Updates `AppState` listener opens the installer on the next resume. Starting the installer from the background is blocked.
+- **GitHub release notes are markdown.** Render headings and bullets before showing them. A short parser is enough. Do not add a markdown package for a list this small.
+
 ## v1.1.3 (2026-10-15)
 
 - **A custom meal omits `recipeId`.** An empty string still passes `typeof recipeId === 'string'`. The day card then says "Recipe unavailable", and a backup row looks like a missing recipe. Store `title` and leave `recipeId` off the object.
@@ -108,6 +114,7 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - A saved setting's default is also the fallback for a missing or unknown stored value. Changing the default changes that fallback. A value the user already saved stays.
 - When an older reader rejects a whole file because its version is newer, keep an optional field on the current version. The old reader skips rows it cannot parse. The new reader still loads the old file.
 - Android "install unknown apps" is an app-op. Listing `REQUEST_INSTALL_PACKAGES` in the manifest does not show a permission dialog. Open the system settings screen for this package.
+- An in-process file download pauses when the phone locks. Android DownloadManager keeps going and posts its own notification, so the app does not need POST_NOTIFICATIONS for that. If the installer only accepts an existing FileProvider URI, copy the finished file into a directory that provider already shares. Do not add a second FileProvider. Open the installer when the app is in the foreground.
 - Do not import a native module until the platform check has passed. The web build is what the screenshots are taken from.
 - A Google Docs markdown export escapes punctuation (`\+`, `\_`, `\#`) and wraps sentences in backticks. Unescape so it renders. Do not rewrite the author's sentences.
 - Batch requests into fewer, larger versions.
