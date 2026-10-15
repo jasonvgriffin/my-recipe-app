@@ -81,7 +81,7 @@ export function collectIngredientKeys(entries: MealPlanEntry[], recipes: Recipe[
   const byId = new Map(recipes.map((r) => [r.id, r]));
   const keys: string[] = [];
   for (const entry of entries) {
-    if (!daySet.has(entry.date)) continue;
+    if (!daySet.has(entry.date) || !entry.recipeId) continue;
     const recipe = byId.get(entry.recipeId);
     if (!recipe) continue;
     for (const ing of recipe.ingredients) {
@@ -294,8 +294,8 @@ export function buildShoppingList(
   const days = new Set(weekDays);
   const byId = new Map(recipes.map((r) => [r.id, r]));
   const parts = entries
-    .filter((e) => days.has(e.date) && byId.has(e.recipeId))
-    .map((e) => ({ recipe: byId.get(e.recipeId)!, servings: e.servings }));
+    .filter((e) => days.has(e.date) && !!e.recipeId && byId.has(e.recipeId))
+    .map((e) => ({ recipe: byId.get(e.recipeId!)!, servings: e.servings }));
   const ts = now.toISOString();
   return {
     id: `week-${weekStart}`,

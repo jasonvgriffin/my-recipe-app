@@ -135,6 +135,28 @@ describe('backup file', () => {
   });
 });
 
+describe('custom meals', () => {
+  it('round-trips a custom meal and an older recipe meal', async () => {
+    const old = phone();
+    await old.plan.placeEntry({ date: '2026-10-05', recipeId: 'r1', slot: 'dinner' }, at('2026-10-01T11:00:00Z'));
+    await old.plan.placeCustomEntry({ date: '2026-10-05', title: 'Rotisserie chicken', slot: 'lunch' }, at('2026-10-01T11:00:00Z'));
+    const backup = await createBackup(old.deps);
+    const custom = backup.data.meal_plan_entries.find((e) => e.title === 'Rotisserie chicken');
+    expect(custom).toBeTruthy();
+    expect(custom).not.toHaveProperty('recipeId');
+    expect(backup.data.meal_plan_entries.some((e) => e.recipeId === 'r1' && e.title === undefined)).toBe(true);
+
+    const fresh = phone();
+    const parsed = parseBackup(JSON.stringify(backup));
+    if (!parsed.ok) throw new Error(parsed.error);
+    await restoreBackup(parsed.backup, 'replace', fresh.deps);
+    const entries = await fresh.plan.entriesForDates(['2026-10-05']);
+    expect(entries).toHaveLength(2);
+    expect(entries.find((e) => e.recipeId === 'r1')?.title).toBeUndefined();
+    expect(entries.find((e) => e.title === 'Rotisserie chicken')?.recipeId).toBeUndefined();
+  });
+});
+
 describe('restore', () => {
   it('restores onto a new phone (merge): photos rewritten, default categories reused, settings restored, stamped for the new account', async () => {
     const { old, chicken, web } = await fullPhone();

@@ -123,3 +123,17 @@ export function defaultMealCategoryId(categories: readonly CategoryRef[]): strin
   const dinner = categories.find((c) => c.name.trim().toLowerCase() === 'dinner');
   return (dinner ?? categories[0])?.id;
 }
+
+/**
+ * Title for a calendar cell.
+ * A recipe row uses the recipe title, and a missing recipe is omitted (the cell stays blank).
+ * A custom entry uses its own title. When both are set, the recipe title wins.
+ */
+export function mealEntryCalendarTitle(
+  entry: Pick<MealPlanEntry, 'recipeId' | 'title'>,
+  recipes: ReadonlyMap<string, { title: string }>,
+): string | undefined {
+  if (entry.recipeId) return recipes.get(entry.recipeId)?.title;
+  const title = entry.title?.trim();
+  return title || undefined;
+}

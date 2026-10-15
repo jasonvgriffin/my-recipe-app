@@ -53,6 +53,28 @@ export function createMealPlanStore(store: KeyValueStore = defaultStore) {
       if (input.servings !== undefined && input.servings > 0) entry.servings = input.servings;
       return entries.save(entry, now);
     },
+    /**
+     * Plan a meal that is not a saved recipe. The title is stored and `recipeId` is omitted
+     * so an older install drops only this row instead of treating it as a missing recipe.
+     * A blank title is not stored.
+     */
+    async placeCustomEntry(
+      input: { date: IsoDate; title: string; slot?: MealSlot },
+      now: Date = new Date(),
+    ): Promise<MealPlanEntry | undefined> {
+      const title = input.title.trim();
+      if (!title) return undefined;
+      const ts = now.toISOString();
+      const entry: MealPlanEntry = {
+        id: uuid(),
+        date: input.date,
+        title,
+        createdAt: ts,
+        updatedAt: ts,
+      };
+      if (input.slot) entry.slot = input.slot;
+      return entries.save(entry, now);
+    },
     /** Move a planned meal to another day and/or slot, or change its servings override. */
     async updateEntry(
       id: string,

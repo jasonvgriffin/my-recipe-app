@@ -1,5 +1,5 @@
 import { createRecipe } from '@/lib/recipe-utils';
-import { defaultMealCategoryId, groupMealPlanEntries, resolveMealSlot } from '@/lib/meal-plan';
+import { defaultMealCategoryId, groupMealPlanEntries, mealEntryCalendarTitle, resolveMealSlot } from '@/lib/meal-plan';
 import { addDays, formatMonthYear, inMonth, monthGrid, weekDates } from '@/lib/dates';
 import { aisleForIngredient } from '@/lib/aisles';
 import {
@@ -132,6 +132,23 @@ describe('meal slot labels', () => {
     expect(isMealPlanEntry({ id: '1', date: '2026-10-03', recipeId: 'r', slot: 'cat-123' })).toBe(true);
     expect(isMealPlanEntry({ id: '1', date: '2026-10-03', recipeId: 'r' })).toBe(true);
     expect(isMealPlanEntry({ date: '2026-10-03', recipeId: 'r' })).toBe(false);
+    expect(isMealPlanEntry({ id: '1', date: '2026-10-03', title: 'Rotisserie chicken' })).toBe(true);
+    expect(isMealPlanEntry({ id: '1', date: '2026-10-03', recipeId: '  ', title: '  ' })).toBe(false);
+    expect(isMealPlanEntry({ id: '1', date: '2026-10-03' })).toBe(false);
+  });
+
+  it('stores a custom meal with a title and no recipe id, and names it on the calendar', async () => {
+    const plan = createMealPlanStore(memoryStore());
+    expect(await plan.placeCustomEntry({ date: '2026-10-03', title: '   ', slot: 'lunch' }, NOW)).toBeUndefined();
+    expect(await plan.entriesForDates(['2026-10-03'])).toHaveLength(0);
+    const custom = await plan.placeCustomEntry({ date: '2026-10-03', title: '  Rotisserie chicken  ', slot: 'lunch' }, NOW);
+    expect(custom).toMatchObject({ title: 'Rotisserie chicken', slot: 'lunch', date: '2026-10-03' });
+    expect(custom).not.toHaveProperty('recipeId');
+    const recipes = new Map([['r1', { title: 'Soup' }]]);
+    expect(mealEntryCalendarTitle({ recipeId: 'r1' }, recipes)).toBe('Soup');
+    expect(mealEntryCalendarTitle({ recipeId: 'gone' }, recipes)).toBeUndefined();
+    expect(mealEntryCalendarTitle({ title: 'Rotisserie chicken' }, recipes)).toBe('Rotisserie chicken');
+    expect(mealEntryCalendarTitle({ recipeId: 'r1', title: 'ignored' }, recipes)).toBe('Soup');
   });
 });
 
@@ -180,6 +197,30 @@ describe('shopping list merge, manual lines, pantry skip (spec #12, #18)', () =>
     const cleared = clearChecked(rebuilt, NOW);
     expect(cleared.items.every((i) => !i.checked)).toBe(true);
     expect(cleared.items.some((i) => i.text === '2 lemons')).toBe(true);
+  });
+
+  it('leaves a custom meal out of the shopping list', () => {
+    const onlyCustom = compileWeekShoppingList(
+      '2026-09-28',
+      [{ id: 'c', date: '2026-10-03', title: 'Rotisserie chicken', createdAt: '', updatedAt: '' }],
+      [bowl],
+      undefined,
+      undefined,
+      NOW,
+    );
+    expect(onlyCustom.items).toEqual([]);
+    const mixed = compileWeekShoppingList(
+      '2026-09-28',
+      [
+        { id: 'e', date: '2026-10-03', recipeId: bowl.id, createdAt: '', updatedAt: '' },
+        { id: 'c', date: '2026-10-03', title: 'Rotisserie chicken', createdAt: '', updatedAt: '' },
+      ],
+      [bowl],
+      undefined,
+      undefined,
+      NOW,
+    );
+    expect(mixed.items.map((i) => i.name).sort()).toEqual(['almond flour', 'cocoa']);
   });
 
   it('skips pantry keys supplied by isInPantry and groups the rest by aisle', () => {

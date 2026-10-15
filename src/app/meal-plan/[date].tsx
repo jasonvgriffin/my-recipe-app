@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 
 import { DayPlan } from '@/components/day-plan';
 import { MaxWidthContainer } from '@/components/layout';
@@ -14,7 +14,15 @@ export default function MealPlanDayScreen() {
     <OptionalFeature id="mealPlan" hiddenLabel="Meal plan is hidden.">
       <MaxWidthContainer>
         <Stack.Screen options={{ title: date ? formatLongDate(date) : 'Day' }} />
-        {date ? <DayPlan date={date} /> : null}
+        {date ? (
+          <DayPlan
+            date={date}
+            onSaved={() => {
+              if (router.canGoBack()) router.back();
+              else router.replace('/meal-plan');
+            }}
+          />
+        ) : null}
       </MaxWidthContainer>
     </OptionalFeature>
   );
