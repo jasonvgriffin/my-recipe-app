@@ -142,7 +142,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
   RevenueCat). Code is ready: flip `tier` in `src/entitlements/features.ts` and plug in an `EntitlementProvider`.
 
 1. ~~**Distribution on Android**~~ — **Resolved (v1.1.0):** the repo is public. Install from GitHub Releases
-   (Obtainium tracks `my-recipe-app-<version>.apk`). Google Play is a later choice, not the v1 path.
+   (each release has one asset, `my-recipe-app-<version>.apk`; the app updates itself from Settings > Updates). Google Play is a later choice, not the v1 path.
 2. ~~**Release signing**~~ — **Resolved:** the production keystore is in GitHub Actions secrets. CI signs release
    APKs with it. Do not regenerate or rotate it without Jason's OK.
 3. ~~**Backend / hosting** for sync + MCP~~ — **Moot since v1.0.6, confirmed in v1.1.0.** The app is local-only.
