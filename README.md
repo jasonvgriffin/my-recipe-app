@@ -10,6 +10,19 @@ Kindly,
 
 Jason Griffin
 
+### Screenshots
+
+Here is what version 1.1.5 looks like on my phone.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/1.1.5/recipes.jpg" width="200" alt="Recipes"><br>Recipes</td>
+    <td align="center"><img src="docs/screenshots/1.1.5/recipe.jpg" width="200" alt="Recipe page"><br>Recipe page</td>
+    <td align="center"><img src="docs/screenshots/1.1.5/import.jpg" width="200" alt="Import from link"><br>Import from link</td>
+    <td align="center"><img src="docs/screenshots/1.1.5/shopping.jpg" width="200" alt="Shopping list"><br>Shopping list</td>
+  </tr>
+</table>
+
 ### Try it
 
 - Android only. Allow installs from unknown sources when your phone asks (Settings > Security, or the prompt that appears when you open the APK).
