@@ -50,6 +50,7 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 ## v1.1.5 (2026-10-23)
 
 - **Drop a cancelled link check before the call that writes.** `importRecipe` saves inside the non-dry-run call. A dry run the user edited away from, or left, has to be ignored before that call. A dropped check is not an error. If the write finishes after Back, keep the recipe and do not pull the screen back.
+- **The v1.1.1 pinned Save is for pasted text.** That version kept a link import as a draft until Save. A successful link now saves and opens the recipe. Pasted text still previews, pins Save, and warns on leave.
 - **Removing a control removes the state that existed only for it.** The checklist Undo stack went with the button. Uncheck is a second tap on the same checkbox.
 
 ## v1.1.4 (2026-10-15)
