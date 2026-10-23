@@ -35,6 +35,8 @@ Contact Us is gone. Version `1.1.0`, `versionCode` 11, same release keystore.
 
 **v1.1.4 (Jason approved):** The update APK downloads through Android DownloadManager, so it continues with the screen locked and shows the system notification. The installer still opens from the file-system content URI, immediately if the app is in front and on the next resume otherwise. Release notes render headings and bullets. The Updates line tells you to allow installs from this app. Version `1.1.4`, `versionCode` 15, same release keystore.
 
+**v1.1.5 (Jason approved):** The shopping checklist has no Undo button. A check is cleared by tapping that row again. A link import saves and opens the recipe; a failed link saves nothing. Pasted text still waits for Save. Add recipe is unchanged. Version `1.1.5`, `versionCode` 16, same release keystore.
+
 ## Phase 1 — Foundation: local recipe CRUD + APK (done in the initial scaffold)
 
 - [x] Expo SDK 57 + TypeScript + expo-router scaffold

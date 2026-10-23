@@ -76,7 +76,7 @@ Removed along the way (the code is in git history): nutrition (Oct 3), receipt s
 
 - Allow installs from unknown sources when prompted (Settings > Security, or the prompt that appears when you open the APK).
 - Download the latest APK from the Releases page (<https://github.com/jasonvgriffin/my-recipe-app/releases>) and open it on your phone to install. The repo is at https://github.com/jasonvgriffin/my-recipe-app.
-- Each release has one asset, my-recipe-app-<version>.apk (for example my-recipe-app-1.1.4.apk).
+- Each release has one asset, my-recipe-app-<version>.apk (for example my-recipe-app-1.1.5.apk).
 - Every release is signed with the same release key, so updates install over the previous version. The app has a built-in updater (Settings > Updates) that downloads new releases from GitHub, so you don't need Obtainium or any other update tracker.
 
 ### Developing locally
@@ -113,7 +113,12 @@ A GitHub Release is published only for a pushed v* tag, or a manual run with pub
 
 ### Versioning
 
-app.json holds expo.version and android.versionCode. The current release is v1.1.4 (versionCode 15). v1.0.0 through v1.0.9 shipped on Oct 3–4, 2026, and v1.1.0 through v1.1.4 on Oct 13–15, 2026.
+app.json holds expo.version and android.versionCode. The current release is v1.1.5 (versionCode 16). v1.0.0 through v1.0.9 shipped on Oct 3–4, 2026, and v1.1.0 through v1.1.4 on Oct 13–15, 2026.
+
+Shipped in v1.1.5:
+
+- The shopping checklist no longer has an Undo button. I check an item off, and I tap it again to clear it.
+- Importing a recipe link saves it and opens the recipe. I don't tap Save for a link. Pasting the recipe text still asks me to save. If the link fails, nothing is stored and I see the error.
 
 Shipped in v1.1.0:
 

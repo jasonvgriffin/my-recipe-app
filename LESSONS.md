@@ -47,6 +47,11 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - **Servings scaling is display-only.** The stepper does not write the recipe. Fractions and mixed numbers go through `parseIngredient` / `scaleIngredient`. A line that does not parse stays as written.
 - **Fetch `origin/main` before branching.** This VM’s checkout was behind the sweetener-rule removal. Branching from the stale snapshot would have put that rule back.
 
+## v1.1.5 (2026-10-23)
+
+- **Drop a cancelled link check before the call that writes.** `importRecipe` saves inside the non-dry-run call. A dry run the user edited away from, or left, has to be ignored before that call. A dropped check is not an error. If the write finishes after Back, keep the recipe and do not pull the screen back.
+- **Removing a control removes the state that existed only for it.** The checklist Undo stack went with the button. Uncheck is a second tap on the same checkbox.
+
 ## v1.1.4 (2026-10-15)
 
 - **DownloadManager cannot write the private cache.** The update file lands in the app's external-files folder, then a copy in the cache is what `FileSystemFileProvider` shares. That provider only lists `files-path` and `cache-path`. Do not add a second FileProvider. The system DownloadManager posts the notification, so this app still does not request `POST_NOTIFICATIONS`.
@@ -115,6 +120,7 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - When an older reader rejects a whole file because its version is newer, keep an optional field on the current version. The old reader skips rows it cannot parse. The new reader still loads the old file.
 - Android "install unknown apps" is an app-op. Listing `REQUEST_INSTALL_PACKAGES` in the manifest does not show a permission dialog. Open the system settings screen for this package.
 - An in-process file download pauses when the phone locks. Android DownloadManager keeps going and posts its own notification, so the app does not need POST_NOTIFICATIONS for that. If the installer only accepts an existing FileProvider URI, copy the finished file into a directory that provider already shares. Do not add a second FileProvider. Open the installer when the app is in the foreground.
+- When a preview can be cancelled and the save happens inside one call, check that the request is still current before that call. A cancelled preview is not an error, and a write that finishes after the user leaves should not navigate them back.
 - Do not import a native module until the platform check has passed. The web build is what the screenshots are taken from.
 - A Google Docs markdown export escapes punctuation (`\+`, `\_`, `\#`) and wraps sentences in backticks. Unescape so it renders. Do not rewrite the author's sentences.
 - Batch requests into fewer, larger versions.

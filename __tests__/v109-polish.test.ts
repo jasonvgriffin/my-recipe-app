@@ -58,8 +58,8 @@ describe('v1.0.9 keyboard', () => {
     const app = JSON.parse(readFileSync(join(process.cwd(), 'app.json'), 'utf8')) as {
       expo: { android: { softwareKeyboardLayoutMode?: string; versionCode?: number }; version?: string };
     };
-    expect(app.expo.version).toBe('1.1.4');
-    expect(app.expo.android.versionCode).toBe(15);
+    expect(app.expo.version).toBe('1.1.5');
+    expect(app.expo.android.versionCode).toBe(16);
     expect(app.expo.android.softwareKeyboardLayoutMode).toBe('resize');
   });
 
