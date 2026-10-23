@@ -15,7 +15,7 @@ the pantry tracks item name, quantity and unit, plus optional category, expirati
 
 **Release policy:** v1.0.0 = ALL SPEC items 1–27 complete (#17 removed). The first published APK is v1.0.0. Until then CI only
 uploads APK _artifacts_ on each push/PR (to keep builds green); a GitHub Release is created only by pushing a
-`v*` tag (or a manual `publish` workflow run) — Eve/Jason decide when.
+`v*` tag (or a manual `publish` workflow run) — the maintainer decides when.
 **v1.0.6 (Jason's requests):** household sharing (#25) was removed — existing household rows were migrated to their
 owner's personal scope. **MCP server deliberately cut in 1.0.6 at Jason's request; may be revisited in a future version.**
 With both gone the app is local-first (no sign-in, no sync); Backup & restore moves data between phones.
@@ -93,7 +93,7 @@ Suggested PR order (each small, with tests; update the status table in SPEC.md):
 > **MCP server deliberately cut in 1.0.6 at Jason's request; may be revisited in a future version.** The notes below
 > are kept as history (the code is in git history: `src/mcp/`, `supabase/functions/mcp/`, `site/oauth/`).
 
-Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes, and see them in the app.
+Goal: Jason can ask an AI assistant to add, tweak, and find recipes, and see them in the app.
 
 1. **Export / import**
    - Export one or all recipes as **JSON** (schema-versioned, round-trippable) and **Markdown**
@@ -109,7 +109,7 @@ Goal: Jason can ask Grok (or another assistant) to add, tweak, and find recipes,
      (inputs/outputs derived from the shared `Recipe` schema; consider a shared `@my-recipe-app/schema` package or zod).
    - Streamable HTTP transport, **HTTPS only**. Server-side validation matches the app.
    - **Auth (decided by Jason, Oct 3 2026): OAuth**, tied to the same Supabase email-code (OTP / magic link)
-     account that household sharing (#25) uses. Grok, ChatGPT and Claude connectors expect OAuth. An API key
+     account that household sharing (#25) uses. AI assistant connectors expect OAuth. An API key
      remains noted as the simpler alternative, but OAuth is the chosen path.
    - **Account + sync required for MCP:** an AI can't reach recipes that live only on the phone, so MCP users
      need the same email-code account with their recipes synced to Supabase. Solo/offline app use still needs

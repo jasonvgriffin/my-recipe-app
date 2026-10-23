@@ -4,9 +4,9 @@ Guidance for Cursor cloud agents (and any other coding agent) working in this re
 
 ## Before building anything (mandatory)
 
-Read `LESSONS.md` first and follow every rule in it, including "Working with Eve". If the shared app-build-lessons skill is not installed, follow `LESSONS.md` and say so.
+Read `LESSONS.md` first and follow every rule in it, including "Working with the coordinating assistant". If the shared app-build-lessons skill is not installed, follow `LESSONS.md` and say so.
 
-**Before opening or updating a PR, add anything new you learned in this run to `LESSONS.md`, even if nobody asked:** app-specific lessons under the app section, reusable ones under General lessons. Also list them under a `Lessons learned` heading in the PR description so Eve can copy the general ones to the other repos and the shared skill.
+**Before opening or updating a PR, add anything new you learned in this run to `LESSONS.md`, even if nobody asked:** app-specific lessons under the app section, reusable ones under General lessons. Also list them under a `Lessons learned` heading in the PR description so the maintainer can copy the general ones to the other repos and the shared skill.
 
 **Before building anything, read docs/INVENTORY.md, docs/SPEC.md and search the codebase. If something similar exists, extend it instead of creating a duplicate (no second helper, component, store, hook, or screen for the same job). Update docs/INVENTORY.md in your PR.**
 
@@ -135,7 +135,7 @@ Never commit the DB password or service_role key; never edit an applied migratio
 5. **Releases:** a GitHub Release with the APK is published **only** for a pushed tag `v*` (e.g. `v1.0.0`) or a
    manual run with `publish: true` + `tag`. The tag must match `app.json` `expo.version`; existing releases are
    never overwritten. **No rolling/incremental releases.** **v1.0.0 = all SPEC items 1–27 complete (#17 removed), and is the
-   first published APK.** Agents must not push `v*` tags or trigger a publish run — Eve/Jason do that.
+   first published APK.** Agents must not push `v*` tags or trigger a publish run — the maintainer does that.
 
 Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the Android SDK.
 
@@ -143,7 +143,7 @@ Android SDK/Gradle builds happen **only in CI**; cloud agents don't need the And
 
 - `main` must stay green (CI builds the APK on every push/PR). Releases only from `v*` tags (see above).
 - Work on a feature branch; open **small, focused PRs** (one concern each) with a clear description and test notes.
-- CI must be green before merge. **Eve merges** PRs (agents do not self-merge to `main` unless Eve says so).
+- CI must be green before merge. **The maintainer merges** PRs (agents do not self-merge to `main` unless the maintainer says so).
 - Don't force-push `main`. Don't commit secrets, keystores, `.env` files, or generated `android/`/`ios/` folders.
 
 ## Product rules (Jason's preferences)

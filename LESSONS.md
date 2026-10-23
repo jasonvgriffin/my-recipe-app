@@ -1,11 +1,11 @@
 # LESSONS.md: My Recipe App
 
 Read this before every build. Add a dated lesson after each version: what went wrong, the rule that prevents it.
-General lessons that apply to any app are copied into the last section of this file from Eve's shared skill, which cloud agents can't read directly. When you find a lesson that applies to any app, add it under General lessons and mention it in your PR so Eve can sync it to the shared skill.
+General lessons that apply to any app are copied into the last section of this file from the coordinating assistant's shared skill, which cloud agents can't read directly. When you find a lesson that applies to any app, add it under General lessons and mention it in your PR so the coordinating assistant can sync it to the shared skill.
 
-## Working with Eve
+## Working with the coordinating assistant
 
-Jason asked the coding agent to get better with Eve as we go. The loop is:
+Jason asked the coding agent to get better at working with the coordinating assistant as we go. The loop is:
 
 - Read this file before writing code. Follow every rule in it.
 - When a review or a bug shows a rule that would have prevented it, add that lesson here in the same change. One rule, what went wrong, the version.
@@ -90,7 +90,7 @@ Jason asked the coding agent to get better with Eve as we go. The loop is:
 - Batch changes into fewer versions; every build + review costs usage.
 - Releases: one tag push builds and publishes. Docs-only commits use `[skip ci]`.
 
-## General lessons (from Eve's shared app-build-lessons skill; Eve keeps this section in sync)
+## General lessons (from the shared app-build-lessons skill; the coordinating assistant keeps this section in sync)
 
 ### Verification
 - Verify UI from real renders or screenshots at 360dp and a default width, never from layout math. Reviewers sign off only from screenshots.

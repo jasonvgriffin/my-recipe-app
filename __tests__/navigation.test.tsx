@@ -273,7 +273,7 @@ describe('More (v1.1.0: no Contact Us)', () => {
     expect(screen.getByTestId('more-pantry')).toBeTruthy();
     expect(screen.queryByTestId('more-contact')).toBeNull();
     expect(screen.queryByText('Contact Us')).toBeNull();
-    expect(screen.queryByText(/eve\.chief_of_staff/)).toBeNull();
+    expect(screen.queryByText(/[\w.+-]+@[\w-]+\.[\w.]+/)).toBeNull();
     expect(screen.queryByText(/AI assistants/)).toBeNull();
   });
 });

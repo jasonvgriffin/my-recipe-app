@@ -260,7 +260,7 @@ Version `1.1.0`, Android `versionCode` 11. Same release signing key as 1.0.x.
 - **Cooking mode, Cook with Me, and step timers removed** (#15, #19, #24). No Cook button, no `myrecipeapp://cook` links, no `docs/COOK_API.md`, no notification or exact-alarm permission. `POST_NOTIFICATIONS` and `RECEIVE_BOOT_COMPLETED` are blocked. A step can still store `durationSeconds` for PDF and share (`src/lib/durations.ts`). Grocery run still uses `expo-keep-awake`. The cooking keep-awake setting is ignored when an old backup is restored.
 - **Servings scaling** (#16). Recipe detail always shows the servings stepper. Parsed quantities, including fractions and mixed numbers, scale for display. A line that does not parse stays as written. The saved recipe does not change. Metric / imperial chips stay behind the `unitConversion` gate.
 - **Supabase client removed.** `@supabase/supabase-js`, `src/types/sync.ts`, and the Supabase variables in `.env.example` are gone. Record metadata lives in `src/types/record.ts` (`SyncMeta`) so old rows and backups still load. New migration `20261013000000_drop_unused_tables.sql` drops `households`, `household_members`, and `receipt_aliases`. The `barcode_items` table is unchanged.
-- **Contact Us removed.** The only address was Eve’s. More lists Pantry and Settings.
+- **Contact Us removed.** The only address was the coordinating assistant's. More lists Pantry and Settings.
 - **No house sweetener restriction** (already on main before this release). Diabetic-friendly still means track servings.
 
 ## v1.1.1 (Jason, Oct 2026)

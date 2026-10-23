@@ -97,7 +97,7 @@ App icon (v1.0.5: yellow bowl `#FFD60A`): sources `assets/icons/*.svg`, PNGs `as
 
 ## Build and release
 
-- `app.json` (icon config by Eve: no `ios.icon`, adaptive background `#16211A`), config plugins in `modules/*/app.plugin.js` and `plugins/with-release-signing.js` (PR #7).
+- `app.json` (icon config by the coordinating assistant: no `ios.icon`, adaptive background `#16211A`), config plugins in `modules/*/app.plugin.js` and `plugins/with-release-signing.js` (PR #7).
 - `.github/workflows/android.yml`: typecheck, lint, jest, prebuild, release APK signed with the release keystore from repo secrets (v1 + v2 + v3 schemes, `plugins/with-release-signing.js`), then `apksigner` scheme check, `zipalign -c -P 16 4`, and a blocked-permission check.
 - Android permissions: `app.json` `android.permissions` (VIBRATE) + `android.blockedPermissions` (storage, overlay, exact alarms, notifications, boot completed, Bluetooth / nearby devices, launcher badges, install referrer, FCM receive). Keep that list in sync with the CI grep. Camera for recipe photos comes from `expo-image-picker`, not a barcode scanner.
 - Tests: `__tests__/` (jest-expo). Jest `testTimeout` is 20 s; screen-heavy suites load routes in `beforeAll`.

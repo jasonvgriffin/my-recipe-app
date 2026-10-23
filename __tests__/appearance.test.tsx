@@ -57,7 +57,7 @@ describe('palettes', () => {
       expect(c.badge).toBe(BADGE_COLORS.badge);
       expect(c.badgeText).toBe(BADGE_COLORS.badgeText);
       expect(c.badgeRing).toBe(BADGE_COLORS.badgeRing);
-      // Fixed badge pair #E53935 / white is ~4.23:1 (Eve: keep this red, do not darken it to clear 4.5).
+      // Fixed badge pair #E53935 / white is ~4.23:1 (maintainer decision: keep this red, do not darken it to clear 4.5).
       expect(contrastRatio(c.badgeText, c.badge)).toBeGreaterThanOrEqual(4.2);
       expect(contrastRatio(c.text, c.tagBg)).toBeGreaterThanOrEqual(7);
       expect(contrastRatio(c.danger, c.card)).toBeGreaterThanOrEqual(4.5);
