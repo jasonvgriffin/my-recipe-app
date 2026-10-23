@@ -27,7 +27,7 @@ function param(value: string | string[] | undefined): string | undefined {
 
 /**
  * Grocery run (spec #18). Full-screen checklist for one recipe or a planned week.
- * One flat list, large targets, progress, undo. The screen stays awake while this is open.
+ * One flat list, large targets, progress. The screen stays awake while this is open.
  */
 export default function GroceryRunScreen() {
   return (
@@ -46,7 +46,6 @@ function GroceryRunBody() {
   const [list, setList] = useState<ShoppingList | undefined>();
   const [missing, setMissing] = useState(false);
   const [ready, setReady] = useState(false);
-  const [undoStack, setUndoStack] = useState<{ id: string; checked: boolean }[]>([]);
 
   const load = useCallback(async () => {
     if (recipeId) {
@@ -98,17 +97,7 @@ function GroceryRunBody() {
 
   async function toggle(item: ShoppingListItem) {
     if (!list) return;
-    setUndoStack((stack) => [...stack, { id: item.id, checked: item.checked }]);
     const next = setItemChecked(list, item.id, !item.checked);
-    setList(next);
-    await mealPlanStore.saveShoppingList(next);
-  }
-
-  async function undo() {
-    const last = undoStack[undoStack.length - 1];
-    if (!last || !list) return;
-    setUndoStack((stack) => stack.slice(0, -1));
-    const next = setItemChecked(list, last.id, last.checked);
     setList(next);
     await mealPlanStore.saveShoppingList(next);
   }
@@ -131,7 +120,7 @@ function GroceryRunBody() {
       ) : missing ? (
         <Text style={{ color: colors.muted, textAlign: 'center', marginTop: 48 }}>Recipe not found.</Text>
       ) : (
-        <GroceryRunView items={items} canUndo={undoStack.length > 0} onToggle={toggle} onUndo={undo} />
+        <GroceryRunView items={items} onToggle={toggle} />
       )}
     </View>
   );

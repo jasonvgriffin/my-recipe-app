@@ -8,16 +8,14 @@ import type { ShoppingListItem } from '@/types/meal-plan';
 
 export interface GroceryRunViewProps {
   items: ShoppingListItem[];
-  canUndo: boolean;
   onToggle: (item: ShoppingListItem) => void;
-  onUndo: () => void;
 }
 
 /**
- * Focused buy list (spec #18): one flat checklist, large targets, progress, undo.
+ * Focused buy list (spec #18): one flat checklist, large targets, progress.
  * The screen keeps the display awake and owns persistence. Aisle values stay on the items.
  */
-export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunViewProps) {
+export function GroceryRunView({ items, onToggle }: GroceryRunViewProps) {
   const bottomInset = useBottomInset();
   const styles = useStyles();
   const [notesFor, setNotesFor] = useState<ShoppingListItem | null>(null);
@@ -36,15 +34,6 @@ export function GroceryRunView({ items, canUndo, onToggle, onUndo }: GroceryRunV
       <View style={styles.track} accessibilityElementsHidden>
         <View style={[styles.fill, { width: `${percent}%` }]} />
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled: !canUndo }}
-        disabled={!canUndo}
-        onPress={onUndo}
-        style={[styles.undo, !canUndo && styles.undoOff]}
-        testID="grocery-undo">
-        <Text style={[styles.undoText, !canUndo && styles.undoTextOff]}>Undo</Text>
-      </Pressable>
       {progress.total > 0 && progress.checked === progress.total ? (
         <Text style={styles.done}>All items checked.</Text>
       ) : null}
@@ -135,17 +124,6 @@ const useStyles = makeStyles((colors) => ({
   progress: { color: colors.text, fontSize: 28, fontWeight: '800' },
   track: { height: 10, borderRadius: 5, backgroundColor: colors.border, overflow: 'hidden' },
   fill: { height: 10, backgroundColor: colors.primary },
-  undo: {
-    minHeight: 56,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  undoOff: { borderColor: colors.border },
-  undoText: { color: colors.primary, fontSize: 18, fontWeight: '800' },
-  undoTextOff: { color: colors.placeholder },
   done: { color: colors.primary, fontWeight: '700' },
   row: {
     minHeight: 64,
