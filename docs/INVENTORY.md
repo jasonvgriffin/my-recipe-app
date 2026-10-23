@@ -1,3 +1,5 @@
+> **Historical planning doc.** Some features described here (the MCP server / Grok integration, household sharing) were dropped; see README.md for what shipped.
+
 # Already-built inventory
 
 > **Update this file in every PR that adds or changes a feature.** Before building anything, read this

@@ -1,3 +1,5 @@
+> **Historical planning doc.** Some features described here (the MCP server / Grok integration, household sharing) were dropped; see README.md for what shipped.
+
 # My Recipe App — Plan
 
 AI-friendly, diabetic-friendly recipe app. Android first, iOS later from the same Expo codebase.

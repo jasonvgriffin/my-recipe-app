@@ -1,3 +1,5 @@
+> **Historical planning doc.** Some features described here (the MCP server / Grok integration, household sharing) were dropped; see README.md for what shipped.
+
 # My Recipe App — v1 Feature Spec
 
 > ## 🍳 RECIPES ARE THE CORE (rule for every agent)
