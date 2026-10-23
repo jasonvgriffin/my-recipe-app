@@ -24,6 +24,6 @@ the account runtime, Settings → Household / More → Household, the `/househol
   Supabase variables. Phone records still use `SyncMeta` in `src/types/record.ts` (UUID, timestamps, optional
   legacy `householdId` / `createdBy`).
 - The live `mcp` Edge Function was deleted in v1.0.6, so the MCP endpoint no longer exists.
-- `.github/workflows/supabase-migrations.yml` still applies new migrations on `main`.
+- The `supabase-migrations.yml` workflow was removed; `supabase/migrations/` is kept as history only.
 
 Backup & restore strips `householdId` and `createdBy` on export. An old backup still loads.

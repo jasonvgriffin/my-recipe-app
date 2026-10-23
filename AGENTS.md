@@ -92,7 +92,6 @@ src/storage/legacy-samples.ts identifies untouched v1.0.0 sample recipes (no see
 test-helpers/sample-recipes.ts  sample recipes for tests only
 __tests__/          jest tests
 .github/workflows/android.yml   CI: APK artifact every push/PR; Release only on v* tag
-.github/workflows/supabase-migrations.yml  applies supabase/migrations on main (see docs/SYNC.md)
 ```
 
 ## Commands
@@ -114,9 +113,9 @@ Expo changes a lot between SDKs — do not trust memory. Check the versioned doc
 
 ## Supabase (no client in the app)
 
-The app has no sign-in, no sync, and no `@supabase/supabase-js` dependency (removed in v1.1.0). The hosted
-project stays so `.github/workflows/supabase-migrations.yml` can apply new files in `supabase/migrations/`.
-v1.1.0 adds `20261013000000_drop_unused_tables.sql` (`households`, `household_members`, `receipt_aliases`).
+The app has no sign-in, no sync, and no `@supabase/supabase-js` dependency (removed in v1.1.0). The
+migrations workflow was removed; `supabase/migrations/` is kept as history only.
+v1.1.0 added `20261013000000_drop_unused_tables.sql` (`households`, `household_members`, `receipt_aliases`).
 Never commit the DB password or service_role key; never edit an applied migration. Details: `docs/SYNC.md`.
 
 ## How CI builds the APK (and when releases happen)
