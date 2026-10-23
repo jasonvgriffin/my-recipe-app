@@ -190,8 +190,6 @@ function ImportBody() {
       try {
         const saved = await commit('open');
         if (!saved) {
-          pendingRef.current = null;
-          draftRef.current = null;
           rememberDraft(null);
           rememberPending(null);
           setBlocked(false);
@@ -307,6 +305,14 @@ function ImportBody() {
   const canSave = Boolean(draft && !duplicate && !busy);
   const showSaveBar = Boolean((draft && !duplicate) || blocked);
 
+  function dropUrlCheck() {
+    if (phaseRef.current !== 'url-dry') return;
+    requestRef.current += 1;
+    phaseRef.current = 'idle';
+    setBusy(false);
+    setError(null);
+  }
+
   function rejectEmpty(message: string) {
     requestRef.current += 1;
     phaseRef.current = 'idle';
@@ -329,12 +335,7 @@ function ImportBody() {
             value={url}
             onChangeText={(value) => {
               setUrl(value);
-              if (phaseRef.current === 'url-dry') {
-                requestRef.current += 1;
-                phaseRef.current = 'idle';
-                setBusy(false);
-                setError(null);
-              }
+              dropUrlCheck();
               invalidatePreview();
             }}
             placeholder="https://example.com/recipe"
@@ -365,12 +366,7 @@ function ImportBody() {
             value={text}
             onChangeText={(value) => {
               setText(value);
-              if (phaseRef.current === 'url-dry') {
-                requestRef.current += 1;
-                phaseRef.current = 'idle';
-                setBusy(false);
-                setError(null);
-              }
+              dropUrlCheck();
               invalidatePreview();
             }}
             placeholder={'Title\nIngredients:\n- 2 tbsp olive oil\nSteps:\n1. Mix'}
