@@ -24,8 +24,8 @@ import { recipeStore } from '@/storage/recipes';
 
 /**
  * Paste a link or recipe text, or receive an Android share / deep link (spec #1).
- * Every path calls importRecipe. Import link and Import text keep a non-duplicate result as a draft until
- * Save. A link that is already in your recipes shows "Already in your recipes" and does not warn on leave.
+ * Every path calls importRecipe. A link import is saved as soon as it succeeds and opens that recipe.
+ * Pasted text stays a draft until Save. A duplicate link opens the recipe already stored.
  */
 export default function ImportScreen() {
   return (
@@ -53,7 +53,17 @@ function ImportBody() {
   const pendingRef = useRef(pending);
   const leaveRef = useRef(false);
   const requestRef = useRef(0);
+  const mountedRef = useRef(true);
+  const persistLock = useRef(false);
+  const phaseRef = useRef<'idle' | 'url-dry' | 'url-persist'>('idle');
   const navigation = useNavigation();
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const rememberDraft = useCallback((next: Extract<ImportResult, { ok: true }> | null) => {
     draftRef.current = next;
@@ -80,6 +90,8 @@ function ImportBody() {
   }, [rememberDraft, rememberPending]);
 
   const preview = useCallback(async (input: RecipeImportInput) => {
+    if (persistLock.current) return;
+    phaseRef.current = 'idle';
     const request = ++requestRef.current;
     setBusy(true);
     setError(null);
@@ -97,65 +109,6 @@ function ImportBody() {
     }
     rememberDraft(result);
   }, [rememberDraft, rememberPending]);
-
-  useEffect(() => {
-    const paramUrl = firstParam(params.url);
-    const paramText = firstParam(params.text);
-    const input: RecipeImportInput | undefined = paramUrl
-      ? (parseImportDeepLink(`myrecipeapp://import?url=${encodeURIComponent(paramUrl)}`) ?? {
-          kind: 'url',
-          url: paramUrl,
-          source: { channel: 'deep-link' },
-        })
-      : paramText
-        ? (parseImportDeepLink(`myrecipeapp://import?text=${encodeURIComponent(paramText)}`) ?? {
-            kind: 'text',
-            text: paramText,
-            source: { channel: 'deep-link' },
-          })
-        : undefined;
-    if (!input) return;
-    let active = true;
-    // Yield once so this effect only schedules the draft; it does not setState synchronously.
-    void Promise.resolve().then(() => {
-      if (active) void preview(input);
-    });
-    return () => {
-      active = false;
-    };
-  }, [params.url, params.text, preview]);
-
-  useEffect(() => {
-    if (firstParam(params.incoming) !== '1') return;
-    let active = true;
-    (async () => {
-      const resolved = await Sharing.getResolvedSharedPayloadsAsync().catch(() => []);
-      const raw = resolved.length ? resolved : Sharing.getSharedPayloads();
-      const pdf = sharedPdfUri(raw as never);
-      if (pdf) {
-        // A shared PDF goes to Import PDF (v1.0.6).
-        Sharing.clearSharedPayloads();
-        if (active) router.replace({ pathname: '/import-pdf', params: { uri: pdf } });
-        return;
-      }
-      const shared = sharedPayloadToText(raw);
-      Sharing.clearSharedPayloads();
-      if (!active) return;
-      if (!shared) {
-        setError({
-          code: 'no_recipe_found',
-          message: 'Nothing to import from that share. Paste a recipe link or the recipe text.',
-        });
-        return;
-      }
-      if (/^https?:\/\//i.test(shared.trim())) setUrl(shared.trim());
-      else setText(shared);
-      await preview(shareTextToImportInput(shared));
-    })();
-    return () => {
-      active = false;
-    };
-  }, [params.incoming, preview]);
 
   const commit = useCallback(
     async (mode: 'open' | 'edit' | 'none'): Promise<boolean> => {
@@ -187,9 +140,9 @@ function ImportBody() {
         rememberPending(null);
         setBlocked(false);
         setBusy(false);
-        if (mode === 'edit' && result.status !== 'duplicate') {
+        if (mode === 'edit' && result.status !== 'duplicate' && mountedRef.current) {
           router.replace({ pathname: '/recipe/[id]/edit', params: { id: saved.id } });
-        } else if (mode === 'open') {
+        } else if (mode === 'open' && mountedRef.current) {
           router.replace({ pathname: '/recipe/[id]', params: { id: saved.id } });
         }
         return true;
@@ -201,10 +154,130 @@ function ImportBody() {
     },
     [photos, rememberDraft, rememberPending],
   );
-  // Ask before leaving while a non-duplicate draft is on screen. Registered with the other hooks.
+
+  const runUrlImport = useCallback(
+    async (input: RecipeImportInput) => {
+      if (persistLock.current) return;
+      const request = ++requestRef.current;
+      phaseRef.current = 'url-dry';
+      setBusy(true);
+      setError(null);
+      setBlocked(false);
+      leaveRef.current = false;
+      rememberDraft(null);
+      rememberPending(null);
+      const result = await importRecipe(input, { dryRun: true });
+      if (request !== requestRef.current || phaseRef.current !== 'url-dry') return;
+      if (!result.ok) {
+        phaseRef.current = 'idle';
+        setBusy(false);
+        setError({ code: result.code, message: importErrorMessage(result.code, result.errors) });
+        return;
+      }
+      if (result.status === 'duplicate') {
+        phaseRef.current = 'idle';
+        setBusy(false);
+        if (mountedRef.current) {
+          router.replace({ pathname: '/recipe/[id]', params: { id: result.recipe.id } });
+        }
+        return;
+      }
+      phaseRef.current = 'url-persist';
+      persistLock.current = true;
+      pendingRef.current = input;
+      draftRef.current = result;
+      leaveRef.current = false;
+      try {
+        const saved = await commit('open');
+        if (!saved) {
+          pendingRef.current = null;
+          draftRef.current = null;
+          rememberDraft(null);
+          rememberPending(null);
+          setBlocked(false);
+        }
+      } finally {
+        persistLock.current = false;
+        if (phaseRef.current === 'url-persist') phaseRef.current = 'idle';
+      }
+    },
+    [commit, rememberDraft, rememberPending],
+  );
+
+  useEffect(() => {
+    const paramUrl = firstParam(params.url);
+    const paramText = firstParam(params.text);
+    const input: RecipeImportInput | undefined = paramUrl
+      ? (parseImportDeepLink(`myrecipeapp://import?url=${encodeURIComponent(paramUrl)}`) ?? {
+          kind: 'url',
+          url: paramUrl,
+          source: { channel: 'deep-link' },
+        })
+      : paramText
+        ? (parseImportDeepLink(`myrecipeapp://import?text=${encodeURIComponent(paramText)}`) ?? {
+            kind: 'text',
+            text: paramText,
+            source: { channel: 'deep-link' },
+          })
+        : undefined;
+    if (!input) return;
+    let active = true;
+    // Yield once so this effect only schedules the import; it does not setState synchronously.
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      if (input.kind === 'url') void runUrlImport(input);
+      else void preview(input);
+    });
+    return () => {
+      active = false;
+    };
+  }, [params.url, params.text, preview, runUrlImport]);
+
+  useEffect(() => {
+    if (firstParam(params.incoming) !== '1') return;
+    let active = true;
+    (async () => {
+      const resolved = await Sharing.getResolvedSharedPayloadsAsync().catch(() => []);
+      const raw = resolved.length ? resolved : Sharing.getSharedPayloads();
+      const pdf = sharedPdfUri(raw as never);
+      if (pdf) {
+        // A shared PDF goes to Import PDF (v1.0.6).
+        Sharing.clearSharedPayloads();
+        if (active) router.replace({ pathname: '/import-pdf', params: { uri: pdf } });
+        return;
+      }
+      const shared = sharedPayloadToText(raw);
+      Sharing.clearSharedPayloads();
+      if (!active) return;
+      if (!shared) {
+        setError({
+          code: 'no_recipe_found',
+          message: 'Nothing to import from that share. Paste a recipe link or the recipe text.',
+        });
+        return;
+      }
+      if (/^https?:\/\//i.test(shared.trim())) setUrl(shared.trim());
+      else setText(shared);
+      const sharedInput = shareTextToImportInput(shared);
+      if (sharedInput.kind === 'url') await runUrlImport(sharedInput);
+      else await preview(sharedInput);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [params.incoming, preview, runUrlImport]);
+
+  // Ask before leaving while a non-duplicate text draft is on screen. A link check still running is dropped.
   useEffect(() => {
     return navigation.addListener('beforeRemove', (e) => {
-      if (!leaveRef.current) return;
+      if (!leaveRef.current) {
+        if (phaseRef.current === 'url-dry') {
+          requestRef.current += 1;
+          phaseRef.current = 'idle';
+          setBusy(false);
+        }
+        return;
+      }
       e.preventDefault();
       Alert.alert('Save changes?', 'You have an imported recipe that hasn’t been saved.', [
         { text: 'Keep editing', style: 'cancel' },
@@ -236,6 +309,7 @@ function ImportBody() {
 
   function rejectEmpty(message: string) {
     requestRef.current += 1;
+    phaseRef.current = 'idle';
     leaveRef.current = false;
     rememberDraft(null);
     rememberPending(null);
@@ -255,6 +329,12 @@ function ImportBody() {
             value={url}
             onChangeText={(value) => {
               setUrl(value);
+              if (phaseRef.current === 'url-dry') {
+                requestRef.current += 1;
+                phaseRef.current = 'idle';
+                setBusy(false);
+                setError(null);
+              }
               invalidatePreview();
             }}
             placeholder="https://example.com/recipe"
@@ -275,7 +355,7 @@ function ImportBody() {
                 rejectEmpty('Paste a recipe link first.');
                 return;
               }
-              void preview({ kind: 'url', url: trimmed, source: { channel: 'app-link' } });
+              void runUrlImport({ kind: 'url', url: trimmed, source: { channel: 'app-link' } });
             }}>
             <Text style={styles.buttonText}>Import link</Text>
           </Pressable>
@@ -285,6 +365,12 @@ function ImportBody() {
             value={text}
             onChangeText={(value) => {
               setText(value);
+              if (phaseRef.current === 'url-dry') {
+                requestRef.current += 1;
+                phaseRef.current = 'idle';
+                setBusy(false);
+                setError(null);
+              }
               invalidatePreview();
             }}
             placeholder={'Title\nIngredients:\n- 2 tbsp olive oil\nSteps:\n1. Mix'}
@@ -298,6 +384,7 @@ function ImportBody() {
             accessibilityRole="button"
             testID="import-text-button"
             onPress={() => {
+              if (persistLock.current) return;
               const trimmed = text.trim();
               if (!trimmed) {
                 rejectEmpty('Paste the recipe text first.');
