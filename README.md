@@ -2,7 +2,7 @@
 
 Greetings,
 
-I built this Android recipe app to get hands-on experience building software with AI coding agents. I like to cook, so it seemed like a good place to start. AI agents wrote almost all of the code and most of this README. I wrote the requirements, made the product decisions, tested the builds on my phone, and merged the changes.
+I built this Android recipe app to get hands-on experience building software with AI coding agents. I like to cook, so it seemed like a good place to start. AI agents wrote all of the code and most of this README. I wrote the requirements, made the product decisions, tested the builds on my phone, and merged the changes.
 
 My goal was to create a very basic app with some useful features.
 
@@ -12,7 +12,7 @@ Jason Griffin
 
 ### Screenshots
 
-Here is what version 1.1.5 looks like on my phone.
+Here is what version 1.1.5 looks like on my phone: Recipes, Recipe page, Import from link, Shopping list.
 
 <table>
   <tr>
@@ -42,14 +42,11 @@ Here is what version 1.1.5 looks like on my phone.
 - Tools: Cursor cloud agents; a personal AI assistant I set up to coordinate the coding agents; GitHub Actions; React Native, Expo and TypeScript.
 - Limitations: Android only (no iOS build), data stays on the device (no account or sync), and it is built for a single user.
 
-### What I learned
+### The biggest thing I learned
 
-- Check the real screen, not the math. Tab labels that fit by layout math were cut off on my phone, so builds are now checked from real renders at 360dp.
-- Open every screenshot before signing off. Screenshots an agent attached as "evidence" turned out to be red error overlays.
-- Put review checklists in the build prompt up front, so one agent run is enough and fix-up runs are avoided.
 - Batch changes into fewer versions, because every build and review costs usage.
 
-### Features
+### Features:
 
 - Import a recipe by pasting its link.
 - Add recipes manually and add tags to them.
@@ -169,7 +166,7 @@ src/config/         app configuration
 
 ## How this was built with AI agents
 
-AI agents wrote almost all of the code. I decided what the app should do and made the product calls. This section describes how that worked, based on the git history, the PRs and the repo docs.
+AI agents wrote all of the code. I decided what the app should do and made the product calls. This section describes how that worked, based on the git history, the PRs and the repo docs.
 
 ### Who did what
 
@@ -220,4 +217,6 @@ Agents may not push v* tags or publish releases. [AGENTS.md](AGENTS.md) reserves
 
 ## License
 
-MIT. See [LICENSE](LICENSE). Copyright (c) 2026 Jason Griffin.
+Licensed under the [MIT License](https://opensource.org/licenses/MIT). See [LICENSE](LICENSE) for the full text.
+
+Copyright (c) 2026 Jason Griffin
