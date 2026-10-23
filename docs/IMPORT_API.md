@@ -5,10 +5,10 @@ Every entry point must call it — never write imported recipes to storage direc
 
 | Entry point                                                         | Status                              | Adapter                                                                     |
 | ------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------- |
-| In-app "Import from link" (spec #1)                                 | ✅ `src/app/import.tsx`             | `{ kind: 'url', url, source: { channel: 'app-link' } }`                     |
+| In-app "Import from link" (spec #1)                                 | ✅ saves and opens the recipe (`src/app/import.tsx`) | `{ kind: 'url', url, source: { channel: 'app-link' } }`                     |
 | Paste / dictate text                                                | ✅ same screen                      | `{ kind: 'text', text, source: { channel: 'app-text' } }`                   |
-| Deep link `myrecipeapp://import?url=…` / `?text=…`                  | ✅ route shows a draft              | `parseImportDeepLink(link)`                                                 |
-| Android share sheet → app (SEND `text/plain`)                       | ✅ `expo-sharing` + `+native-intent` | `shareTextToImportInput(sharedText)`                                        |
+| Deep link `myrecipeapp://import?url=…` / `?text=…`                  | ✅ a URL is saved and opened; pasted text shows a draft | `parseImportDeepLink(link)`                                                 |
+| Android share sheet → app (SEND `text/plain`)                       | ✅ a shared URL is saved and opened; shared recipe text shows a draft | `shareTextToImportInput(sharedText)`                                        |
 | Android share sheet → app (SEND `application/pdf`, v1.0.6)          | ✅ forwarded to Import PDF          | `sharedPdfUri(payloads)` → `/import-pdf?uri=…`                              |
 | **Import PDF** (+ menu, v1.0.6)                                     | ✅ `src/app/import-pdf.tsx`         | `readRecipesFromPdf(bytes, deps)` → one `{ kind: 'text', text, source: { channel: 'pdf' } }` dry run per recipe; `importPdfCandidates(chosen, categoryIds, deps)` saves |
 | JSON file import                                                    | later phase                         | `{ kind: 'structured', …, source: { channel: 'file' } }`                    |
@@ -115,9 +115,10 @@ else Alert.alert('Import failed', r.errors.join('\n'));
 const read = await readRecipesFromPdf(bytes, appImportDeps); // { ok:false, reason:'no_text' } for scans
 if (read.ok) await importPdfCandidates(read.candidates, [dinnerId, weeknightId], appImportDeps);
 
-// Deep link / share intent — the import screen previews with dryRun, then saves on confirm.
+// Deep link / share intent — a URL is saved by the import screen; pasted text is previewed, then saved on confirm.
 const input = parseImportDeepLink(url) ?? shareTextToImportInput(sharedText);
-await importRecipe(input, { dryRun: true });
+if (input?.kind === 'url') await importRecipe(input);
+else await importRecipe(input, { dryRun: true });
 ```
 
 ## Files

@@ -442,7 +442,7 @@ describe('grocery run (spec #18)', () => {
   it.each([
     ['compact', COMPACT],
     ['expanded', EXPANDED],
-  ])('keeps the screen awake, shows one flat list, and undoes a check at %s', async (_label, width) => {
+  ])('keeps the screen awake, shows one flat list, and checks items off at %s', async (_label, width) => {
     mockWidth = width;
     const recipe = await chicken();
     const week = toIsoDate(startOfWeek(new Date()));
@@ -457,11 +457,14 @@ describe('grocery run (spec #18)', () => {
     expect(useKeepAwake).toHaveBeenCalledWith('grocery-run', { suppressDeactivateWarnings: true });
     expect(screen.queryByTestId('grocery-layout-dual')).toBeNull();
 
+    expect(screen.queryByTestId('grocery-undo')).toBeNull();
+    expect(screen.queryByText('Undo')).toBeNull();
     const progressText = () => String(screen.getByTestId('grocery-progress').props.children);
     expect(progressText()).toMatch(/^0 of /);
-    await act(async () => fireEvent.press(screen.getByLabelText(/green beans/i)));
+    const beans = () => screen.getByLabelText(/green beans/i);
+    await act(async () => fireEvent.press(beans()));
     await waitFor(() => expect(progressText()).toMatch(/^1 of /));
-    await act(async () => fireEvent.press(screen.getByTestId('grocery-undo')));
+    await act(async () => fireEvent.press(beans()));
     await waitFor(() => expect(progressText()).toMatch(/^0 of /));
   });
 
@@ -470,6 +473,7 @@ describe('grocery run (spec #18)', () => {
     const recipe = await chicken();
     renderRouter({ 'grocery-run': Grocery() }, { initialUrl: `/grocery-run?recipeId=${recipe.id}` });
     expect(await screen.findByText(/green beans/i)).toBeTruthy();
+    expect(screen.queryByTestId('grocery-undo')).toBeNull();
     expect(screen.queryByTestId('grocery-layout-dual')).toBeNull();
     expect(screen.queryByText('By aisle')).toBeNull();
   });
@@ -487,7 +491,7 @@ describe('grocery run (spec #18)', () => {
       createdAt: '2026-10-01T00:00:00.000Z',
       updatedAt: '2026-10-01T00:00:00.000Z',
     };
-    render(<GroceryRunView items={[item]} canUndo={false} onToggle={onToggle} onUndo={() => undefined} />);
+    render(<GroceryRunView items={[item]} onToggle={onToggle} />);
     expect(screen.getByText('Qty: 1')).toBeTruthy();
     expect(screen.queryByText('Party size')).toBeNull();
     fireEvent.press(screen.getByText('(see notes)'));

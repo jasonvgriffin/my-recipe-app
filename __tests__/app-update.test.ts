@@ -218,15 +218,15 @@ describe('install handoff', () => {
   });
 });
 
-describe('v1.1.4 manifest', () => {
+describe('v1.1.5 manifest', () => {
   it('requests install permission and downloads through DownloadManager without a new permission', () => {
     const { readFileSync } = jest.requireActual('fs') as { readFileSync: (path: string, encoding: string) => string };
     const { join } = jest.requireActual('path') as { join: (...parts: string[]) => string };
     const app = JSON.parse(readFileSync(join(process.cwd(), 'app.json'), 'utf8')) as {
       expo: { version: string; android: { versionCode: number; permissions: string[]; blockedPermissions: string[] } };
     };
-    expect(app.expo.version).toBe('1.1.4');
-    expect(app.expo.android.versionCode).toBe(15);
+    expect(app.expo.version).toBe('1.1.5');
+    expect(app.expo.android.versionCode).toBe(16);
     expect(app.expo.android.permissions).toEqual([
       'android.permission.VIBRATE',
       'android.permission.REQUEST_INSTALL_PACKAGES',

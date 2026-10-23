@@ -2,7 +2,7 @@
   "expo": {
     "name": "My Recipe App",
     "slug": "my-recipe-app",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "myrecipeapp",
@@ -20,7 +20,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.jasonvgriffin.myrecipeapp",
       "softwareKeyboardLayoutMode": "resize",
-      "versionCode": 15,
+      "versionCode": 16,
       "permissions": [
         "android.permission.VIBRATE",
         "android.permission.REQUEST_INSTALL_PACKAGES"

@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { renderRouter } from 'expo-router/testing-library';
 import { Alert } from 'react-native';
 
@@ -72,36 +72,39 @@ describe('import screen (spec #1)', () => {
     return router as { back: () => void; push: (href: string) => void };
   }
 
-  async function previewLink(url = 'https://example.com/eggs') {
+  async function importLink(url = 'https://example.com/eggs') {
     fireEvent.changeText(await screen.findByTestId('import-url-input'), url);
     await act(async () => fireEvent.press(screen.getByTestId('import-url-button')));
+  }
+
+  async function previewText(body = 'Scrambled eggs\nIngredients:\n- 2 eggs\nSteps:\n1. Whisk\n2. Cook') {
+    fireEvent.changeText(await screen.findByTestId('import-text-input'), body);
+    await act(async () => fireEvent.press(screen.getByTestId('import-text-button')));
     expect(await screen.findByTestId('import-draft')).toBeTruthy();
   }
 
-  it('shows a draft for a parsed link and saves only when Save is tapped', async () => {
+  it('saves a parsed link and opens it without a Save step', async () => {
     const alert = jest.spyOn(Alert, 'alert');
     await openImport();
-    await previewLink();
-    expect(screen.getByText('Draft')).toBeTruthy();
-    expect(screen.getByTestId('import-save')).toBeEnabled();
-    expect(screen.getByText('Save and edit')).toBeTruthy();
-    expect(within(screen.getByTestId('import-screen')).queryByTestId('import-save')).toBeNull();
-    expect(await recipeStore.list()).toHaveLength(0);
-    await act(async () => fireEvent.press(screen.getByTestId('import-save')));
+    await importLink();
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
+    expect(screen.queryByTestId('import-save')).toBeNull();
+    expect(screen.queryByText('Draft')).toBeNull();
+    expect(screen.queryByText('Save and edit')).toBeNull();
     expect(alert).not.toHaveBeenCalled();
     const saved = (await recipeStore.list()).find((r) => r.title === 'Imported eggs');
     expect(saved?.sourceUrl).toBe('https://example.com/eggs');
     expect(saved?.photoUri).toBeUndefined();
+    expect(await recipeStore.list()).toHaveLength(1);
   });
 
-  it('Save and edit opens the editor after the write', async () => {
+  it('Save and edit opens the editor after a pasted-text write', async () => {
     mount('/import');
-    await previewLink();
+    await previewText();
     await act(async () => fireEvent.press(screen.getByTestId('import-save-edit')));
     expect(await screen.findByTestId('recipe-editor')).toBeTruthy();
-    const saved = (await recipeStore.list()).find((r) => r.title === 'Imported eggs');
-    expect(saved?.sourceUrl).toBe('https://example.com/eggs');
+    const saved = (await recipeStore.list()).find((r) => r.title === 'Scrambled eggs');
+    expect(saved?.ingredients).toHaveLength(1);
   });
 
   it('shows a download error and a page with no recipe', async () => {
@@ -147,41 +150,50 @@ describe('import screen (spec #1)', () => {
     expect(await recipeStore.list()).toHaveLength(1);
   });
 
-  it('editing the link or the pasted text after a preview clears the draft and does not save it', async () => {
+  it('editing pasted text after a preview clears the draft and does not save it', async () => {
     mount('/import');
-    await previewLink();
-    fireEvent.changeText(screen.getByTestId('import-url-input'), 'https://example.com/other');
-    expect(screen.queryByTestId('import-draft')).toBeNull();
-    expect(screen.getByTestId('import-save')).toBeDisabled();
-    await act(async () => fireEvent.press(screen.getByTestId('import-save')));
-    expect(await recipeStore.list()).toHaveLength(0);
-    expect(screen.queryByTestId('recipe-detail')).toBeNull();
-
-    fireEvent.changeText(
-      screen.getByTestId('import-text-input'),
-      'Scrambled eggs\nIngredients:\n- 2 eggs\nSteps:\n1. Whisk',
-    );
-    await act(async () => fireEvent.press(screen.getByTestId('import-text-button')));
-    expect(await screen.findByTestId('import-draft')).toBeTruthy();
+    await previewText('Scrambled eggs\nIngredients:\n- 2 eggs\nSteps:\n1. Whisk');
     fireEvent.changeText(screen.getByTestId('import-text-input'), 'Changed title\nIngredients:\n- 2 eggs\nSteps:\n1. Whisk');
     expect(screen.queryByTestId('import-draft')).toBeNull();
     expect(screen.getByTestId('import-save')).toBeDisabled();
     await act(async () => fireEvent.press(screen.getByTestId('import-save')));
     expect(await recipeStore.list()).toHaveLength(0);
+    expect(screen.queryByTestId('recipe-detail')).toBeNull();
   });
 
-  it('keeps the draft on screen when the write fails', async () => {
+  it('drops a link import when the URL changes before it resolves', async () => {
     mount('/import');
-    await previewLink();
+    let release: (value: Response) => void = () => undefined;
+    (globalThis.fetch as jest.Mock).mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    fireEvent.changeText(await screen.findByTestId('import-url-input'), 'https://example.com/eggs');
+    await act(async () => fireEvent.press(screen.getByTestId('import-url-button')));
+    fireEvent.changeText(screen.getByTestId('import-url-input'), 'https://example.com/other');
+    await act(async () => {
+      release({ ok: true, status: 200, text: async () => MICRODATA } as Response);
+    });
+    expect(screen.queryByTestId('recipe-detail')).toBeNull();
+    expect(screen.queryByTestId('import-error')).toBeNull();
+    expect(screen.queryByTestId('import-save')).toBeNull();
+    expect(await recipeStore.list()).toHaveLength(0);
+  });
+
+  it('shows a save error and stores nothing when a link write fails', async () => {
+    mount('/import');
     jest.spyOn(recipeStore, 'save').mockRejectedValueOnce(new Error('disk full'));
-    await act(async () => fireEvent.press(screen.getByTestId('import-save')));
+    await importLink();
     expect(await screen.findByTestId('import-error-save_failed')).toBeTruthy();
-    expect(screen.getByTestId('import-draft')).toBeTruthy();
+    expect(screen.queryByTestId('import-draft')).toBeNull();
+    expect(screen.queryByTestId('import-save')).toBeNull();
     expect(screen.queryByTestId('recipe-detail')).toBeNull();
     expect(await recipeStore.list()).toHaveLength(0);
   });
 
-  it('opens an existing recipe when the link was already imported, and leaving does not warn', async () => {
+  it('opens an existing recipe when the link was already imported, and does not write another', async () => {
     const existing = createRecipe({
       title: 'Imported eggs',
       ingredients: [{ text: '4 eggs' }],
@@ -192,28 +204,73 @@ describe('import screen (spec #1)', () => {
     });
     await recipeStore.save(existing);
     const alert = jest.spyOn(Alert, 'alert');
-    const router = await openImport();
+    await openImport();
     fireEvent.changeText(screen.getByTestId('import-url-input'), 'https://www.example.com/eggs/');
     await act(async () => fireEvent.press(screen.getByTestId('import-url-button')));
-    expect(await screen.findByText('Already in your recipes')).toBeTruthy();
+    expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
+    expect(screen.queryByText('Already in your recipes')).toBeNull();
     expect(screen.queryByTestId('import-save')).toBeNull();
-    await act(async () => router.back());
     expect(alert).not.toHaveBeenCalled();
     expect(await recipeStore.list()).toHaveLength(1);
+  });
 
-    mount('/import');
-    fireEvent.changeText(await screen.findByTestId('import-url-input'), 'https://www.example.com/eggs/');
+  it('opens a deep-linked recipe URL after saving it', async () => {
+    mount(`/import?url=${encodeURIComponent('https://example.com/eggs')}`);
+    expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
+    const saved = (await recipeStore.list()).find((r) => r.title === 'Imported eggs');
+    expect(saved?.sourceUrl).toBe('https://example.com/eggs');
+  });
+
+  it('does not save a link import that is left before the write starts', async () => {
+    let release: (value: Response) => void = () => undefined;
+    (globalThis.fetch as jest.Mock).mockImplementation(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const router = await openImport();
+    fireEvent.changeText(screen.getByTestId('import-url-input'), 'https://example.com/eggs');
     await act(async () => fireEvent.press(screen.getByTestId('import-url-button')));
-    expect(await screen.findByText('Already in your recipes')).toBeTruthy();
-    await act(async () => fireEvent.press(screen.getByTestId('import-open-existing')));
+    await act(async () => router.back());
+    await act(async () => {
+      release({ ok: true, status: 200, text: async () => MICRODATA } as Response);
+    });
+    expect(screen.queryByTestId('recipe-detail')).toBeNull();
+    expect(await recipeStore.list()).toHaveLength(0);
+  });
+
+  it('ignores a second Import link tap while the first write is still running', async () => {
+    let calls = 0;
+    let releasePersist: () => void = () => undefined;
+    let markPersistStarted: () => void = () => undefined;
+    const persistStarted = new Promise<void>((resolve) => {
+      markPersistStarted = resolve;
+    });
+    (globalThis.fetch as jest.Mock).mockImplementation(() => {
+      calls += 1;
+      if (calls === 1) {
+        return Promise.resolve({ ok: true, status: 200, text: async () => MICRODATA } as Response);
+      }
+      markPersistStarted();
+      return new Promise<Response>((resolve) => {
+        releasePersist = () => resolve({ ok: true, status: 200, text: async () => MICRODATA } as Response);
+      });
+    });
+    mount('/import');
+    fireEvent.changeText(await screen.findByTestId('import-url-input'), 'https://example.com/eggs');
+    await act(async () => fireEvent.press(screen.getByTestId('import-url-button')));
+    await persistStarted;
+    await act(async () => fireEvent.press(screen.getByTestId('import-url-button')));
+    await act(async () => releasePersist());
     expect(await screen.findByTestId('recipe-detail')).toBeTruthy();
     expect(await recipeStore.list()).toHaveLength(1);
   });
 
-  it('asks before leaving a draft; Save stores it and Discard drops it', async () => {
+  it('asks before leaving a pasted-text draft; Save stores it and Discard drops it', async () => {
     const alert = jest.spyOn(Alert, 'alert');
     const router = await openImport();
-    await previewLink();
+    await previewText();
     expect(await recipeStore.list()).toHaveLength(0);
     await act(async () => router.back());
     expect(alert).toHaveBeenCalledWith('Save changes?', expect.any(String), expect.any(Array));
@@ -228,13 +285,13 @@ describe('import screen (spec #1)', () => {
     expect(alert).not.toHaveBeenCalled();
 
     await act(async () => router.push('/import'));
-    await previewLink();
+    await previewText();
     await act(async () => router.back());
     const saveButtons = alert.mock.calls[0][2] as { text: string; onPress?: () => void }[];
     alert.mockClear();
     await act(async () => saveButtons.find((b) => b.text === 'Save')!.onPress!());
     await waitFor(async () => {
-      expect((await recipeStore.list()).some((r) => r.title === 'Imported eggs')).toBe(true);
+      expect((await recipeStore.list()).some((r) => r.title === 'Scrambled eggs')).toBe(true);
     });
     expect(alert).not.toHaveBeenCalled();
     expect(await screen.findByTestId('search-input')).toBeTruthy();
