@@ -93,7 +93,7 @@ Suggested PR order (each small, with tests; update the status table in SPEC.md):
 ## Phase 3 — AI-friendly
 
 > **MCP server deliberately cut in 1.0.6 at Jason's request; may be revisited in a future version.** The notes below
-> are kept as history (the code is in git history: `src/mcp/`, `supabase/functions/mcp/`, `site/oauth/`).
+> are kept as history (the code is in git history: `src/mcp/`, `supabase/functions/mcp/`).
 
 Goal: Jason can ask an AI assistant to add, tweak, and find recipes, and see them in the app.
 
